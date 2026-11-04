@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Transparent Canvas Editor</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <header class="head">
+      <div><h1>透明画布编辑器</h1><p>方框、文字、图片背景、渐变蒙层、多选对齐、刻度与辅助线。</p></div>
+    </header>
+
+    <div class="toolbar">
+      <button class="btn primary" id="addBox">＋ 添加方框</button>
+      <button class="btn secondary" id="addText">＋ 添加文字</button>
+    </div>
+
+    <div class="settings-tabs main-tabs">
+      <button class="settings-tab active" id="objectTab">对象 / 图层</button>
+      <button class="settings-tab" id="canvasTab">画布属性</button>
+    </div>
+
+    <div class="settings-pane active" id="objectSettingsPane">
+      <div class="pane-kicker object-kicker">对象编辑区</div>
+
+      <section class="section">
+        <div class="section-title">图层 <span class="hint-mini" id="layerCount">0 个</span></div>
+        <div class="layers" id="layers"></div>
+        <button class="btn danger full mt8" id="deleteObj">删除选中</button>
+        <div class="hint mt8">拖动图层行可调整上下顺序；Shift + 点击可混合多选方框和文字。</div>
+      </section>
+
+      <div class="align-compact" id="alignPanel">
+        <button class="smallbtn full align-trigger" id="alignMenuButton">对齐工具 <span class="hint-mini" id="selectionCount">0 个对象</span> ▾</button>
+        <div class="align-popover" id="alignPopover">
+          <button class="smallbtn" id="alignLeft">左对齐</button>
+          <button class="smallbtn" id="alignCenterX">水平居中</button>
+          <button class="smallbtn" id="alignRight">右对齐</button>
+          <button class="smallbtn" id="alignTop">上对齐</button>
+          <button class="smallbtn" id="alignCenterY">垂直居中</button>
+          <button class="smallbtn" id="alignBottom">下对齐</button>
+          <button class="smallbtn span3" id="distributeH">水平等间距</button>
+          <button class="smallbtn span3" id="distributeV">垂直等间距</button>
+        </div>
+      </div>
+
+      <section class="section object-card" id="commonPanel">
+        <div class="section-title">对象基础属性</div>
+        <div class="row"><label>图层名称</label><input id="layerName" type="text" maxlength="200" placeholder="可重复命名"></div>
+        <div class="section-title sub-title">位置与尺寸</div>
+        <div class="inline2">
+          <div class="row"><label>X</label><input id="objX" type="number"></div>
+          <div class="row"><label>Y</label><input id="objY" type="number"></div>
+        </div>
+        <div class="inline2" id="sizeFields">
+          <div class="row"><label>宽</label><input id="objW" type="number" min="10"></div>
+          <div class="row"><label>高</label><input id="objH" type="number" min="10"></div>
+        </div>
+      </section>
+
+      <section class="section object-card" id="boxPanel">
+        <div class="section-title">方框外观</div>
+        <div class="row"><label>圆角 <span id="radiusVal"></span></label><input id="radius" type="range" min="0" max="240"></div>
+        <div class="row"><label>渐变蒙层透明度 <span id="bgOpacityVal"></span></label><input id="bgOpacity" type="range" min="0" max="100"></div>
+        <div class="row"><label>渐变角度 <span id="angleVal"></span></label><input id="angle" type="range" min="0" max="360"></div>
+        <div id="colors"></div>
+        <button class="add-stop" id="addColor">＋ 添加渐变颜色</button>
+
+        <div class="subsection">
+          <div class="section-title">方框背景图片</div>
+          <div class="image-actions">
+            <button class="smallbtn" id="boxImageUpload">上传图片</button>
+            <button class="smallbtn" id="boxImageRemove">移除图片</button>
+          </div>
+          <input id="boxImageFile" type="file" accept="image/*" hidden>
+          <div class="row"><label>图片透明度 <span id="boxImageOpacityVal"></span></label><input id="boxImageOpacity" type="range" min="0" max="100"></div>
+          <div class="row"><label>填充方式</label><select id="boxImageFit"><option value="cover">裁切填满</option><option value="contain">完整显示</option><option value="stretch">拉伸</option></select></div>
+          <div class="hint">图片在底层，渐变蒙层覆盖其上；圆角会同时裁切图片与蒙层。</div>
+        </div>
+
+        <div class="subsection">
+          <div class="section-title">边框与阴影</div>
+          <label class="toggle"><input id="borderOn" type="checkbox"> 显示边框</label>
+          <div class="row"><label>边框宽度</label><input id="borderWidth" type="number" min="0" max="30"></div>
+          <div class="row"><label>边框颜色</label><input id="borderColor" type="color"></div>
+          <div class="row"><label>边框透明度 <span id="borderOpacityVal"></span></label><input id="borderOpacity" type="range" min="0" max="100"></div>
+          <label class="toggle"><input id="shadowOn" type="checkbox"> 阴影</label>
+        </div>
+      </section>
+
+      <section class="section object-card" id="textPanel" hidden>
+        <div class="section-title">文字属性</div>
+        <textarea id="textContent" placeholder="输入文字"></textarea>
+        <div class="row"><label>字号</label><input id="fontSize" type="number" min="6" max="400"></div>
+        <div class="row"><label>颜色</label><input id="textColor" type="color"></div>
+        <div class="row"><label>透明度 <span id="textOpacityVal"></span></label><input id="textOpacity" type="range" min="0" max="100"></div>
+        <div class="row"><label>字重</label><select id="fontWeight"><option value="400">常规</option><option value="500">中等</option><option value="600">半粗</option><option value="700">粗体</option></select></div>
+        <div class="row"><label>字体</label><select id="fontFamily">
+          <option value='"Microsoft YaHei",sans-serif'>微软雅黑</option>
+          <option value='"Segoe UI",sans-serif'>Segoe UI</option>
+          <option value='"SimHei",sans-serif'>黑体</option>
+          <option value='"SimSun",serif'>宋体</option>
+          <option value='"KaiTi",serif'>楷体</option>
+          <option value='"FangSong",serif'>仿宋</option>
+          <option value="Arial,sans-serif">Arial</option>
+          <option value="Helvetica,sans-serif">Helvetica</option>
+          <option value="Verdana,sans-serif">Verdana</option>
+          <option value="Tahoma,sans-serif">Tahoma</option>
+          <option value='"Times New Roman",serif'>Times New Roman</option>
+          <option value="Georgia,serif">Georgia</option>
+          <option value="Consolas,monospace">Consolas</option>
+          <option value='"Courier New",monospace'>Courier New</option>
+          <option value="serif">系统衬线</option>
+          <option value="sans-serif">系统无衬线</option>
+          <option value="monospace">系统等宽</option>
+        </select></div>
+        <div class="image-actions mt8">
+          <button class="smallbtn" id="loadSystemFonts">读取系统字体</button>
+          <button class="smallbtn" id="uploadFont">上传自定义字体</button>
+        </div>
+        <input id="fontFile" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" hidden>
+        <div class="hint mt8" id="fontStatus">支持系统字体枚举时可读取本机字体；也可直接上传 TTF / OTF / WOFF / WOFF2。</div>
+      </section>
+    </div>
+
+    <div class="settings-pane" id="canvasSettingsPane" hidden>
+      <div class="pane-kicker canvas-kicker">画布设置区</div>
+      <section class="section canvas-card">
+        <div class="section-title">画布尺寸</div>
+        <div class="inline2">
+          <div class="row"><label>宽</label><input id="canvasW" type="number" min="100" max="10000"></div>
+          <div class="row"><label>高</label><input id="canvasH" type="number" min="100" max="10000"></div>
+        </div>
+        <div class="hint">画布尺寸只能输入参数，不允许拖拽边缘修改。</div>
+      </section>
+
+      <section class="section canvas-card">
+        <div class="section-title">画布渐变蒙层</div>
+        <div class="row"><label>透明度 <span id="canvasBgOpacityVal"></span></label><input id="canvasBgOpacity" type="range" min="0" max="100"></div>
+        <div class="row"><label>渐变角度 <span id="canvasAngleVal"></span></label><input id="canvasAngle" type="range" min="0" max="360"></div>
+        <div id="canvasColors"></div>
+        <button class="add-stop" id="canvasAddColor">＋ 添加渐变颜色</button>
+      </section>
+
+      <section class="section canvas-card">
+        <div class="section-title">画布背景图片</div>
+        <div class="image-actions">
+          <button class="smallbtn" id="canvasImageUpload">上传图片</button>
+          <button class="smallbtn" id="canvasImageRemove">移除图片</button>
+        </div>
+        <input id="canvasImageFile" type="file" accept="image/*" hidden>
+        <div class="row"><label>图片透明度 <span id="canvasImageOpacityVal"></span></label><input id="canvasImageOpacity" type="range" min="0" max="100"></div>
+        <div class="row"><label>填充方式</label><select id="canvasImageFit"><option value="cover">裁切填满</option><option value="contain">完整显示</option><option value="stretch">拉伸</option></select></div>
+      </section>
+
+      <section class="section canvas-card">
+        <div class="section-title">导出设置</div>
+        <div class="row"><label>导出倍率</label><select id="exportScale"><option value="1">1×</option><option value="2" selected>2× 高清</option><option value="3">3×</option><option value="4">4×</option></select></div>
+      </section>
+    </div>
+
+    <div class="bottom-actions">
+      <div class="export-row">
+        <button class="btn secondary" id="exportCrop">导出内容区域</button>
+        <button class="btn primary" id="exportFull">导出整张画布</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="workspace">
+    <div class="viewport" id="viewport"><div class="world" id="world"></div></div>
+    <div class="guide-layer" id="guideLayer"></div>
+    <canvas class="ruler top" id="topRuler"></canvas>
+    <canvas class="ruler left" id="leftRuler"></canvas>
+    <div class="ruler-corner"></div>
+
+    <div class="topbar">
+      <button id="zoomOut">−</button><span class="zoom-label" id="zoomLabel">100%</span><button id="zoomIn">＋</button>
+      <button id="fitView">适应</button><button id="resetView">100%</button>
+      <span class="canvas-size" id="canvasSizeLabel"></span>
+    </div>
+
+    <div class="rightbar-shell" id="rightbarShell">
+      <div class="tool-group history-group">
+        <button class="group-trigger" title="历史操作"><span>史</span><small>历史</small></button>
+        <div class="group-popover">
+          <button class="toolbtn" id="undoBtn" title="撤回 Ctrl+Z"><span>↶</span><small>撤回</small></button>
+          <button class="toolbtn" id="redoBtn" title="反撤回 Ctrl+Y / Ctrl+Shift+Z"><span>↷</span><small>反撤回</small></button>
+          <button class="toolbtn" id="historyToggle" title="历史操作记录"><span>史</span><small>记录</small></button>
+        </div>
+      </div>
+
+      <div class="tool-group guide-group">
+        <button class="group-trigger" title="参考线和吸附"><span>线</span><small>参考线</small></button>
+        <div class="group-popover">
+          <button class="toolbtn active" id="snapEnabled" title="开启 / 关闭自动吸附"><span>吸</span><small>吸附</small></button>
+          <button class="toolbtn active" id="guidesToggle" title="显示 / 隐藏参考线"><span>线</span><small id="guideCount">参考线 0</small></button>
+          <button class="toolbtn" id="clearGuides" title="清空全部参考线"><span>清</span><small>清空</small></button>
+        </div>
+      </div>
+
+      <div class="tool-group data-group">
+        <button class="group-trigger" title="项目数据"><span>数</span><small>数据</small></button>
+        <div class="group-popover">
+          <button class="toolbtn" id="exportData" title="保存当前项目数据"><span>存</span><small>保存</small></button>
+          <button class="toolbtn" id="importData" title="加载项目数据"><span>载</span><small>加载</small></button>
+        </div>
+      </div>
+
+      <div class="tool-group selection-group">
+        <button class="group-trigger" title="选中对象操作"><span>选</span><small>选中</small></button>
+        <div class="group-popover">
+          <button class="toolbtn" id="copySelected" title="复制选中的所有对象"><span>复</span><small>复制</small></button>
+          <button class="toolbtn" id="pasteSelected" title="粘贴已复制的对象"><span>粘</span><small>粘贴</small></button>
+          <button class="toolbtn" id="exportSelectedData" title="把选中的所有对象导出为新的数据文件"><span>导</span><small>导出</small></button>
+        </div>
+      </div>
+
+      <div class="history-panel" id="historyPanel">
+        <div class="history-head"><strong>历史记录</strong><span id="historyCount">0 / 100</span></div>
+        <div class="history-list" id="historyList"></div>
+      </div>
+    </div>
+
+    <input id="importDataFile" type="file" accept="application/json,.json" hidden>
+    <div class="context-menu" id="contextMenu" role="menu"></div>
+    <div class="right-status" id="dataStatus" aria-live="polite"></div>
+    <div class="help">水平 / 垂直刻度 · Shift 多选方框 · 右侧按组展开工具 · Ctrl+Z / Ctrl+Y</div>
+  </main>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
