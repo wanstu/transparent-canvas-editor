@@ -29,8 +29,32 @@ const objectNodeCache=new Map();
 let worldUpdateRAF=0;
 const measureCtx=document.createElement('canvas').getContext('2d');
 const uid=()=>state.nextId++;
-const hexToRgb=h=>{h=(h||'#ffffff').replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]};
-const rgba=(hex,a)=>{const[r,g,b]=hexToRgb(hex);return `rgba(${r},${g},${b},${a})`};
+function parseColorValue(value){
+  if(typeof value!=='string')return null;
+  let s=value.trim();if(!s)return null;
+  if(/^transparent$/i.test(s))return{r:0,g:0,b:0,a:0,css:'rgba(0, 0, 0, 0)',hex:'#000000'};
+  let h=s.replace(/^#/,'').replace(/\s+/g,'');
+  if(/^[0-9a-f]{3,4}$/i.test(h)){h=h.split('').map(ch=>ch+ch).join('')}
+  if(/^[0-9a-f]{6}([0-9a-f]{2})?$/i.test(h)){
+    const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16),a=h.length===8?parseInt(h.slice(6,8),16)/255:1;
+    return{r,g,b,a,hex:'#'+h.slice(0,6).toLowerCase(),css:a<.999?`rgba(${r}, ${g}, ${b}, ${Math.round(a*1000)/1000})`:'#'+h.slice(0,6).toLowerCase()}
+  }
+  const m=s.match(/^rgba?\(\s*([^)]*)\s*\)$/i);
+  if(m){
+    const parts=m[1].split(',').map(v=>v.trim());if(parts.length<3||parts.length>4)return null;
+    const channel=v=>{if(/%$/.test(v))return clamp(Math.round(parseFloat(v)*2.55),0,255);const n=Number(v);return Number.isFinite(n)?clamp(Math.round(n),0,255):NaN};
+    const r=channel(parts[0]),g=channel(parts[1]),b=channel(parts[2]);if(![r,g,b].every(Number.isFinite))return null;
+    let a=1;if(parts[3]!=null){a=/%$/.test(parts[3])?parseFloat(parts[3])/100:Number(parts[3]);if(!Number.isFinite(a))return null;a=clamp(a,0,1)}
+    const hex='#'+[r,g,b].map(n=>n.toString(16).padStart(2,'0')).join('');
+    return{r,g,b,a,hex,css:a<.999?`rgba(${r}, ${g}, ${b}, ${Math.round(a*1000)/1000})`:hex}
+  }
+  return null
+}
+function normalizeColorValue(value,fallback='#ffffff'){return parseColorValue(value)?.css||parseColorValue(fallback)?.css||'#ffffff'}
+function colorToHex(value,fallback='#ffffff'){return parseColorValue(value)?.hex||parseColorValue(fallback)?.hex||'#ffffff'}
+function colorAlpha(value){return parseColorValue(value)?.a??1}
+const hexToRgb=h=>{const p=parseColorValue(h)||parseColorValue('#ffffff');return[p.r,p.g,p.b]};
+const rgba=(color,a=1)=>{const p=parseColorValue(color)||parseColorValue('#ffffff'),alpha=clamp((p.a??1)*a,0,1);return `rgba(${p.r},${p.g},${p.b},${Math.round(alpha*1000)/1000})`};
 const fitCSS=fit=>fit==='stretch'?'100% 100%':fit;
 
 function desktopApp(){
@@ -143,8 +167,8 @@ function cleanupUnusedResources(){
   return{imagesRemoved,fontsRemoved}
 }
 
-function defaultBox(){return{id:uid(),type:'box',shape:'rect',name:'方框',visible:true,locked:false,rotation:0,lockAspect:false,x:180,y:150,w:420,h:300,radius:28,bgOpacity:.88,gradientType:'linear',angle:135,colors:[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:true,borderWidth:2,borderColor:'#ffffff',borderOpacity:.9,shadowOn:true,shadowX:0,shadowY:16,shadowBlur:34,shadowSpread:0,shadowColor:'#232e3f',shadowOpacity:.22,innerShadowOn:false,innerShadowX:0,innerShadowY:4,innerShadowBlur:12,innerShadowSpread:0,innerShadowColor:'#000000',innerShadowOpacity:.18}}
-function defaultCircle(){return{id:uid(),type:'box',shape:'ellipse',name:'圆形',visible:true,locked:false,rotation:0,lockAspect:true,x:250,y:180,w:240,h:240,radius:120,bgOpacity:.9,gradientType:'radial',angle:135,colors:[{c:'#ffffff',p:0},{c:'#dce8ff',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:true,borderWidth:2,borderColor:'#8fb6ff',borderOpacity:.9,shadowOn:false,shadowX:0,shadowY:12,shadowBlur:28,shadowSpread:0,shadowColor:'#315887',shadowOpacity:.22,innerShadowOn:false,innerShadowX:0,innerShadowY:4,innerShadowBlur:12,innerShadowSpread:0,innerShadowColor:'#315887',innerShadowOpacity:.16}}
+function defaultBox(){return{id:uid(),type:'box',shape:'rect',name:'方框',visible:true,locked:false,rotation:0,lockAspect:false,x:180,y:150,w:420,h:300,radius:28,bgOpacity:.88,gradientType:'linear',angle:135,colors:[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:true,borderWidth:2,borderColor:'#ffffff',borderOpacity:.9,shadowOn:true,shadowX:0,shadowY:16,shadowBlur:34,shadowSpread:0,shadowColor:'#232e3f',shadowOpacity:.22,innerShadowOn:false,innerShadowX:0,innerShadowY:4,innerShadowBlur:12,innerShadowSpread:0,innerShadowColor:'#000000',innerShadowOpacity:.18,deformEnabled:false,deformSmoothness:58,deform:{top:0,right:0,bottom:0,left:0}}}
+function defaultCircle(){return{id:uid(),type:'box',shape:'ellipse',name:'圆形',visible:true,locked:false,rotation:0,lockAspect:true,x:250,y:180,w:240,h:240,radius:120,bgOpacity:.9,gradientType:'radial',angle:135,colors:[{c:'#ffffff',p:0},{c:'#dce8ff',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:true,borderWidth:2,borderColor:'#8fb6ff',borderOpacity:.9,shadowOn:false,shadowX:0,shadowY:12,shadowBlur:28,shadowSpread:0,shadowColor:'#315887',shadowOpacity:.22,innerShadowOn:false,innerShadowX:0,innerShadowY:4,innerShadowBlur:12,innerShadowSpread:0,innerShadowColor:'#315887',innerShadowOpacity:.16,deformEnabled:false,deformSmoothness:58,deform:{top:0,right:0,bottom:0,left:0}}}
 function defaultLine(){return{id:uid(),type:'box',shape:'line',name:'直线',visible:true,locked:false,rotation:0,lockAspect:false,x:280,y:260,w:300,h:20,radius:0,bgOpacity:0,gradientType:'linear',angle:0,colors:[{c:'#2563eb',p:0},{c:'#2563eb',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:false,borderWidth:0,borderColor:'#2563eb',borderOpacity:1,shadowOn:false,shadowX:0,shadowY:6,shadowBlur:12,shadowSpread:0,shadowColor:'#111827',shadowOpacity:.3,innerShadowOn:false,lineColor:'#2563eb',lineWidth:4,lineOpacity:1}}
 function defaultText(){return{id:uid(),type:'text',name:'文字',visible:true,locked:false,rotation:0,x:260,y:230,content:'文字',fontSize:48,color:'#111827',opacity:1,fontWeight:'400',fontFamily:'"Microsoft YaHei",sans-serif'}}
 function boxShape(o){return o?.type==='box'?(o.shape||'rect'):null}
@@ -195,6 +219,31 @@ function beginInlineLayerRename(row,o){
 }
 function handleHTML(){return'<i class="handle nw" data-dir="nw"></i><i class="handle n" data-dir="n"></i><i class="handle ne" data-dir="ne"></i><i class="handle e" data-dir="e"></i><i class="handle se" data-dir="se"></i><i class="handle s" data-dir="s"></i><i class="handle sw" data-dir="sw"></i><i class="handle w" data-dir="w"></i><i class="rotate-handle" data-dir="rotate" title="拖动旋转；Shift 按 15° 吸附"></i>'}
 function lineHandleHTML(){return'<i class="handle e" data-dir="e"></i><i class="handle w" data-dir="w"></i><i class="rotate-handle" data-dir="rotate" title="拖动旋转；Shift 按 15° 吸附"></i>'}
+function deformHandleHTML(){return'<i class="deform-handle top" data-deform="top" title="拖动上边弧度"></i><i class="deform-handle right" data-deform="right" title="拖动右边弧度"></i><i class="deform-handle bottom" data-deform="bottom" title="拖动下边弧度"></i><i class="deform-handle left" data-deform="left" title="拖动左边弧度"></i>'}
+function deformValues(o){const d=o?.deform||{};return{top:finiteNumber(d.top,0),right:finiteNumber(d.right,0),bottom:finiteNumber(d.bottom,0),left:finiteNumber(d.left,0)}}
+function syncDeformHandles(el,o){
+  if(!o?.deformEnabled||!isFillShape(o))return;const d=deformValues(o);
+  const top=el.querySelector('[data-deform="top"]'),right=el.querySelector('[data-deform="right"]'),bottom=el.querySelector('[data-deform="bottom"]'),left=el.querySelector('[data-deform="left"]');
+  if(top){top.style.left=(o.w/2)+'px';top.style.top=(-d.top)+'px'}
+  if(right){right.style.left=(o.w+d.right)+'px';right.style.top=(o.h/2)+'px'}
+  if(bottom){bottom.style.left=(o.w/2)+'px';bottom.style.top=(o.h+d.bottom)+'px'}
+  if(left){left.style.left=(-d.left)+'px';left.style.top=(o.h/2)+'px'}
+}
+function deformPreviewPad(o){
+  const outer=o.shadowOn?Math.max(0,finiteNumber(o.shadowBlur,0)*2+finiteNumber(o.shadowSpread,0))+Math.hypot(finiteNumber(o.shadowX,0),finiteNumber(o.shadowY,0)):0,d=deformValues(o),bulge=Math.max(0,d.top,d.right,d.bottom,d.left);
+  return Math.ceil(clamp(Math.max(8,outer+Math.max(0,o.borderWidth||0)+4,bulge+8),8,400))
+}
+async function renderDeformCanvas(el,o){
+  let canvas=el.querySelector('.deform-canvas');if(!canvas){canvas=document.createElement('canvas');canvas.className='deform-canvas';el.prepend(canvas)}
+  const token=(Number(canvas.dataset.renderToken)||0)+1;canvas.dataset.renderToken=String(token);
+  const pad=deformPreviewPad(o),cssW=Math.ceil(o.w+pad*2),cssH=Math.ceil(o.h+pad*2),dpr=clamp(Math.min(window.devicePixelRatio||1,4096/Math.max(cssW,cssH)),.5,2),tmp=canvas._renderBuffer||(canvas._renderBuffer=document.createElement('canvas'));
+  tmp.width=Math.max(1,Math.ceil(cssW*dpr));tmp.height=Math.max(1,Math.ceil(cssH*dpr));
+  const ctx=tmp.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);
+  const local={...o,x:pad,y:pad,rotation:0};await drawBox(ctx,local);
+  if(Number(canvas.dataset.renderToken)!==token)return;
+  canvas.width=tmp.width;canvas.height=tmp.height;canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';canvas.style.left=(-pad)+'px';canvas.style.top=(-pad)+'px';
+  const out=canvas.getContext('2d');out.clearRect(0,0,canvas.width,canvas.height);out.drawImage(tmp,0,0)
+}
 function updateWorldDom(){
   const cimg=world.querySelector('.canvas-image-layer'),cbg=world.querySelector('.canvas-bg-layer');
   if(cimg){const p=previewImageUrl(state.canvasImageRef);cimg.style.backgroundImage=p?`url("${p}")`:'none';cimg.style.backgroundSize=fitCSS(state.canvasImageFit);cimg.style.opacity=state.canvasImageOpacity}
@@ -207,8 +256,10 @@ function updateWorldDom(){
       if(isLine(o)){
         el.style.border='none';el.style.boxShadow='none';el.style.borderRadius='0';
         const stroke=el.querySelector('.line-stroke');if(stroke){stroke.style.height=Math.max(1,o.lineWidth)+'px';stroke.style.background=rgba(o.lineColor,o.lineOpacity);stroke.style.opacity=1;stroke.style.boxShadow=shadowCSS(o)}
+      }else if(o.deformEnabled){
+        el.classList.add('deform-active');el.style.borderRadius='0';el.style.border='none';el.style.boxShadow='none';syncDeformHandles(el,o);renderDeformCanvas(el,o)
       }else{
-        el.style.borderRadius=isEllipse(o)?'50%':o.radius+'px';
+        el.classList.remove('deform-active');el.style.borderRadius=isEllipse(o)?'50%':o.radius+'px';
         el.style.border=o.borderOn?`${o.borderWidth}px solid ${rgba(o.borderColor,o.borderOpacity)}`:'none';el.style.boxShadow=outerShadowCSS(o);
         const img=el.querySelector('.box-image'),fill=el.querySelector('.box-fill'),inner=el.querySelector('.inner-shadow-layer'),p=previewImageUrl(o.imageRef);
         if(img){img.style.backgroundImage=p?`url("${p}")`:'none';img.style.backgroundSize=fitCSS(o.imageFit);img.style.opacity=o.imageOpacity}
@@ -237,13 +288,17 @@ function renderObjects(syncUI=true){
     if(o.visible===false)return;
     const el=document.createElement('div');
     const primary=o.id===state.selectedId,multi=boxIds.has(o.id),shapeClass=o.type==='box'?(isLine(o)?' line-object':isEllipse(o)?' ellipse-object':' box-object'):' text-object';
-    el.className='object'+shapeClass+(o.locked?' locked':'')+(primary?' selected':'')+(multi?' multi-selected':'')+(primary&&singleBox&&!o.locked?' single-selection':'');
+    el.className='object'+shapeClass+(o.deformEnabled&&isFillShape(o)?' deform-active':'')+(o.locked?' locked':'')+(primary?' selected':'')+(multi?' multi-selected':'')+(primary&&singleBox&&!o.locked?' single-selection':'');
     el.dataset.id=o.id;el.style.left=o.x+'px';el.style.top=o.y+'px';el.style.zIndex=i+3;el.style.transform=`rotate(${o.rotation||0}deg)`;el.style.transformOrigin='50% 50%';
     if(o.type==='box'){
       el.style.width=o.w+'px';el.style.height=o.h+'px';
       if(isLine(o)){
         const stroke=document.createElement('div');stroke.className='line-stroke';stroke.style.height=Math.max(1,o.lineWidth)+'px';stroke.style.background=rgba(o.lineColor,o.lineOpacity);stroke.style.opacity=1;stroke.style.boxShadow=shadowCSS(o);el.appendChild(stroke);
         el.insertAdjacentHTML('beforeend',lineHandleHTML())
+      }else if(o.deformEnabled){
+        el.style.border='none';el.style.boxShadow='none';el.style.borderRadius='0';
+        const canvas=document.createElement('canvas');canvas.className='deform-canvas';el.appendChild(canvas);
+        el.insertAdjacentHTML('beforeend',handleHTML()+deformHandleHTML());syncDeformHandles(el,o);renderDeformCanvas(el,o)
       }else{
         el.style.borderRadius=isEllipse(o)?'50%':o.radius+'px';
         el.style.border=o.borderOn?`${o.borderWidth}px solid ${rgba(o.borderColor,o.borderOpacity)}`:'none';
@@ -333,12 +388,12 @@ document.querySelectorAll('.tool-group>.group-trigger').forEach(trigger=>{
 });
 $('#historyToggle').onclick=e=>{e.stopPropagation();const shell=$('#rightbarShell');shell.classList.toggle('history-open');$('.history-group').classList.add('open')};
 const shortcutPanel=$('#shortcutPanel');
-shortcutPanel.innerHTML='<div class="shortcut-head"><strong>完整快捷键 / 操作</strong><button id="shortcutClose">×</button></div><div class="shortcut-list"><div><span>撤回</span><span><kbd>Ctrl</kbd>+<kbd>Z</kbd></span></div><div><span>反撤回</span><span><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></span></div><div><span>全选可见对象</span><span><kbd>Ctrl</kbd>+<kbd>A</kbd></span></div><div><span>清除选择</span><kbd>Esc</kbd></div><div><span>追加 / 取消多选</span><span><kbd>Shift</kbd>+点击</span></div><div><span>框选多个对象</span><span>空白处左键拖动</span></div><div><span>复制 / 粘贴</span><span><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd></span></div><div><span>复制一份</span><span><kbd>Ctrl</kbd>+<kbd>D</kbd></span></div><div><span>删除</span><kbd>Delete</kbd></div><div><span>移动 1px / 10px</span><span><kbd>方向键</kbd> / <kbd>Shift</kbd>+<kbd>方向键</kbd></span></div><div><span>居中定位选中对象</span><kbd>Home</kbd></div><div><span>缩放到选中对象</span><kbd>F</kbd></div><div><span>移动画布</span><span>中键拖动 / <kbd>Space</kbd>+左键拖动</span></div><div><span>缩放画布</span><span>鼠标滚轮</span></div><div><span>临时锁定纵横比</span><span>缩放时按 <kbd>Shift</kbd></span></div><div><span>旋转 15° 吸附</span><span>旋转时按 <kbd>Shift</kbd></span></div><div><span>创建参考线</span><span>从水平 / 垂直刻度拖出</span></div><div><span>删除参考线</span><span>双击参考线</span></div><div><span>重命名图层</span><span>双击图层名称</span></div><div><span>显示 / 隐藏本面板</span><kbd>?</kbd></div></div>';
+shortcutPanel.innerHTML='<div class="shortcut-head"><strong>完整快捷键 / 操作</strong><button id="shortcutClose">×</button></div><div class="shortcut-list"><div><span>撤回</span><span><kbd>Ctrl</kbd>+<kbd>Z</kbd></span></div><div><span>反撤回</span><span><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></span></div><div><span>全选可见对象</span><span><kbd>Ctrl</kbd>+<kbd>A</kbd></span></div><div><span>清除选择</span><kbd>Esc</kbd></div><div><span>追加 / 取消多选</span><span><kbd>Shift</kbd>+点击</span></div><div><span>框选多个对象</span><span>空白处左键拖动</span></div><div><span>复制 / 粘贴</span><span><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd></span></div><div><span>复制一份</span><span><kbd>Ctrl</kbd>+<kbd>D</kbd></span></div><div><span>删除</span><kbd>Delete</kbd></div><div><span>移动 1px / 10px</span><span><kbd>方向键</kbd> / <kbd>Shift</kbd>+<kbd>方向键</kbd></span></div><div><span>居中定位选中对象</span><kbd>Home</kbd></div><div><span>缩放到选中对象</span><kbd>F</kbd></div><div><span>移动画布</span><span>中键拖动 / <kbd>Space</kbd>+左键拖动</span></div><div><span>缩放画布</span><span>鼠标滚轮</span></div><div><span>临时锁定纵横比</span><span>缩放时按 <kbd>Shift</kbd></span></div><div><span>旋转 15° 吸附</span><span>旋转时按 <kbd>Shift</kbd></span></div><div><span>局部弧度形变</span><span>启用形变后拖紫色边缘点</span></div><div><span>颜色值输入</span><span>#HEX / rgb(...) / rgba(...)</span></div><div><span>创建参考线</span><span>从水平 / 垂直刻度拖出</span></div><div><span>删除参考线</span><span>双击参考线</span></div><div><span>重命名图层</span><span>双击图层名称</span></div><div><span>显示 / 隐藏本面板</span><kbd>?</kbd></div></div>';
 function updateSmartHint(){
   const el=$('#smartHint');if(!el)return;const n=selectedObjects().length;let msg='';
   if(spacePanHeld)msg='平移模式：按住 Space + 左键拖动 · 松开 Space 恢复编辑';
   else if(!n)msg='空白拖动框选 · Ctrl+A 全选 · Space / 中键平移 · 滚轮缩放 · ? 全部快捷键';
-  else if(n===1){const o=selected(),kind=objectKindName(o);msg=isLine(o)?'直线已选中 · 两端手柄调整长度 · 上方圆点旋转 · Home 居中 · F 缩放到选中 · ? 全部快捷键':o?.type==='box'?kind+'已选中 · 上方圆点旋转 · Shift 缩放锁比例 · Home 居中 · F 缩放到选中 · ? 全部快捷键':'文字已选中 · 上方圆点旋转 · Shift+点击追加多选 · Home 居中 · F 缩放到选中 · ? 全部快捷键'}
+  else if(n===1){const o=selected(),kind=objectKindName(o);msg=isFillShape(o)&&o.deformEnabled?kind+'形变模式 · 拖紫色边缘点形成弧度 · 平滑范围可在左侧调整 · ? 全部操作':isLine(o)?'直线已选中 · 两端手柄调整长度 · 上方圆点旋转 · Home 居中 · F 缩放到选中 · ? 全部快捷键':o?.type==='box'?kind+'已选中 · 上方圆点旋转 · Shift 缩放锁比例 · Home 居中 · F 缩放到选中 · ? 全部快捷键':'文字已选中 · 上方圆点旋转 · Shift+点击追加多选 · Home 居中 · F 缩放到选中 · ? 全部快捷键'}
   else msg=n+' 个对象已选中 · Shift+点击增减选择 · F 缩放到选中 · 方向键移动 · Delete 删除 · ? 全部快捷键';
   el.textContent=msg;el.title=msg+' · 点击查看完整快捷键'
 }
@@ -393,7 +448,7 @@ function refreshPanels(){
   ['objX','objY','objW','objH','objRotation'].forEach(id=>$('#'+id).disabled=!has||multi||locked);
   $('#lockAspect').disabled=!has||multi||locked||!fillShape;
   $('#aspectLockRow').style.display=fillShape?'flex':'none';
-  $('#boxPanel').hidden=!fillShape;$('#linePanel').hidden=!line;$('#shadowPanel').hidden=o?.type!=='box';$('#textPanel').hidden=o?.type!=='text';
+  $('#boxPanel').hidden=!fillShape;$('#deformPanel').hidden=!fillShape;$('#linePanel').hidden=!line;$('#shadowPanel').hidden=o?.type!=='box';$('#textPanel').hidden=o?.type!=='text';
   $('#deleteObj').disabled=multi?editableSelectedObjects().length===0:(!has||locked);
   if(!o){$('#layerName').value='';return}
   $('#layerName').value=o.name||'';$('#objX').value=Math.round(o.x);$('#objY').value=Math.round(o.y);$('#objRotation').value=Math.round(o.rotation||0);$('#lockAspect').checked=!!o.lockAspect;
@@ -401,7 +456,7 @@ function refreshPanels(){
     $('#sizeFields').style.display='grid';$('#objW').value=Math.round(o.w);$('#objH').value=Math.round(o.h);
     $('#objWLabel').textContent=line?'长度':'宽';$('#objHField').style.display=line?'none':'';$('#objWField').style.display='';$('#objWField').style.gridColumn=line?'1 / -1':'';
     if(line){
-      $('#lineColor').value=o.lineColor;$('#lineWidth').value=o.lineWidth;$('#lineOpacity').value=Math.round(o.lineOpacity*100);$('#lineOpacityVal').textContent=Math.round(o.lineOpacity*100)+'%';
+      staticColorEditors.lineColor.set(o.lineColor);$('#lineWidth').value=o.lineWidth;$('#lineOpacity').value=Math.round(o.lineOpacity*100);$('#lineOpacityVal').textContent=Math.round(o.lineOpacity*100)+'%';
       $('#linePanel').querySelectorAll('input,select,button,textarea').forEach(el=>el.disabled=locked||multi)
     }else{
       $('#shapePanelTitle').textContent=isEllipse(o)?'圆形外观':'方框外观';$('#radiusRow').style.display=isEllipse(o)?'none':'';
@@ -410,40 +465,84 @@ function refreshPanels(){
       $('#bgOpacity').value=Math.round(o.bgOpacity*100);$('#bgOpacityVal').textContent=Math.round(o.bgOpacity*100)+'%';
       $('#angle').value=o.angle;$('#angleVal').textContent=Math.round(o.angle)+'°';
       $('#boxImageOpacity').value=Math.round(o.imageOpacity*100);$('#boxImageOpacityVal').textContent=Math.round(o.imageOpacity*100)+'%';$('#boxImageFit').value=o.imageFit;
-      $('#borderOn').checked=o.borderOn;$('#borderWidth').value=o.borderWidth;$('#borderColor').value=o.borderColor;
+      $('#borderOn').checked=o.borderOn;$('#borderWidth').value=o.borderWidth;staticColorEditors.borderColor.set(o.borderColor);
       $('#borderOpacity').value=Math.round(o.borderOpacity*100);$('#borderOpacityVal').textContent=Math.round(o.borderOpacity*100)+'%';
       renderColorControls(o);
       $('#boxPanel').querySelectorAll('input,select,button,textarea').forEach(el=>el.disabled=locked||multi);
       $('#boxImageRemove').disabled=locked||multi||!o.imageRef
     }
-    $('#shadowOn').checked=!!o.shadowOn;$('#shadowX').value=finiteNumber(o.shadowX,0);$('#shadowY').value=finiteNumber(o.shadowY,0);$('#shadowBlur').value=Math.max(0,finiteNumber(o.shadowBlur,0));$('#shadowSpread').value=finiteNumber(o.shadowSpread,0);$('#shadowColor').value=o.shadowColor||'#000000';$('#shadowOpacity').value=Math.round(clamp(finiteNumber(o.shadowOpacity,.25),0,1)*100);$('#shadowOpacityVal').textContent=Math.round(clamp(finiteNumber(o.shadowOpacity,.25),0,1)*100)+'%';
+    if(fillShape){
+      $('#deformEnabled').checked=!!o.deformEnabled;$('#deformSmoothness').value=clamp(finiteNumber(o.deformSmoothness,58),20,90);$('#deformSmoothnessVal').textContent=Math.round(clamp(finiteNumber(o.deformSmoothness,58),20,90))+'%';
+      $('#deformPanel').querySelectorAll('input,select,button,textarea').forEach(el=>el.disabled=locked||multi)
+    }
+    $('#shadowOn').checked=!!o.shadowOn;$('#shadowX').value=finiteNumber(o.shadowX,0);$('#shadowY').value=finiteNumber(o.shadowY,0);$('#shadowBlur').value=Math.max(0,finiteNumber(o.shadowBlur,0));$('#shadowSpread').value=finiteNumber(o.shadowSpread,0);staticColorEditors.shadowColor.set(o.shadowColor||'#000000');$('#shadowOpacity').value=Math.round(clamp(finiteNumber(o.shadowOpacity,.25),0,1)*100);$('#shadowOpacityVal').textContent=Math.round(clamp(finiteNumber(o.shadowOpacity,.25),0,1)*100)+'%';
     $('#innerShadowSection').hidden=line;
-    if(!line){$('#innerShadowOn').checked=!!o.innerShadowOn;$('#innerShadowX').value=finiteNumber(o.innerShadowX,0);$('#innerShadowY').value=finiteNumber(o.innerShadowY,0);$('#innerShadowBlur').value=Math.max(0,finiteNumber(o.innerShadowBlur,0));$('#innerShadowSpread').value=finiteNumber(o.innerShadowSpread,0);$('#innerShadowColor').value=o.innerShadowColor||'#000000';$('#innerShadowOpacity').value=Math.round(clamp(finiteNumber(o.innerShadowOpacity,.18),0,1)*100);$('#innerShadowOpacityVal').textContent=Math.round(clamp(finiteNumber(o.innerShadowOpacity,.18),0,1)*100)+'%'}
+    if(!line){$('#innerShadowOn').checked=!!o.innerShadowOn;$('#innerShadowX').value=finiteNumber(o.innerShadowX,0);$('#innerShadowY').value=finiteNumber(o.innerShadowY,0);$('#innerShadowBlur').value=Math.max(0,finiteNumber(o.innerShadowBlur,0));$('#innerShadowSpread').value=finiteNumber(o.innerShadowSpread,0);staticColorEditors.innerShadowColor.set(o.innerShadowColor||'#000000');$('#innerShadowOpacity').value=Math.round(clamp(finiteNumber(o.innerShadowOpacity,.18),0,1)*100);$('#innerShadowOpacityVal').textContent=Math.round(clamp(finiteNumber(o.innerShadowOpacity,.18),0,1)*100)+'%'}
     $('#shadowHint').textContent=line?'直线没有内部区域，因此只支持外阴影。':'外阴影与内阴影可以同时启用，参数互不影响。';
     $('#shadowPanel').querySelectorAll('input,select,button,textarea').forEach(el=>el.disabled=locked||multi)
   }else{
     $('#sizeFields').style.display='none';$('#objHField').style.display='';$('#objWField').style.gridColumn='';$('#objWLabel').textContent='宽';
-    $('#textContent').value=o.content;$('#fontSize').value=o.fontSize;$('#textColor').value=o.color;
+    $('#textContent').value=o.content;$('#fontSize').value=o.fontSize;staticColorEditors.textColor.set(o.color);
     $('#textOpacity').value=Math.round(o.opacity*100);$('#textOpacityVal').textContent=Math.round(o.opacity*100)+'%';$('#fontWeight').value=o.fontWeight;ensureFontOption(o.fontFamily,o.fontFamily);$('#fontFamily').value=o.fontFamily;
     $('#textPanel').querySelectorAll('input,select,button,textarea').forEach(el=>el.disabled=locked)
   }
 }
+function syncColorEditor(textEl,pickerEl,value){
+  const normalized=normalizeColorValue(value,'#ffffff');textEl.value=normalized;textEl.classList.remove('invalid');pickerEl.value=colorToHex(normalized)
+}
+function bindColorEditor(textEl,pickerEl,onValue){
+  const apply=(raw,commit=false)=>{
+    const parsed=parseColorValue(raw);
+    textEl.classList.toggle('invalid',!parsed);
+    if(!parsed)return false;
+    textEl.value=parsed.css;pickerEl.value=parsed.hex;onValue(parsed.css,commit);return true
+  };
+  textEl.addEventListener('input',()=>{const parsed=parseColorValue(textEl.value);textEl.classList.toggle('invalid',!parsed);if(parsed){pickerEl.value=parsed.hex;onValue(parsed.css,false)}});
+  textEl.addEventListener('change',()=>{if(!apply(textEl.value,true)){textEl.classList.add('invalid')}});
+  textEl.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();textEl.blur()}});
+  pickerEl.addEventListener('input',()=>{textEl.value=pickerEl.value;textEl.classList.remove('invalid');onValue(pickerEl.value,false)});
+  pickerEl.addEventListener('change',()=>onValue(pickerEl.value,true));
+  return{set:value=>syncColorEditor(textEl,pickerEl,value),apply}
+}
+function makeColorEditor(value,onValue){
+  const wrap=document.createElement('div');wrap.className='color-editor';
+  const picker=document.createElement('input');picker.type='color';
+  const text=document.createElement('input');text.type='text';text.spellcheck=false;text.placeholder='#RRGGBB / rgba(...)';text.title='支持 #RGB、#RGBA、#RRGGBB、#RRGGBBAA、rgb(...)、rgba(...)';
+  wrap.append(picker,text);const binding=bindColorEditor(text,picker,onValue);binding.set(value);return{wrap,binding,text,picker}
+}
 function renderColorControls(o){
   const wrap=$('#colors');wrap.innerHTML='';
   o.colors.forEach((s,i)=>{
-    const r=document.createElement('div');r.className='color-row';r.innerHTML=`<input type="color" value="${s.c}"><input type="range" min="0" max="100" value="${s.p}" title="位置 ${s.p}%"><button class="remove">×</button>`;
-    const[c,p,rm]=r.children;c.oninput=e=>{s.c=e.target.value;renderObjects(false)};p.oninput=e=>{s.p=+e.target.value;p.title='位置 '+s.p+'%';renderObjects(false)};
-    rm.onclick=()=>{if(o.colors.length>1){o.colors.splice(i,1);renderObjects(true);commitHistory('删除对象渐变颜色')}};wrap.appendChild(r)
+    const r=document.createElement('div');r.className='color-row';
+    const editor=makeColorEditor(s.c,(value,commit)=>{s.c=value;renderObjects(false);if(commit)commitHistory('修改对象渐变颜色')});
+    const p=document.createElement('input');p.type='range';p.min='0';p.max='100';p.value=s.p;p.title='位置 '+s.p+'%';
+    const rm=document.createElement('button');rm.className='remove';rm.textContent='×';
+    p.oninput=()=>{s.p=+p.value;p.title='位置 '+s.p+'%';renderObjects(false)};
+    p.onchange=()=>commitHistory('调整对象渐变位置');
+    rm.onclick=()=>{if(o.colors.length>1){o.colors.splice(i,1);renderObjects(true);commitHistory('删除对象渐变颜色')}};
+    r.append(editor.wrap,p,rm);wrap.appendChild(r)
   })
 }
 function renderCanvasColorControls(){
   const wrap=$('#canvasColors');wrap.innerHTML='';
   state.canvasColors.forEach((s,i)=>{
-    const r=document.createElement('div');r.className='color-row';r.innerHTML=`<input type="color" value="${s.c}"><input type="range" min="0" max="100" value="${s.p}" title="位置 ${s.p}%"><button class="remove">×</button>`;
-    const[c,p,rm]=r.children;c.oninput=e=>{s.c=e.target.value;renderObjects(false)};p.oninput=e=>{s.p=+e.target.value;p.title='位置 '+s.p+'%';renderObjects(false)};
-    rm.onclick=()=>{if(state.canvasColors.length>1){state.canvasColors.splice(i,1);renderCanvasColorControls();renderObjects(false);commitHistory('删除画布渐变颜色')}};wrap.appendChild(r)
+    const r=document.createElement('div');r.className='color-row';
+    const editor=makeColorEditor(s.c,(value,commit)=>{s.c=value;renderObjects(false);if(commit)commitHistory('修改画布渐变颜色')});
+    const p=document.createElement('input');p.type='range';p.min='0';p.max='100';p.value=s.p;p.title='位置 '+s.p+'%';
+    const rm=document.createElement('button');rm.className='remove';rm.textContent='×';
+    p.oninput=()=>{s.p=+p.value;p.title='位置 '+s.p+'%';renderObjects(false)};
+    p.onchange=()=>commitHistory('调整画布渐变位置');
+    rm.onclick=()=>{if(state.canvasColors.length>1){state.canvasColors.splice(i,1);renderCanvasColorControls();renderObjects(false);commitHistory('删除画布渐变颜色')}};
+    r.append(editor.wrap,p,rm);wrap.appendChild(r)
   })
 }
+const staticColorEditors={
+  borderColor:bindColorEditor($('#borderColor'),$('#borderColorPicker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o))o.borderColor=value});if(commit)commitHistory('修改边框颜色')}),
+  shadowColor:bindColorEditor($('#shadowColor'),$('#shadowColorPicker'),(value,commit)=>{mutateSelected(o=>{if(o.type==='box')o.shadowColor=value});if(commit)commitHistory('修改外阴影颜色')}),
+  innerShadowColor:bindColorEditor($('#innerShadowColor'),$('#innerShadowColorPicker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o))o.innerShadowColor=value});if(commit)commitHistory('修改内阴影颜色')}),
+  lineColor:bindColorEditor($('#lineColor'),$('#lineColorPicker'),(value,commit)=>{mutateSelected(o=>{if(isLine(o))o.lineColor=value});if(commit)commitHistory('修改直线颜色')}),
+  textColor:bindColorEditor($('#textColor'),$('#textColorPicker'),(value,commit)=>{mutateSelected(o=>{if(o.type==='text')o.color=value});if(commit)commitHistory('修改文字颜色')})
+};
 
 let gesture=null;
 let spacePanHeld=false;
@@ -462,11 +561,13 @@ function bindObjectEvents(el,o){
     if(e.button===1||(e.button===0&&spacePanHeld)){e.stopPropagation();beginPan(e);return}
     if(e.button!==0)return;
     e.stopPropagation();
-    const dir=e.target.dataset.dir;
-    if(e.shiftKey&&!dir){selectObject(o,true);renderObjects();return}
+    const dir=e.target.dataset.dir,deformSide=e.target.dataset.deform;
+    if(e.shiftKey&&!dir&&!deformSide){selectObject(o,true);renderObjects();return}
     if(!state.selectedBoxIds.includes(o.id)){selectObject(o,false);renderObjects()}
     if(o.locked){gesture=null;return}
-    if(dir==='rotate'&&state.selectedBoxIds.length===1){
+    if(deformSide&&isFillShape(o)&&o.deformEnabled&&state.selectedBoxIds.length===1){
+      gesture={type:'deform',id:o.id,side:deformSide};el.classList.add('deforming')
+    }else if(dir==='rotate'&&state.selectedBoxIds.length===1){
       const s=getObjectSize(o),center={x:o.x+s.w/2,y:o.y+s.h/2},p=clientToWorld(e.clientX,e.clientY);
       gesture={type:'rotate',id:o.id,center,startAngle:Math.atan2(p.y-center.y,p.x-center.x),origRotation:o.rotation||0};
       el.classList.add('rotating')
@@ -489,17 +590,27 @@ function bindObjectEvents(el,o){
   })
 }
 function getObjectSize(o){if(o.type==='box')return{w:o.w,h:o.h};const m=textMetrics(measureCtx,o);return{w:m.w,h:m.h}}
+function getUnrotatedVisualRect(o){
+  const base=getObjectSize(o),cy=o.y+base.h/2;
+  if(isLine(o)){const h=Math.max(1,o.lineWidth);return{x:o.x,y:cy-h/2,w:o.w,h}}
+  if(isFillShape(o)&&o.deformEnabled){const d=deformValues(o),l=Math.max(0,d.left),r=Math.max(0,d.right),t=Math.max(0,d.top),b=Math.max(0,d.bottom);return{x:o.x-l,y:o.y-t,w:o.w+l+r,h:o.h+t+b}}
+  return{x:o.x,y:o.y,w:base.w,h:base.h}
+}
 function getObjectBounds(o){
-  const base=getObjectSize(o),s=isLine(o)?{w:o.w,h:Math.max(1,o.lineWidth)}:base,angle=((o.rotation||0)%360)*Math.PI/180,cx=o.x+base.w/2,cy=o.y+base.h/2;
-  if(Math.abs(angle)<1e-8)return{x:cx-s.w/2,y:cy-s.h/2,w:s.w,h:s.h};
-  const c=Math.abs(Math.cos(angle)),sn=Math.abs(Math.sin(angle)),w=s.w*c+s.h*sn,h=s.w*sn+s.h*c;
-  return{x:cx-w/2,y:cy-h/2,w,h}
+  const base=getObjectSize(o),cx=o.x+base.w/2,cy=o.y+base.h/2,rect=getUnrotatedVisualRect(o);
+  const angle=((o.rotation||0)%360)*Math.PI/180;if(Math.abs(angle)<1e-8)return rect;
+  const c=Math.cos(angle),s=Math.sin(angle),pts=[[rect.x,rect.y],[rect.x+rect.w,rect.y],[rect.x+rect.w,rect.y+rect.h],[rect.x,rect.y+rect.h]].map(([x,y])=>{const dx=x-cx,dy=y-cy;return{x:cx+dx*c-dy*s,y:cy+dx*s+dy*c}});
+  const minX=Math.min(...pts.map(p=>p.x)),minY=Math.min(...pts.map(p=>p.y)),maxX=Math.max(...pts.map(p=>p.x)),maxY=Math.max(...pts.map(p=>p.y));return{x:minX,y:minY,w:maxX-minX,h:maxY-minY}
 }
 function selectionBounds(items=selectedObjects()){
   if(!items.length)return null;const rects=items.map(getObjectBounds),x=Math.min(...rects.map(r=>r.x)),y=Math.min(...rects.map(r=>r.y)),right=Math.max(...rects.map(r=>r.x+r.w)),bottom=Math.max(...rects.map(r=>r.y+r.h));
   return{x,y,w:right-x,h:bottom-y}
 }
 function clientToWorld(clientX,clientY){const r=viewport.getBoundingClientRect();return{x:(clientX-r.left-state.panX)/state.zoom,y:(clientY-r.top-state.panY)/state.zoom}}
+function worldPointToObjectLocal(o,p){
+  const cx=o.x+o.w/2,cy=o.y+o.h/2,rad=-(o.rotation||0)*Math.PI/180,c=Math.cos(rad),s=Math.sin(rad),dx=p.x-cx,dy=p.y-cy;
+  return{x:dx*c-dy*s+o.w/2,y:dx*s+dy*c+o.h/2}
+}
 function rectsIntersect(a,b){return a.x<=b.x+b.w&&a.x+a.w>=b.x&&a.y<=b.y+b.h&&a.y+a.h>=b.y}
 function focusBounds(bounds,fit=false){
   if(!bounds)return;const pad=fit?150:0;
@@ -571,6 +682,15 @@ viewport.addEventListener('pointermove',e=>{
     const r=viewport.getBoundingClientRect(),x1=gesture.sx-r.left,y1=gesture.sy-r.top,x2=e.clientX-r.left,y2=e.clientY-r.top;
     selectionMarquee.style.left=Math.min(x1,x2)+'px';selectionMarquee.style.top=Math.min(y1,y2)+'px';selectionMarquee.style.width=Math.abs(x2-x1)+'px';selectionMarquee.style.height=Math.abs(y2-y1)+'px';return
   }
+  if(gesture.type==='deform'){
+    const o=state.objects.find(x=>x.id===gesture.id);if(!o||!isFillShape(o))return;const local=worldPointToObjectLocal(o,clientToWorld(e.clientX,e.clientY)),limit=Math.max(o.w,o.h)*1.5;let value=0;
+    if(gesture.side==='top')value=-local.y;
+    else if(gesture.side==='right')value=local.x-o.w;
+    else if(gesture.side==='bottom')value=local.y-o.h;
+    else if(gesture.side==='left')value=-local.x;
+    value=clamp(value,-limit,limit);if(Math.abs(value)<3/Math.max(.1,state.zoom))value=0;
+    o.deform=o.deform||{top:0,right:0,bottom:0,left:0};o.deform[gesture.side]=Math.round(value*100)/100;renderObjects(false);return
+  }
   if(gesture.type==='rotate'){
     const o=state.objects.find(x=>x.id===gesture.id);if(!o)return;const p=clientToWorld(e.clientX,e.clientY),a=Math.atan2(p.y-gesture.center.y,p.x-gesture.center.x),delta=(a-gesture.startAngle)*180/Math.PI;
     let rotation=gesture.origRotation+delta;if(e.shiftKey)rotation=Math.round(rotation/15)*15;o.rotation=Math.round(rotation*100)/100;renderObjects(false);$('#objRotation').value=Math.round(o.rotation);return
@@ -603,7 +723,7 @@ viewport.addEventListener('pointerdown',e=>{
 });
 viewport.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault()});
 viewport.addEventListener('pointerup',e=>{
-  if(!gesture||gesture.type==='guide')return;const g=gesture,type=g.type;gesture=null;viewport.classList.remove('panning');world.querySelectorAll('.rotating').forEach(el=>el.classList.remove('rotating'));
+  if(!gesture||gesture.type==='guide')return;const g=gesture,type=g.type;gesture=null;viewport.classList.remove('panning');world.querySelectorAll('.rotating,.deforming').forEach(el=>{el.classList.remove('rotating');el.classList.remove('deforming')});
   if(type==='marquee'){
     const moved=Math.hypot(e.clientX-g.sx,e.clientY-g.sy),a=clientToWorld(g.sx,g.sy),b=clientToWorld(e.clientX,e.clientY);
     selectionMarquee.classList.remove('show');
@@ -615,11 +735,11 @@ viewport.addEventListener('pointerup',e=>{
     renderObjects();updateSmartHint();return
   }
   clearSnapFeedback();
-  if(type==='move'||type==='moveGroup')commitHistory('移动对象');else if(type==='resize')commitHistory('调整对象尺寸');else if(type==='rotate')commitHistory('旋转对象')
+  if(type==='move'||type==='moveGroup')commitHistory('移动对象');else if(type==='resize')commitHistory('调整对象尺寸');else if(type==='rotate')commitHistory('旋转对象');else if(type==='deform')commitHistory('形变对象')
 });
 viewport.addEventListener('pointercancel',()=>{
-  if(!gesture||gesture.type==='guide')return;const type=gesture.type;gesture=null;viewport.classList.remove('panning');selectionMarquee.classList.remove('show');world.querySelectorAll('.rotating').forEach(el=>el.classList.remove('rotating'));clearSnapFeedback();
-  if(type==='move'||type==='moveGroup'||type==='resize'||type==='rotate')commitHistory(type==='resize'?'调整对象尺寸':type==='rotate'?'旋转对象':'移动对象')
+  if(!gesture||gesture.type==='guide')return;const type=gesture.type;gesture=null;viewport.classList.remove('panning');selectionMarquee.classList.remove('show');world.querySelectorAll('.rotating,.deforming').forEach(el=>{el.classList.remove('rotating');el.classList.remove('deforming')});clearSnapFeedback();
+  if(type==='move'||type==='moveGroup'||type==='resize'||type==='rotate'||type==='deform')commitHistory(type==='resize'?'调整对象尺寸':type==='rotate'?'旋转对象':type==='deform'?'形变对象':'移动对象')
 });
 
 const RULER_SIZE=28;
@@ -681,6 +801,10 @@ $('#layerName').oninput=e=>{const o=selected();if(!o||hasMultiBoxes()||o.locked)
 $('#objX').oninput=e=>mutateSelected(o=>o.x=+e.target.value||0);$('#objY').oninput=e=>mutateSelected(o=>o.y=+e.target.value||0);
 $('#objRotation').oninput=e=>mutateSelected(o=>o.rotation=finiteNumber(e.target.value,0));
 $('#lockAspect').onchange=e=>mutateSelected(o=>{if(isFillShape(o))o.lockAspect=e.target.checked});
+$('#deformEnabled').onchange=e=>{mutateSelected(o=>{if(isFillShape(o)){o.deformEnabled=e.target.checked;o.deform=o.deform||{top:0,right:0,bottom:0,left:0}}},true);commitHistory(e.target.checked?'启用局部形变':'关闭局部形变')};
+$('#deformSmoothness').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.deformSmoothness=clamp(+e.target.value||58,20,90)});$('#deformSmoothnessVal').textContent=e.target.value+'%'};
+$('#deformSmoothness').onchange=()=>commitHistory('调整形变平滑范围');
+$('#resetDeform').onclick=()=>{mutateSelected(o=>{if(isFillShape(o)){o.deform={top:0,right:0,bottom:0,left:0}}},true);commitHistory('重置形变')};
 $('#objW').oninput=e=>mutateSelected(o=>{if(o.type!=='box')return;const ratio=o.w/Math.max(1,o.h),w=Math.max(20,+e.target.value||20);o.w=w;if(o.lockAspect&&!isLine(o))o.h=Math.max(20,w/ratio)},true);
 $('#objH').oninput=e=>mutateSelected(o=>{if(o.type!=='box'||isLine(o))return;const ratio=o.w/Math.max(1,o.h),h=Math.max(20,+e.target.value||20);o.h=h;if(o.lockAspect)o.w=Math.max(20,h*ratio)},true);
 $('#radius').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.radius=+e.target.value});$('#radiusVal').textContent=e.target.value+'px'};
@@ -689,9 +813,8 @@ $('#bgOpacity').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.bgOpacity=+e.
 $('#angle').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.angle=+e.target.value});$('#angleVal').textContent=e.target.value+'°'};
 $('#addColor').onclick=()=>{mutateSelected(o=>{if(isFillShape(o))o.colors.push({c:'#ffffff',p:100})},true);commitHistory('添加对象渐变颜色')};
 $('#borderOn').oninput=e=>mutateSelected(o=>o.borderOn=e.target.checked);$('#borderWidth').oninput=e=>mutateSelected(o=>o.borderWidth=Math.max(0,+e.target.value||0));
-$('#borderColor').oninput=e=>mutateSelected(o=>o.borderColor=e.target.value);$('#borderOpacity').oninput=e=>{mutateSelected(o=>o.borderOpacity=+e.target.value/100);$('#borderOpacityVal').textContent=e.target.value+'%'};
+$('#borderOpacity').oninput=e=>{mutateSelected(o=>o.borderOpacity=+e.target.value/100);$('#borderOpacityVal').textContent=e.target.value+'%'};
 $('#boxImageOpacity').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.imageOpacity=+e.target.value/100});$('#boxImageOpacityVal').textContent=e.target.value+'%'};$('#boxImageFit').onchange=e=>mutateSelected(o=>{if(isFillShape(o))o.imageFit=e.target.value});
-$('#lineColor').oninput=e=>mutateSelected(o=>{if(isLine(o))o.lineColor=e.target.value});
 $('#lineWidth').oninput=e=>mutateSelected(o=>{if(isLine(o))o.lineWidth=clamp(+e.target.value||1,1,100)},true);
 $('#lineOpacity').oninput=e=>{mutateSelected(o=>{if(isLine(o))o.lineOpacity=+e.target.value/100});$('#lineOpacityVal').textContent=e.target.value+'%'};
 $('#shadowOn').oninput=e=>mutateSelected(o=>{if(o.type==='box')o.shadowOn=e.target.checked});
@@ -699,16 +822,14 @@ $('#shadowX').oninput=e=>mutateSelected(o=>{if(o.type==='box')o.shadowX=clamp(fi
 $('#shadowY').oninput=e=>mutateSelected(o=>{if(o.type==='box')o.shadowY=clamp(finiteNumber(e.target.value,0),-200,200)});
 $('#shadowBlur').oninput=e=>mutateSelected(o=>{if(o.type==='box')o.shadowBlur=clamp(finiteNumber(e.target.value,0),0,200)});
 $('#shadowSpread').oninput=e=>mutateSelected(o=>{if(o.type==='box')o.shadowSpread=clamp(finiteNumber(e.target.value,0),-100,200)});
-$('#shadowColor').oninput=e=>mutateSelected(o=>{if(o.type==='box')o.shadowColor=e.target.value});
 $('#shadowOpacity').oninput=e=>{mutateSelected(o=>{if(o.type==='box')o.shadowOpacity=+e.target.value/100});$('#shadowOpacityVal').textContent=e.target.value+'%'};
 $('#innerShadowOn').oninput=e=>mutateSelected(o=>{if(isFillShape(o))o.innerShadowOn=e.target.checked});
 $('#innerShadowX').oninput=e=>mutateSelected(o=>{if(isFillShape(o))o.innerShadowX=clamp(finiteNumber(e.target.value,0),-200,200)});
 $('#innerShadowY').oninput=e=>mutateSelected(o=>{if(isFillShape(o))o.innerShadowY=clamp(finiteNumber(e.target.value,0),-200,200)});
 $('#innerShadowBlur').oninput=e=>mutateSelected(o=>{if(isFillShape(o))o.innerShadowBlur=clamp(finiteNumber(e.target.value,0),0,200)});
 $('#innerShadowSpread').oninput=e=>mutateSelected(o=>{if(isFillShape(o))o.innerShadowSpread=clamp(finiteNumber(e.target.value,0),-100,200)});
-$('#innerShadowColor').oninput=e=>mutateSelected(o=>{if(isFillShape(o))o.innerShadowColor=e.target.value});
 $('#innerShadowOpacity').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.innerShadowOpacity=+e.target.value/100});$('#innerShadowOpacityVal').textContent=e.target.value+'%'};
-$('#textContent').oninput=e=>mutateSelected(o=>o.content=e.target.value);$('#fontSize').oninput=e=>mutateSelected(o=>o.fontSize=clamp(+e.target.value||6,6,400));$('#textColor').oninput=e=>mutateSelected(o=>o.color=e.target.value);$('#textOpacity').oninput=e=>{mutateSelected(o=>o.opacity=+e.target.value/100);$('#textOpacityVal').textContent=e.target.value+'%'};$('#fontWeight').oninput=e=>mutateSelected(o=>o.fontWeight=e.target.value);$('#fontFamily').oninput=e=>mutateSelected(o=>o.fontFamily=e.target.value);
+$('#textContent').oninput=e=>mutateSelected(o=>o.content=e.target.value);$('#fontSize').oninput=e=>mutateSelected(o=>o.fontSize=clamp(+e.target.value||6,6,400));$('#textOpacity').oninput=e=>{mutateSelected(o=>o.opacity=+e.target.value/100);$('#textOpacityVal').textContent=e.target.value+'%'};$('#fontWeight').oninput=e=>mutateSelected(o=>o.fontWeight=e.target.value);$('#fontFamily').oninput=e=>mutateSelected(o=>o.fontFamily=e.target.value);
 
 function readFileAsDataURL(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error||new Error('读取文件失败'));r.readAsDataURL(file)})}
 $('#boxImageUpload').onclick=()=>{const o=selected();if(isFillShape(o)&&!o.locked&&!hasMultiBoxes())$('#boxImageFile').click()};
@@ -1009,7 +1130,7 @@ function jumpHistory(id){
   $('#rightbarShell').classList.add('history-open');$('.history-group').classList.add('open')
 }
 
-const PROJECT_FORMAT='transparent-canvas-editor',PROJECT_VERSION=9;
+const PROJECT_FORMAT='transparent-canvas-editor',PROJECT_VERSION=10;
 function projectSnapshot(){return{format:PROJECT_FORMAT,version:PROJECT_VERSION,savedAt:new Date().toISOString(),assets:{images:exportImageAssets(),fonts:structuredClone(state.customFonts)},canvas:{width:state.canvasW,height:state.canvasH,backgroundOpacity:state.canvasBgOpacity,gradientType:state.canvasGradientType,gradientAngle:state.canvasAngle,colors:structuredClone(state.canvasColors),imageRef:state.canvasImageRef,imageOpacity:state.canvasImageOpacity,imageFit:state.canvasImageFit},objects:structuredClone(state.objects),assists:{snapEnabled:state.snapEnabled,guidesVisible:state.guidesVisible,guides:structuredClone(state.guides)},view:{zoom:state.zoom,panX:state.panX,panY:state.panY},selectedId:state.selectedId,selectedBoxIds:[...state.selectedBoxIds]}}
 function setDataStatus(msg,type='',duration=1800){
   const el=$('#dataStatus');clearTimeout(statusTimer);el.textContent=msg;el.className='right-status show'+(type?' '+type:'');
@@ -1041,7 +1162,7 @@ $('#workspaceLocation').onclick=async()=>{
 };
 $('#importData').onclick=()=>$('#importDataFile').click();
 function finiteNumber(v,f){v=Number(v);return Number.isFinite(v)?v:f}
-function cleanColor(v,f='#ffffff'){return typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v)?v:f}
+function cleanColor(v,f='#ffffff'){return normalizeColorValue(v,f)}
 function cleanStops(list,fallback){if(!Array.isArray(list)||!list.length)return structuredClone(fallback);return list.slice(0,32).map((s,i)=>({c:cleanColor(s?.c,i?'#dfe7f2':'#ffffff'),p:clamp(finiteNumber(s?.p,i?100:0),0,100)}))}
 function cleanFit(v){return['cover','contain','stretch'].includes(v)?v:'cover'}
 function cleanGradientType(v){return v==='radial'?'radial':'linear'}
@@ -1073,6 +1194,9 @@ function normalizeObject(raw,idFallback,assetAliases=new Map()){
       innerShadowSpread:clamp(finiteNumber(raw.innerShadowSpread,legacyInner?raw.shadowSpread:0),-100,200),
       innerShadowColor:cleanColor(raw.innerShadowColor,legacyInner?cleanColor(raw.shadowColor,innerDefaultColor):innerDefaultColor),
       innerShadowOpacity:clamp(finiteNumber(raw.innerShadowOpacity,legacyInner?raw.shadowOpacity:(shape==='ellipse'?.16:.18)),0,1),
+      deformEnabled:shape!=='line'&&raw.deformEnabled===true,
+      deformSmoothness:clamp(finiteNumber(raw.deformSmoothness,58),20,90),
+      deform:shape==='line'?{top:0,right:0,bottom:0,left:0}:{top:clamp(finiteNumber(raw.deform?.top,0),-20000,20000),right:clamp(finiteNumber(raw.deform?.right,0),-20000,20000),bottom:clamp(finiteNumber(raw.deform?.bottom,0),-20000,20000),left:clamp(finiteNumber(raw.deform?.left,0),-20000,20000)},
       lineColor:cleanColor(raw.lineColor,'#2563eb'),lineWidth:clamp(finiteNumber(raw.lineWidth,4),1,100),lineOpacity:clamp(finiteNumber(raw.lineOpacity,1),0,1)
     }
   }
@@ -1098,8 +1222,39 @@ function appendRoundedRectPath(ctx,x,y,w,h,r){
   w=Math.max(.01,w);h=Math.max(.01,h);r=Math.max(0,Math.min(r,w/2,h/2));
   ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()
 }
+function appendSmoothHorizontalEdge(ctx,sx,sy,mx,my,ex,ey,k){
+  let d=mx-sx;ctx.bezierCurveTo(sx+d*k,sy,mx-d*k,my,mx,my);
+  d=ex-mx;ctx.bezierCurveTo(mx+d*k,my,ex-d*k,ey,ex,ey)
+}
+function appendSmoothVerticalEdge(ctx,sx,sy,mx,my,ex,ey,k){
+  let d=my-sy;ctx.bezierCurveTo(sx,sy+d*k,mx,my-d*k,mx,my);
+  d=ey-my;ctx.bezierCurveTo(mx,my+d*k,ex,ey-d*k,ex,ey)
+}
+function appendDeformedRectPath(ctx,o,inset=0){
+  const x=o.x+inset,y=o.y+inset,w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2),r=Math.max(0,Math.min(o.radius-inset,w/2,h/2)),d=deformValues(o),smooth=clamp(finiteNumber(o.deformSmoothness,58),20,90)/100,k=.2+smooth*.6;
+  const cx=x+w/2,cy=y+h/2;
+  ctx.moveTo(x+r,y);
+  appendSmoothHorizontalEdge(ctx,x+r,y,cx,y-d.top,x+w-r,y,k);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  appendSmoothVerticalEdge(ctx,x+w,y+r,x+w+d.right,cy,x+w,y+h-r,k);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  appendSmoothHorizontalEdge(ctx,x+w-r,y+h,cx,y+h+d.bottom,x+r,y+h,k);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  appendSmoothVerticalEdge(ctx,x,y+h-r,x-d.left,cy,x,y+r,k);
+  ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath()
+}
+function appendDeformedEllipsePath(ctx,o,inset=0){
+  const x=o.x+inset,y=o.y+inset,w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2),cx=x+w/2,cy=y+h/2,d=deformValues(o),smooth=clamp(finiteNumber(o.deformSmoothness,58),20,90)/100,k=.35+smooth*.35;
+  const T={x:cx,y:y-d.top},R={x:x+w+d.right,y:cy},B={x:cx,y:y+h+d.bottom},L={x:x-d.left,y:cy};
+  ctx.moveTo(T.x,T.y);
+  ctx.bezierCurveTo(T.x+(R.x-T.x)*k,T.y,R.x,R.y-(R.y-T.y)*k,R.x,R.y);
+  ctx.bezierCurveTo(R.x,R.y+(B.y-R.y)*k,B.x+(R.x-B.x)*k,B.y,B.x,B.y);
+  ctx.bezierCurveTo(B.x+(L.x-B.x)*k,B.y,L.x,L.y+(B.y-L.y)*k,L.x,L.y);
+  ctx.bezierCurveTo(L.x,L.y+(T.y-L.y)*k,T.x+(L.x-T.x)*k,T.y,T.x,T.y);ctx.closePath()
+}
 function appendShapeSubpath(ctx,o,inset=0){
   const x=o.x+inset,y=o.y+inset,w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2);
+  if(o.deformEnabled&&isFillShape(o)){if(isEllipse(o))appendDeformedEllipsePath(ctx,o,inset);else appendDeformedRectPath(ctx,o,inset);return}
   if(isEllipse(o)){ctx.moveTo(x+w,y+h/2);ctx.ellipse(x+w/2,y+h/2,w/2,h/2,0,0,Math.PI*2);ctx.closePath()}
   else appendRoundedRectPath(ctx,x,y,w,h,Math.max(0,o.radius-inset))
 }
@@ -1143,8 +1298,8 @@ async function drawBox(ctx,o){
     ctx.globalAlpha=o.lineOpacity;ctx.strokeStyle=o.lineColor;ctx.lineWidth=o.lineWidth;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(o.x,o.y+o.h/2);ctx.lineTo(o.x+o.w,o.y+o.h/2);ctx.stroke();ctx.restore();return
   }
   ctx.save();beginShapePath(ctx,o,0);ctx.clip();
-  const boxSrc=imageAssetValue(o.imageRef);if(boxSrc){const img=await loadImage(boxSrc);ctx.save();ctx.globalAlpha=o.imageOpacity;drawImageFit(ctx,img,o.x,o.y,o.w,o.h,o.imageFit);ctx.restore()}
-  if(o.bgOpacity>0){ctx.save();ctx.globalAlpha=o.bgOpacity;ctx.fillStyle=createGradient(ctx,o.x,o.y,o.w,o.h,o.colors,o.angle,o.gradientType);ctx.fillRect(o.x,o.y,o.w,o.h);ctx.restore()}
+  const visual=getUnrotatedVisualRect(o),boxSrc=imageAssetValue(o.imageRef);if(boxSrc){const img=await loadImage(boxSrc);ctx.save();ctx.globalAlpha=o.imageOpacity;drawImageFit(ctx,img,visual.x,visual.y,visual.w,visual.h,o.imageFit);ctx.restore()}
+  if(o.bgOpacity>0){ctx.save();ctx.globalAlpha=o.bgOpacity;ctx.fillStyle=createGradient(ctx,visual.x,visual.y,visual.w,visual.h,o.colors,o.angle,o.gradientType);ctx.fillRect(visual.x,visual.y,visual.w,visual.h);ctx.restore()}
   ctx.restore();
   drawObjectInnerShadow(ctx,o);
   if(o.borderOn&&o.borderWidth>0){ctx.strokeStyle=rgba(o.borderColor,o.borderOpacity);ctx.lineWidth=o.borderWidth;beginShapePath(ctx,o,o.borderWidth/2);ctx.stroke()}

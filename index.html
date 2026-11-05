@@ -74,6 +74,7 @@
         <div class="row"><label>渐变蒙层透明度 <span id="bgOpacityVal"></span></label><input id="bgOpacity" type="range" min="0" max="100"></div>
         <div class="row" id="angleRow"><label>渐变角度 <span id="angleVal"></span></label><input id="angle" type="range" min="0" max="360"></div>
         <div id="colors"></div>
+        <div class="hint">色值可直接输入：#RGB / #RGBA / #RRGGBB / #RRGGBBAA / rgb(...) / rgba(...)</div>
         <button class="add-stop" id="addColor">＋ 添加渐变颜色</button>
 
         <div class="subsection">
@@ -92,9 +93,17 @@
           <div class="section-title">边框</div>
           <label class="toggle"><input id="borderOn" type="checkbox"> 显示边框</label>
           <div class="row"><label>边框宽度</label><input id="borderWidth" type="number" min="0" max="30"></div>
-          <div class="row"><label>边框颜色</label><input id="borderColor" type="color"></div>
+          <div class="row color-value-row"><label>边框颜色</label><div class="color-editor"><input id="borderColorPicker" type="color"><input id="borderColor" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
           <div class="row"><label>边框透明度 <span id="borderOpacityVal"></span></label><input id="borderOpacity" type="range" min="0" max="100"></div>
         </div>
+      </section>
+
+      <section class="section object-card" id="deformPanel" hidden>
+        <div class="section-title">局部弧度形变</div>
+        <label class="toggle"><input id="deformEnabled" type="checkbox"> 启用形变点</label>
+        <div class="row"><label>平滑范围 <span id="deformSmoothnessVal"></span></label><input id="deformSmoothness" type="range" min="20" max="90" value="58"></div>
+        <button class="smallbtn full" id="resetDeform">重置形变</button>
+        <div class="hint mt8">启用后对象四边出现紫色形变点。向外拖形成鼓包，向内拖形成凹弧；旁边轮廓会按平滑范围自动过渡。</div>
       </section>
 
       <section class="section object-card" id="shadowPanel" hidden>
@@ -111,7 +120,7 @@
             <div class="row"><label>模糊</label><input id="shadowBlur" type="number" min="0" max="200" step="1"></div>
             <div class="row"><label>扩散</label><input id="shadowSpread" type="number" min="-100" max="200" step="1"></div>
           </div>
-          <div class="row"><label>颜色</label><input id="shadowColor" type="color"></div>
+          <div class="row color-value-row"><label>颜色</label><div class="color-editor"><input id="shadowColorPicker" type="color"><input id="shadowColor" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
           <div class="row"><label>透明度 <span id="shadowOpacityVal"></span></label><input id="shadowOpacity" type="range" min="0" max="100"></div>
         </div>
 
@@ -126,7 +135,7 @@
             <div class="row"><label>模糊</label><input id="innerShadowBlur" type="number" min="0" max="200" step="1"></div>
             <div class="row"><label>扩散</label><input id="innerShadowSpread" type="number" min="-100" max="200" step="1"></div>
           </div>
-          <div class="row"><label>颜色</label><input id="innerShadowColor" type="color"></div>
+          <div class="row color-value-row"><label>颜色</label><div class="color-editor"><input id="innerShadowColorPicker" type="color"><input id="innerShadowColor" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
           <div class="row"><label>透明度 <span id="innerShadowOpacityVal"></span></label><input id="innerShadowOpacity" type="range" min="0" max="100"></div>
         </div>
 
@@ -135,7 +144,7 @@
 
       <section class="section object-card" id="linePanel" hidden>
         <div class="section-title">直线属性</div>
-        <div class="row"><label>线条颜色</label><input id="lineColor" type="color"></div>
+        <div class="row color-value-row"><label>线条颜色</label><div class="color-editor"><input id="lineColorPicker" type="color"><input id="lineColor" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
         <div class="row"><label>线宽</label><input id="lineWidth" type="number" min="1" max="100"></div>
         <div class="row"><label>透明度 <span id="lineOpacityVal"></span></label><input id="lineOpacity" type="range" min="0" max="100"></div>
         <div class="hint">直线长度使用上方“长度”参数；拖动两端缩放手柄可调整长度，旋转手柄可改变方向。</div>
@@ -145,7 +154,7 @@
         <div class="section-title">文字属性</div>
         <textarea id="textContent" placeholder="输入文字"></textarea>
         <div class="row"><label>字号</label><input id="fontSize" type="number" min="6" max="400"></div>
-        <div class="row"><label>颜色</label><input id="textColor" type="color"></div>
+        <div class="row color-value-row"><label>颜色</label><div class="color-editor"><input id="textColorPicker" type="color"><input id="textColor" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
         <div class="row"><label>透明度 <span id="textOpacityVal"></span></label><input id="textOpacity" type="range" min="0" max="100"></div>
         <div class="row"><label>字重</label><select id="fontWeight"><option value="400">常规</option><option value="500">中等</option><option value="600">半粗</option><option value="700">粗体</option></select></div>
         <div class="row"><label>字体</label><select id="fontFamily">
@@ -193,6 +202,7 @@
         <div class="row"><label>透明度 <span id="canvasBgOpacityVal"></span></label><input id="canvasBgOpacity" type="range" min="0" max="100"></div>
         <div class="row" id="canvasAngleRow"><label>渐变角度 <span id="canvasAngleVal"></span></label><input id="canvasAngle" type="range" min="0" max="360"></div>
         <div id="canvasColors"></div>
+        <div class="hint">色值可直接输入：#RGB / #RGBA / #RRGGBB / #RRGGBBAA / rgb(...) / rgba(...)</div>
         <button class="add-stop" id="canvasAddColor">＋ 添加渐变颜色</button>
       </section>
 
