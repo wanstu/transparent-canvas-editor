@@ -59,6 +59,10 @@
           <div class="row"><label>宽</label><input id="objW" type="number" min="10"></div>
           <div class="row"><label>高</label><input id="objH" type="number" min="10"></div>
         </div>
+        <div class="inline2">
+          <div class="row"><label>旋转</label><input id="objRotation" type="number" min="-360" max="360" step="1"></div>
+          <label class="toggle aspect-lock" id="aspectLockRow"><input id="lockAspect" type="checkbox"> 锁定纵横比</label>
+        </div>
       </section>
 
       <section class="section object-card" id="boxPanel">
@@ -172,6 +176,8 @@
 
   <main class="workspace">
     <div class="viewport" id="viewport"><div class="world" id="world"></div></div>
+    <div class="snap-overlay" id="snapOverlay"></div>
+    <div class="selection-marquee" id="selectionMarquee"></div>
     <div class="guide-layer" id="guideLayer"></div>
     <canvas class="ruler top" id="topRuler"></canvas>
     <canvas class="ruler left" id="leftRuler"></canvas>
@@ -233,7 +239,7 @@
     <input id="importDataFile" type="file" accept="application/json,.json" hidden>
     <div class="context-menu" id="contextMenu" role="menu"></div>
     <div class="right-status" id="dataStatus" aria-live="polite"></div>
-    <div class="help">水平 / 垂直刻度 · Shift 多选方框 · 右侧按组展开工具 · Ctrl+Z / Ctrl+Y</div>
+    <button class="help" id="smartHint" type="button" title="点击查看全部快捷键">Space / 中键拖动画布 · 滚轮缩放 · Ctrl+A 全选 · ? 查看全部快捷键</button>
   </main>
 </div>
 <script src="app.js"></script>

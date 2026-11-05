@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s);
-const world=$('#world'),viewport=$('#viewport'),guideLayer=$('#guideLayer'),topRuler=$('#topRuler'),leftRuler=$('#leftRuler');
+const world=$('#world'),viewport=$('#viewport'),guideLayer=$('#guideLayer'),snapOverlay=$('#snapOverlay'),selectionMarquee=$('#selectionMarquee'),topRuler=$('#topRuler'),leftRuler=$('#leftRuler');
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const state={
   objects:[],selectedId:null,selectedBoxIds:[],nextId:1,
@@ -23,6 +23,9 @@ const imageCache=new Map();
 const previewImageCache=new Map();
 const previewBuilds=new Map();
 const loadedCustomFontFamilies=new Set();
+const layerNodeCache=new Map();
+const objectNodeCache=new Map();
+let worldUpdateRAF=0;
 const measureCtx=document.createElement('canvas').getContext('2d');
 const uid=()=>state.nextId++;
 const hexToRgb=h=>{h=(h||'#ffffff').replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]};
@@ -138,8 +141,8 @@ function cleanupUnusedResources(){
   return{imagesRemoved,fontsRemoved}
 }
 
-function defaultBox(){return{id:uid(),type:'box',name:'方框',visible:true,locked:false,x:180,y:150,w:420,h:300,radius:28,bgOpacity:.88,angle:135,colors:[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:true,borderWidth:2,borderColor:'#ffffff',borderOpacity:.9,shadowOn:true}}
-function defaultText(){return{id:uid(),type:'text',name:'文字',visible:true,locked:false,x:260,y:230,content:'文字',fontSize:48,color:'#111827',opacity:1,fontWeight:'400',fontFamily:'"Microsoft YaHei",sans-serif'}}
+function defaultBox(){return{id:uid(),type:'box',name:'方框',visible:true,locked:false,rotation:0,lockAspect:false,x:180,y:150,w:420,h:300,radius:28,bgOpacity:.88,angle:135,colors:[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:true,borderWidth:2,borderColor:'#ffffff',borderOpacity:.9,shadowOn:true}}
+function defaultText(){return{id:uid(),type:'text',name:'文字',visible:true,locked:false,rotation:0,x:260,y:230,content:'文字',fontSize:48,color:'#111827',opacity:1,fontWeight:'400',fontFamily:'"Microsoft YaHei",sans-serif'}}
 function selected(){return state.objects.find(o=>o.id===state.selectedId)||null}
 function selectedObjects(){const ids=new Set(state.selectedBoxIds);return state.objects.filter(o=>ids.has(o.id))}
 function editableSelectedObjects(){return selectedObjects().filter(o=>!o.locked)}
@@ -167,18 +170,18 @@ function beginInlineLayerRename(row,o){
   if(o.locked){setDataStatus('锁定对象不能重命名','err');return}
   const nameEl=row.querySelector('.layer-name');if(!nameEl||row.querySelector('.layer-name-input'))return;
   row.draggable=false;const input=document.createElement('input');input.className='layer-name-input';input.type='text';input.value=o.name||'';input.maxLength=200;nameEl.replaceWith(input);input.focus();input.select();
-  let done=false;const finish=save=>{if(done)return;done=true;const old=o.name||'';if(save)o.name=input.value;row.draggable=!o.locked;renderLayers();if(save&&o.name!==old){$('#layerName').value=o.name;commitHistory('重命名图层')}};
+  let done=false;const finish=save=>{if(done)return;done=true;const old=o.name||'';if(save)o.name=input.value;row.draggable=!o.locked;const span=document.createElement('span');span.className='layer-name';span.title='双击重命名';span.textContent=o.name||((o.type==='box'?'方框':'文字')+' '+o.id);input.replaceWith(span);renderLayers();if(save&&o.name!==old){$('#layerName').value=o.name;commitHistory('重命名图层')}};
   input.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();finish(true)}else if(e.key==='Escape'){e.preventDefault();finish(false)}});
   input.addEventListener('blur',()=>finish(true))
 }
-function handleHTML(){return'<i class="handle nw" data-dir="nw"></i><i class="handle n" data-dir="n"></i><i class="handle ne" data-dir="ne"></i><i class="handle e" data-dir="e"></i><i class="handle se" data-dir="se"></i><i class="handle s" data-dir="s"></i><i class="handle sw" data-dir="sw"></i><i class="handle w" data-dir="w"></i>'}
+function handleHTML(){return'<i class="handle nw" data-dir="nw"></i><i class="handle n" data-dir="n"></i><i class="handle ne" data-dir="ne"></i><i class="handle e" data-dir="e"></i><i class="handle se" data-dir="se"></i><i class="handle s" data-dir="s"></i><i class="handle sw" data-dir="sw"></i><i class="handle w" data-dir="w"></i><i class="rotate-handle" data-dir="rotate" title="拖动旋转；Shift 按 15° 吸附"></i>'}
 function updateWorldDom(){
   const cimg=world.querySelector('.canvas-image-layer'),cbg=world.querySelector('.canvas-bg-layer');
   if(cimg){const p=previewImageUrl(state.canvasImageRef);cimg.style.backgroundImage=p?`url("${p}")`:'none';cimg.style.backgroundSize=fitCSS(state.canvasImageFit);cimg.style.opacity=state.canvasImageOpacity}
   if(cbg){cbg.style.background=gradientCSS(state.canvasColors,state.canvasAngle);cbg.style.opacity=state.canvasBgOpacity}
   state.objects.forEach((o,i)=>{
-    const el=world.querySelector(`.object[data-id="${o.id}"]`);if(!el)return;
-    el.style.left=o.x+'px';el.style.top=o.y+'px';el.style.zIndex=i+3;
+    const el=objectNodeCache.get(o.id);if(!el)return;
+    el.style.left=o.x+'px';el.style.top=o.y+'px';el.style.zIndex=i+3;el.style.transform=`rotate(${o.rotation||0}deg)`;el.style.transformOrigin='50% 50%';
     if(o.type==='box'){
       el.style.width=o.w+'px';el.style.height=o.h+'px';el.style.borderRadius=o.radius+'px';
       el.style.border=o.borderOn?`${o.borderWidth}px solid ${rgba(o.borderColor,o.borderOpacity)}`:'none';el.style.boxShadow=o.shadowOn?'0 16px 34px rgba(35,46,63,.22)':'none';
@@ -186,13 +189,17 @@ function updateWorldDom(){
       if(img){img.style.backgroundImage=p?`url("${p}")`:'none';img.style.backgroundSize=fitCSS(o.imageFit);img.style.opacity=o.imageOpacity}
       if(fill){fill.style.background=gradientCSS(o.colors,o.angle);fill.style.opacity=o.bgOpacity}
     }else{
-      if(el.textContent!==o.content)el.textContent=o.content;el.style.fontSize=o.fontSize+'px';el.style.color=o.color;el.style.opacity=o.opacity;el.style.fontWeight=o.fontWeight;el.style.fontFamily=o.fontFamily
+      const content=el.querySelector('.text-content');if(content&&content.textContent!==o.content)content.textContent=o.content;el.style.fontSize=o.fontSize+'px';el.style.color=o.color;el.style.opacity=o.opacity;el.style.fontWeight=o.fontWeight;el.style.fontFamily=o.fontFamily
     }
   })
 }
 function renderObjects(syncUI=true){
-  if(!syncUI&&world.querySelector('.canvas-bg-layer')){updateWorldDom();return}
-  world.innerHTML='';
+  if(!syncUI&&world.querySelector('.canvas-bg-layer')){
+    if(!worldUpdateRAF)worldUpdateRAF=requestAnimationFrame(()=>{worldUpdateRAF=0;updateWorldDom()});
+    return
+  }
+  if(worldUpdateRAF){cancelAnimationFrame(worldUpdateRAF);worldUpdateRAF=0}
+  objectNodeCache.clear();world.innerHTML='';
   const cimg=document.createElement('div');cimg.className='canvas-image-layer';
   const canvasPreview=previewImageUrl(state.canvasImageRef);if(canvasPreview){cimg.style.backgroundImage=`url("${canvasPreview}")`;cimg.style.backgroundSize=fitCSS(state.canvasImageFit);cimg.style.opacity=state.canvasImageOpacity}
   world.appendChild(cimg);
@@ -203,8 +210,8 @@ function renderObjects(syncUI=true){
     if(o.visible===false)return;
     const el=document.createElement('div');
     const primary=o.id===state.selectedId,multi=boxIds.has(o.id);
-    el.className='object '+(o.type==='box'?'box-object':'text-object')+(o.locked?' locked':'')+(primary?' selected':'')+(multi?' multi-selected':'')+(primary&&singleBox&&o.type==='box'&&!o.locked?' single-selection':'');
-    el.dataset.id=o.id;el.style.left=o.x+'px';el.style.top=o.y+'px';el.style.zIndex=i+3;
+    el.className='object '+(o.type==='box'?'box-object':'text-object')+(o.locked?' locked':'')+(primary?' selected':'')+(multi?' multi-selected':'')+(primary&&singleBox&&!o.locked?' single-selection':'');
+    el.dataset.id=o.id;el.style.left=o.x+'px';el.style.top=o.y+'px';el.style.zIndex=i+3;el.style.transform=`rotate(${o.rotation||0}deg)`;el.style.transformOrigin='50% 50%';
     if(o.type==='box'){
       el.style.width=o.w+'px';el.style.height=o.h+'px';el.style.borderRadius=o.radius+'px';
       el.style.border=o.borderOn?`${o.borderWidth}px solid ${rgba(o.borderColor,o.borderOpacity)}`:'none';
@@ -215,46 +222,46 @@ function renderObjects(syncUI=true){
       const fill=document.createElement('div');fill.className='box-fill';fill.style.background=gradientCSS(o.colors,o.angle);fill.style.opacity=o.bgOpacity;el.appendChild(fill);
       el.insertAdjacentHTML('beforeend',handleHTML());
     }else{
-      el.textContent=o.content;el.style.fontSize=o.fontSize+'px';el.style.color=o.color;el.style.opacity=o.opacity;el.style.fontWeight=o.fontWeight;el.style.fontFamily=o.fontFamily;
+      const content=document.createElement('span');content.className='text-content';content.textContent=o.content;el.appendChild(content);el.style.fontSize=o.fontSize+'px';el.style.color=o.color;el.style.opacity=o.opacity;el.style.fontWeight=o.fontWeight;el.style.fontFamily=o.fontFamily;
+      el.insertAdjacentHTML('beforeend','<i class="rotate-handle" data-dir="rotate" title="拖动旋转；Shift 按 15° 吸附"></i>');
     }
-    bindObjectEvents(el,o);world.appendChild(el);
+    bindObjectEvents(el,o);objectNodeCache.set(o.id,el);world.appendChild(el);
   });
-  if(syncUI){renderLayers();refreshPanels();refreshAlignPanel();refreshRightbar()}
+  if(syncUI){renderLayers();refreshPanels();refreshAlignPanel();refreshRightbar();updateSmartHint()}
+}
+function createLayerNode(id){
+  const d=document.createElement('div');d.className='layer';d.dataset.id=id;
+  d.innerHTML='<button class="layer-control" data-layer-action="visibility"></button><button class="layer-control" data-layer-action="lock"></button><span class="layer-icon"></span><span class="layer-name" title="双击重命名"></span><span class="layer-z"></span>';
+  d.addEventListener('click',e=>{
+    const o=state.objects.find(x=>x.id===Number(d.dataset.id));if(!o)return;const action=e.target.closest('[data-layer-action]')?.dataset.layerAction;
+    if(action){e.stopPropagation();if(action==='visibility'){o.visible=o.visible===false;renderObjects();commitHistory((o.visible?'显示':'隐藏')+(o.type==='box'?'方框':'文字'))}else{o.locked=!o.locked;renderObjects();commitHistory((o.locked?'锁定':'解锁')+(o.type==='box'?'方框':'文字'))}return}
+    selectObject(o,e.shiftKey);renderObjects()
+  });
+  d.addEventListener('dblclick',e=>{const name=e.target.closest('.layer-name');if(!name)return;const o=state.objects.find(x=>x.id===Number(d.dataset.id));if(o){e.preventDefault();e.stopPropagation();beginInlineLayerRename(d,o)}});
+  d.addEventListener('dragstart',e=>{if(e.target.closest('.layer-name-input')){e.preventDefault();return}d.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',d.dataset.id)});
+  d.addEventListener('dragend',()=>{d.classList.remove('dragging');$('#layers').querySelectorAll('.drop-target').forEach(x=>x.classList.remove('drop-target'))});
+  d.addEventListener('dragover',e=>{e.preventDefault();d.classList.add('drop-target');e.dataTransfer.dropEffect='move'});
+  d.addEventListener('dragleave',()=>d.classList.remove('drop-target'));
+  d.addEventListener('drop',e=>{e.preventDefault();d.classList.remove('drop-target');const draggedId=Number(e.dataTransfer.getData('text/plain')),targetId=Number(d.dataset.id);if(!Number.isFinite(draggedId)||draggedId===targetId)return;const from=state.objects.findIndex(x=>x.id===draggedId),to=state.objects.findIndex(x=>x.id===targetId);if(from<0||to<0)return;const[moved]=state.objects.splice(from,1);state.objects.splice(to,0,moved);renderObjects();commitHistory('调整图层顺序')});
+  d.addEventListener('contextmenu',e=>{const o=state.objects.find(x=>x.id===Number(d.dataset.id));if(!o)return;e.preventDefault();e.stopPropagation();if(!state.selectedBoxIds.includes(o.id)&&state.selectedId!==o.id)selectObject(o,false);renderObjects();showContextMenu(e.clientX,e.clientY,o)});
+  return d
 }
 function renderLayers(){
-  const wrap=$('#layers');wrap.innerHTML='';$('#layerCount').textContent=state.objects.length+' 个';
-  if(!state.objects.length){wrap.innerHTML='<div class="empty-state">还没有图层</div>';return}
-  const set=new Set(state.selectedBoxIds);
-  [...state.objects].reverse().forEach((o,rev)=>{
-    const actual=state.objects.length-1-rev,d=document.createElement('div');
-    d.className='layer'+(o.id===state.selectedId?' active':'')+(set.has(o.id)?' multi':'');
-    d.draggable=!o.locked;d.dataset.id=o.id;
-    const controls=`<button class="layer-control ${o.visible===false?'':'on'}" data-layer-action="visibility" title="${o.visible===false?'显示':'隐藏'}">${o.visible===false?'◌':'◉'}</button><button class="layer-control ${o.locked?'locked':''}" data-layer-action="lock" title="${o.locked?'解锁':'锁定'}">${o.locked?'🔒':'🔓'}</button>`;
-    d.innerHTML=`${controls}<span class="layer-icon">${o.type==='box'?'□':'T'}</span><span class="layer-name" title="双击重命名">${escapeHtml(o.name||((o.type==='box'?'方框':'文字')+' '+o.id))}</span><span class="layer-z">${actual+1}</span>`;
-    d.addEventListener('click',e=>{
-      const action=e.target.closest('[data-layer-action]')?.dataset.layerAction;
-      if(action){
-        e.stopPropagation();
-        if(action==='visibility'){o.visible=o.visible===false;renderObjects();commitHistory((o.visible?'显示':'隐藏')+(o.type==='box'?'方框':'文字'))}
-        else if(action==='lock'){o.locked=!o.locked;renderObjects();commitHistory((o.locked?'锁定':'解锁')+(o.type==='box'?'方框':'文字'))}
-        return
-      }
-      selectObject(o,e.shiftKey);renderObjects()
-    });
-    d.querySelector('.layer-name').addEventListener('dblclick',e=>{e.preventDefault();e.stopPropagation();beginInlineLayerRename(d,o)});
-    d.addEventListener('dragstart',e=>{if(e.target.closest('.layer-name-input')){e.preventDefault();return}d.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(o.id))});
-    d.addEventListener('dragend',()=>{d.classList.remove('dragging');wrap.querySelectorAll('.drop-target').forEach(x=>x.classList.remove('drop-target'))});
-    d.addEventListener('dragover',e=>{e.preventDefault();d.classList.add('drop-target');e.dataTransfer.dropEffect='move'});
-    d.addEventListener('dragleave',()=>d.classList.remove('drop-target'));
-    d.addEventListener('drop',e=>{
-      e.preventDefault();d.classList.remove('drop-target');
-      const draggedId=Number(e.dataTransfer.getData('text/plain'));if(!Number.isFinite(draggedId)||draggedId===o.id)return;
-      const from=state.objects.findIndex(x=>x.id===draggedId),to=state.objects.findIndex(x=>x.id===o.id);if(from<0||to<0)return;
-      const [moved]=state.objects.splice(from,1);state.objects.splice(to,0,moved);renderObjects();commitHistory('调整图层顺序')
-    });
-    d.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();if(!state.selectedBoxIds.includes(o.id)&&state.selectedId!==o.id)selectObject(o,false);renderObjects();showContextMenu(e.clientX,e.clientY,o)});
-    wrap.appendChild(d)
-  })
+  const wrap=$('#layers');$('#layerCount').textContent=state.objects.length+' 个';
+  if(!state.objects.length){wrap.innerHTML='<div class="empty-state">还没有图层</div>';layerNodeCache.clear();return}
+  wrap.querySelector('.empty-state')?.remove();const selectedSet=new Set(state.selectedBoxIds),valid=new Set(state.objects.map(o=>o.id)),frag=document.createDocumentFragment();
+  for(const[id,node]of layerNodeCache)if(!valid.has(id)){node.remove();layerNodeCache.delete(id)}
+  for(let i=state.objects.length-1;i>=0;i--){
+    const o=state.objects[i];let d=layerNodeCache.get(o.id);if(!d){d=createLayerNode(o.id);layerNodeCache.set(o.id,d)}
+    d.className='layer'+(o.id===state.selectedId?' active':'')+(selectedSet.has(o.id)?' multi':'');d.draggable=!o.locked;
+    const vis=d.querySelector('[data-layer-action="visibility"]'),lock=d.querySelector('[data-layer-action="lock"]');
+    vis.className='layer-control '+(o.visible===false?'':'on');vis.title=o.visible===false?'显示':'隐藏';vis.textContent=o.visible===false?'◌':'◉';
+    lock.className='layer-control '+(o.locked?'locked':'');lock.title=o.locked?'解锁':'锁定';lock.textContent=o.locked?'🔒':'🔓';
+    d.querySelector('.layer-icon').textContent=o.type==='box'?'□':'T';
+    const name=d.querySelector('.layer-name');if(name)name.textContent=o.name||((o.type==='box'?'方框':'文字')+' '+o.id);
+    d.querySelector('.layer-z').textContent=i+1;frag.appendChild(d)
+  }
+  wrap.appendChild(frag)
 }
 
 function refreshAlignPanel(){
@@ -292,7 +299,16 @@ document.querySelectorAll('.tool-group>.group-trigger').forEach(trigger=>{
 });
 $('#historyToggle').onclick=e=>{e.stopPropagation();const shell=$('#rightbarShell');shell.classList.toggle('history-open');$('.history-group').classList.add('open')};
 const shortcutPanel=$('#shortcutPanel');
-shortcutPanel.innerHTML='<div class="shortcut-head"><strong>快捷键</strong><button id="shortcutClose">×</button></div><div class="shortcut-list"><div><span>撤回</span><span><kbd>Ctrl</kbd> + <kbd>Z</kbd></span></div><div><span>反撤回</span><span><kbd>Ctrl</kbd> + <kbd>Y</kbd></span></div><div><span>复制 / 粘贴</span><span><kbd>Ctrl</kbd> + <kbd>C</kbd> / <kbd>V</kbd></span></div><div><span>复制一份</span><span><kbd>Ctrl</kbd> + <kbd>D</kbd></span></div><div><span>删除</span><kbd>Delete</kbd></div><div><span>移动 1px</span><kbd>方向键</kbd></div><div><span>移动 10px</span><span><kbd>Shift</kbd> + <kbd>方向键</kbd></span></div><div><span>混合多选</span><span><kbd>Shift</kbd> + 点击</span></div><div><span>移动画布</span><span>鼠标中键 / <kbd>Space</kbd> + 左键拖动</span></div><div><span>缩放画布</span><span>鼠标滚轮</span></div><div><span>显示 / 隐藏本面板</span><kbd>?</kbd></div></div>';
+shortcutPanel.innerHTML='<div class="shortcut-head"><strong>完整快捷键 / 操作</strong><button id="shortcutClose">×</button></div><div class="shortcut-list"><div><span>撤回</span><span><kbd>Ctrl</kbd>+<kbd>Z</kbd></span></div><div><span>反撤回</span><span><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></span></div><div><span>全选可见对象</span><span><kbd>Ctrl</kbd>+<kbd>A</kbd></span></div><div><span>清除选择</span><kbd>Esc</kbd></div><div><span>追加 / 取消多选</span><span><kbd>Shift</kbd>+点击</span></div><div><span>框选多个对象</span><span>空白处左键拖动</span></div><div><span>复制 / 粘贴</span><span><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd></span></div><div><span>复制一份</span><span><kbd>Ctrl</kbd>+<kbd>D</kbd></span></div><div><span>删除</span><kbd>Delete</kbd></div><div><span>移动 1px / 10px</span><span><kbd>方向键</kbd> / <kbd>Shift</kbd>+<kbd>方向键</kbd></span></div><div><span>居中定位选中对象</span><kbd>Home</kbd></div><div><span>缩放到选中对象</span><kbd>F</kbd></div><div><span>移动画布</span><span>中键拖动 / <kbd>Space</kbd>+左键拖动</span></div><div><span>缩放画布</span><span>鼠标滚轮</span></div><div><span>临时锁定纵横比</span><span>缩放时按 <kbd>Shift</kbd></span></div><div><span>旋转 15° 吸附</span><span>旋转时按 <kbd>Shift</kbd></span></div><div><span>创建参考线</span><span>从水平 / 垂直刻度拖出</span></div><div><span>删除参考线</span><span>双击参考线</span></div><div><span>重命名图层</span><span>双击图层名称</span></div><div><span>显示 / 隐藏本面板</span><kbd>?</kbd></div></div>';
+function updateSmartHint(){
+  const el=$('#smartHint');if(!el)return;const n=selectedObjects().length;let msg='';
+  if(spacePanHeld)msg='平移模式：按住 Space + 左键拖动 · 松开 Space 恢复编辑';
+  else if(!n)msg='空白拖动框选 · Ctrl+A 全选 · Space / 中键平移 · 滚轮缩放 · ? 全部快捷键';
+  else if(n===1){const o=selected();msg=o?.type==='box'?'方框已选中 · 上方圆点旋转 · Shift 缩放锁比例 · Home 居中 · F 缩放到选中 · ? 全部快捷键':'文字已选中 · 上方圆点旋转 · Shift+点击追加多选 · Home 居中 · F 缩放到选中 · ? 全部快捷键'}
+  else msg=n+' 个对象已选中 · Shift+点击增减选择 · F 缩放到选中 · 方向键移动 · Delete 删除 · ? 全部快捷键';
+  el.textContent=msg;el.title=msg+' · 点击查看完整快捷键'
+}
+$('#smartHint').onclick=e=>{e.stopPropagation();$('#rightbarShell').classList.add('shortcuts-open')};
 $('#shortcutToggle').onclick=e=>{e.stopPropagation();$('#rightbarShell').classList.toggle('shortcuts-open')};
 $('#shortcutClose').onclick=e=>{e.stopPropagation();$('#rightbarShell').classList.remove('shortcuts-open')};
 $('#undoBtn').onclick=undoHistory;$('#redoBtn').onclick=redoHistory;
@@ -340,11 +356,13 @@ function refreshPanels(){
   const o=selected(),has=!!o,multi=hasMultiBoxes(),locked=!!o?.locked;
   $('#commonPanel').style.opacity=has?(locked?'.58':'1'):'.45';
   $('#layerName').disabled=!has||multi||locked;
-  ['objX','objY','objW','objH'].forEach(id=>$('#'+id).disabled=!has||multi||locked);
+  ['objX','objY','objW','objH','objRotation'].forEach(id=>$('#'+id).disabled=!has||multi||locked);
+  $('#lockAspect').disabled=!has||multi||locked||o?.type!=='box';
+  $('#aspectLockRow').style.display=o?.type==='box'?'flex':'none';
   $('#boxPanel').hidden=o?.type!=='box';$('#textPanel').hidden=o?.type!=='text';
   $('#deleteObj').disabled=multi?editableSelectedObjects().length===0:(!has||locked);
   if(!o){$('#layerName').value='';return}
-  $('#layerName').value=o.name||'';$('#objX').value=Math.round(o.x);$('#objY').value=Math.round(o.y);
+  $('#layerName').value=o.name||'';$('#objX').value=Math.round(o.x);$('#objY').value=Math.round(o.y);$('#objRotation').value=Math.round(o.rotation||0);$('#lockAspect').checked=!!o.lockAspect;
   if(o.type==='box'){
     $('#sizeFields').style.display='grid';$('#objW').value=Math.round(o.w);$('#objH').value=Math.round(o.h);
     $('#radius').value=o.radius;$('#radiusVal').textContent=Math.round(o.radius)+'px';
@@ -383,7 +401,7 @@ let gesture=null;
 let spacePanHeld=false;
 function setSpacePanHeld(active){
   spacePanHeld=active;
-  viewport.classList.toggle('space-pan-ready',active)
+  viewport.classList.toggle('space-pan-ready',active);updateSmartHint()
 }
 function beginPan(e){
   e.preventDefault();
@@ -397,16 +415,19 @@ function bindObjectEvents(el,o){
     if(e.button!==0)return;
     e.stopPropagation();
     const dir=e.target.dataset.dir;
-    if(e.shiftKey){selectObject(o,true);renderObjects();return}
+    if(e.shiftKey&&!dir){selectObject(o,true);renderObjects();return}
     if(!state.selectedBoxIds.includes(o.id)){selectObject(o,false);renderObjects()}
     if(o.locked){gesture=null;return}
-    if(dir&&o.type==='box'&&state.selectedBoxIds.length===1){
-      gesture={type:'resize',id:o.id,dir,sx:e.clientX,sy:e.clientY,orig:{x:o.x,y:o.y,w:o.w,h:o.h}}
+    if(dir==='rotate'&&state.selectedBoxIds.length===1){
+      const s=getObjectSize(o),center={x:o.x+s.w/2,y:o.y+s.h/2},p=clientToWorld(e.clientX,e.clientY);
+      gesture={type:'rotate',id:o.id,center,startAngle:Math.atan2(p.y-center.y,p.x-center.x),origRotation:o.rotation||0};
+      el.classList.add('rotating')
+    }else if(dir&&o.type==='box'&&state.selectedBoxIds.length===1){
+      gesture={type:'resize',id:o.id,dir,sx:e.clientX,sy:e.clientY,ratio:o.w/Math.max(1,o.h),lockAspect:!!o.lockAspect,orig:{x:o.x,y:o.y,w:o.w,h:o.h}}
     }else if(state.selectedBoxIds.length>1&&state.selectedBoxIds.includes(o.id)){
-      const origins=editableSelectedObjects().map(item=>{const s=getObjectSize(item);return{id:item.id,x:item.x,y:item.y,w:s.w,h:s.h}});
+      const items=editableSelectedObjects(),origins=items.map(item=>({id:item.id,x:item.x,y:item.y}));
       if(!origins.length){gesture=null;return}
-      const minX=Math.min(...origins.map(v=>v.x)),minY=Math.min(...origins.map(v=>v.y)),maxX=Math.max(...origins.map(v=>v.x+v.w)),maxY=Math.max(...origins.map(v=>v.y+v.h));
-      gesture={type:'moveGroup',sx:e.clientX,sy:e.clientY,origins,bounds:{x:minX,y:minY,w:maxX-minX,h:maxY-minY}}
+      gesture={type:'moveGroup',sx:e.clientX,sy:e.clientY,origins,bounds:selectionBounds(items)}
     }else{
       gesture={type:'move',id:o.id,sx:e.clientX,sy:e.clientY,orig:{x:o.x,y:o.y}}
     }
@@ -420,24 +441,92 @@ function bindObjectEvents(el,o){
   })
 }
 function getObjectSize(o){if(o.type==='box')return{w:o.w,h:o.h};const m=textMetrics(measureCtx,o);return{w:m.w,h:m.h}}
+function getObjectBounds(o){
+  const s=getObjectSize(o),angle=((o.rotation||0)%360)*Math.PI/180;
+  if(Math.abs(angle)<1e-8)return{x:o.x,y:o.y,w:s.w,h:s.h};
+  const c=Math.abs(Math.cos(angle)),sn=Math.abs(Math.sin(angle)),w=s.w*c+s.h*sn,h=s.w*sn+s.h*c,cx=o.x+s.w/2,cy=o.y+s.h/2;
+  return{x:cx-w/2,y:cy-h/2,w,h}
+}
+function selectionBounds(items=selectedObjects()){
+  if(!items.length)return null;const rects=items.map(getObjectBounds),x=Math.min(...rects.map(r=>r.x)),y=Math.min(...rects.map(r=>r.y)),right=Math.max(...rects.map(r=>r.x+r.w)),bottom=Math.max(...rects.map(r=>r.y+r.h));
+  return{x,y,w:right-x,h:bottom-y}
+}
+function clientToWorld(clientX,clientY){const r=viewport.getBoundingClientRect();return{x:(clientX-r.left-state.panX)/state.zoom,y:(clientY-r.top-state.panY)/state.zoom}}
+function rectsIntersect(a,b){return a.x<=b.x+b.w&&a.x+a.w>=b.x&&a.y<=b.y+b.h&&a.y+a.h>=b.y}
+function focusBounds(bounds,fit=false){
+  if(!bounds)return;const pad=fit?150:0;
+  if(fit)state.zoom=clamp(Math.min((viewport.clientWidth-pad)/Math.max(1,bounds.w),(viewport.clientHeight-pad)/Math.max(1,bounds.h)),.1,4);
+  state.panX=viewport.clientWidth/2-(bounds.x+bounds.w/2)*state.zoom;state.panY=viewport.clientHeight/2-(bounds.y+bounds.h/2)*state.zoom;updateWorldTransform()
+}
+let snapFeedback={lines:[],distances:[]};
+function clearSnapFeedback(){snapFeedback={lines:[],distances:[]};snapOverlay.innerHTML=''}
+function renderSnapFeedback(){
+  snapOverlay.innerHTML='';
+  snapFeedback.lines.forEach(line=>{const el=document.createElement('div');el.className='snap-line '+line.axis;if(line.axis==='vertical')el.style.left=(state.panX+line.value*state.zoom)+'px';else el.style.top=(state.panY+line.value*state.zoom)+'px';snapOverlay.appendChild(el)});
+  snapFeedback.distances.forEach(d=>{const el=document.createElement('div');el.className='snap-distance';el.textContent=(d.axis==='x'?'↔ ':'↕ ')+Math.round(d.gap*10)/10+' px';el.style.left=(state.panX+d.x*state.zoom)+'px';el.style.top=(state.panY+d.y*state.zoom)+'px';snapOverlay.appendChild(el)})
+}
 function snapTargets(axis,excludeIds=new Set()){
   const base=axis==='x'?[0,state.canvasW/2,state.canvasW,...state.guides.vertical]:[0,state.canvasH/2,state.canvasH,...state.guides.horizontal];
-  state.objects.forEach(o=>{if(o.visible===false||excludeIds.has(o.id))return;const s=getObjectSize(o);if(axis==='x')base.push(o.x,o.x+s.w/2,o.x+s.w);else base.push(o.y,o.y+s.h/2,o.y+s.h)});
+  state.objects.forEach(o=>{if(o.visible===false||excludeIds.has(o.id))return;const b=getObjectBounds(o);if(axis==='x')base.push(b.x,b.x+b.w/2,b.x+b.w);else base.push(b.y,b.y+b.h/2,b.y+b.h)});
   return[...new Set(base.filter(Number.isFinite).map(v=>Math.round(v*1000)/1000))]
+}
+function equalSpacingCandidate(axis,rect,x,y,excludeIds,threshold){
+  const others=state.objects.filter(o=>o.visible!==false&&!excludeIds.has(o.id)).map(getObjectBounds).sort((a,b)=>axis==='x'?a.x-b.x:a.y-b.y);
+  let best=null;
+  for(let i=0;i<others.length-1;i++){
+    const a=others[i],b=others[i+1],aEnd=axis==='x'?a.x+a.w:a.y+a.h,bStart=axis==='x'?b.x:b.y,gap=bStart-aEnd;if(gap<0)continue;
+    const size=axis==='x'?rect.w:rect.h,pos=axis==='x'?x:y;
+    const candidates=[
+      {pos:(axis==='x'?b.x+b.w:b.y+b.h)+gap,gap,anchor:b},
+      {pos:(axis==='x'?a.x:a.y)-size-gap,gap,anchor:a}
+    ];
+    const room=gap-size;if(room>=0)candidates.push({pos:aEnd+room/2,gap:room/2,anchor:a});
+    for(const c of candidates){const d=Math.abs(c.pos-pos);if(d<=threshold&&(!best||d<best.d))best={...c,d}}
+  }
+  if(!best)return null;
+  return axis==='x'?{pos:best.pos,d:best.d,feedback:{axis:'x',gap:best.gap,x:best.pos+rect.w/2,y:y-24/state.zoom}}:{pos:best.pos,d:best.d,feedback:{axis:'y',gap:best.gap,x:x+rect.w/2,y:best.pos-24/state.zoom}}
 }
 function snapValue(v,targets){if(!state.snapEnabled)return v;const th=8/Math.max(.1,state.zoom);let best=v,dist=Infinity;for(const t of targets){const d=Math.abs(v-t);if(d<=th&&d<dist){best=t;dist=d}}return Math.round(best*1000)/1000}
 function snapRectMove(rect,x,y,excludeIds=new Set()){
-  if(!state.snapEnabled)return{x,y};const tx=snapTargets('x',excludeIds),ty=snapTargets('y',excludeIds),th=8/state.zoom;let dx=0,dy=0,bx=Infinity,by=Infinity;
-  for(const c of[x,x+rect.w/2,x+rect.w])for(const t of tx){const d=Math.abs(c-t);if(d<=th&&d<bx){bx=d;dx=t-c}}
-  for(const c of[y,y+rect.h/2,y+rect.h])for(const t of ty){const d=Math.abs(c-t);if(d<=th&&d<by){by=d;dy=t-c}}
-  const clean=v=>Math.round(v*1000)/1000;
-  return{x:clean(x+dx),y:clean(y+dy)}
+  if(!state.snapEnabled){clearSnapFeedback();return{x,y}}const tx=snapTargets('x',excludeIds),ty=snapTargets('y',excludeIds),th=8/state.zoom;let dx=0,dy=0,bx=Infinity,by=Infinity,xLine=null,yLine=null;
+  for(const c of[x,x+rect.w/2,x+rect.w])for(const t of tx){const d=Math.abs(c-t);if(d<=th&&d<bx){bx=d;dx=t-c;xLine=t}}
+  for(const c of[y,y+rect.h/2,y+rect.h])for(const t of ty){const d=Math.abs(c-t);if(d<=th&&d<by){by=d;dy=t-c;yLine=t}}
+  const eqX=equalSpacingCandidate('x',rect,x,y,excludeIds,th),eqY=equalSpacingCandidate('y',rect,x,y,excludeIds,th);let usedEqX=false,usedEqY=false;
+  if(eqX&&eqX.d<bx){dx=eqX.pos-x;bx=eqX.d;xLine=null;usedEqX=true}
+  if(eqY&&eqY.d<by){dy=eqY.pos-y;by=eqY.d;yLine=null;usedEqY=true}
+  const clean=v=>Math.round(v*1000)/1000,rx=clean(x+dx),ry=clean(y+dy);
+  snapFeedback={lines:[],distances:[]};if(xLine!=null)snapFeedback.lines.push({axis:'vertical',value:xLine});if(yLine!=null)snapFeedback.lines.push({axis:'horizontal',value:yLine});if(usedEqX)snapFeedback.distances.push({...eqX.feedback,x:rx+rect.w/2,y:ry-24/state.zoom});if(usedEqY)snapFeedback.distances.push({...eqY.feedback,x:rx+rect.w/2,y:ry+rect.h/2});renderSnapFeedback();
+  return{x:rx,y:ry}
 }
-function snapMove(o,x,y){const s=getObjectSize(o);return snapRectMove({w:s.w,h:s.h},x,y,new Set([o.id]))}
+function snapMove(o,x,y){
+  const b=getObjectBounds(o),offsetX=b.x-o.x,offsetY=b.y-o.y,p=snapRectMove({w:b.w,h:b.h},x+offsetX,y+offsetY,new Set([o.id]));
+  return{x:p.x-offsetX,y:p.y-offsetY}
+}
 function syncPositionFields(o){if(!o||o.id!==state.selectedId||hasMultiBoxes())return;$('#objX').value=Math.round(o.x);$('#objY').value=Math.round(o.y);if(o.type==='box'){$('#objW').value=Math.round(o.w);$('#objH').value=Math.round(o.h)}}
+function applyAspectResize(g,d,x,y,w,h,preserve){
+  const ratio=g.ratio||1,horiz=d.includes('e')||d.includes('w'),vert=d.includes('n')||d.includes('s');
+  if(!preserve)return{x,y,w,h};
+  if(horiz&&vert){
+    const rw=Math.abs(w-g.orig.w)/Math.max(1,g.orig.w),rh=Math.abs(h-g.orig.h)/Math.max(1,g.orig.h);
+    if(rw>=rh){h=w/ratio;if(d.includes('n'))y=g.orig.y+g.orig.h-h;else y=g.orig.y}
+    else{w=h*ratio;if(d.includes('w'))x=g.orig.x+g.orig.w-w;else x=g.orig.x}
+  }else if(horiz){h=w/ratio;y=g.orig.y+(g.orig.h-h)/2}
+  else if(vert){w=h*ratio;x=g.orig.x+(g.orig.w-w)/2}
+  const scale=Math.max(1,20/Math.max(.001,w),20/Math.max(.001,h));if(scale>1){w*=scale;h*=scale}
+  if(d.includes('w'))x=g.orig.x+g.orig.w-w;if(d.includes('n'))y=g.orig.y+g.orig.h-h;
+  return{x,y,w,h}
+}
 viewport.addEventListener('pointermove',e=>{
   if(!gesture)return;
   if(gesture.type==='pan'){state.panX=gesture.orig.x+(e.clientX-gesture.sx);state.panY=gesture.orig.y+(e.clientY-gesture.sy);updateWorldTransform();return}
+  if(gesture.type==='marquee'){
+    const r=viewport.getBoundingClientRect(),x1=gesture.sx-r.left,y1=gesture.sy-r.top,x2=e.clientX-r.left,y2=e.clientY-r.top;
+    selectionMarquee.style.left=Math.min(x1,x2)+'px';selectionMarquee.style.top=Math.min(y1,y2)+'px';selectionMarquee.style.width=Math.abs(x2-x1)+'px';selectionMarquee.style.height=Math.abs(y2-y1)+'px';return
+  }
+  if(gesture.type==='rotate'){
+    const o=state.objects.find(x=>x.id===gesture.id);if(!o)return;const p=clientToWorld(e.clientX,e.clientY),a=Math.atan2(p.y-gesture.center.y,p.x-gesture.center.x),delta=(a-gesture.startAngle)*180/Math.PI;
+    let rotation=gesture.origRotation+delta;if(e.shiftKey)rotation=Math.round(rotation/15)*15;o.rotation=Math.round(rotation*100)/100;renderObjects(false);$('#objRotation').value=Math.round(o.rotation);return
+  }
   const dx=(e.clientX-gesture.sx)/state.zoom,dy=(e.clientY-gesture.sy)/state.zoom;
   if(gesture.type==='moveGroup'){
     const excluded=new Set(gesture.origins.map(or=>or.id)),p=snapRectMove(gesture.bounds,gesture.bounds.x+dx,gesture.bounds.y+dy,excluded),adx=p.x-gesture.bounds.x,ady=p.y-gesture.bounds.y;
@@ -451,6 +540,7 @@ viewport.addEventListener('pointermove',e=>{
   if(d.includes('s')){let bottom=snapValue(gesture.orig.y+gesture.orig.h+dy,snapTargets('y',excluded));h=bottom-y}
   if(d.includes('w')){let left=snapValue(gesture.orig.x+dx,snapTargets('x',excluded));w=gesture.orig.x+gesture.orig.w-left;x=left}
   if(d.includes('n')){let top=snapValue(gesture.orig.y+dy,snapTargets('y',excluded));h=gesture.orig.y+gesture.orig.h-top;y=top}
+  ({x,y,w,h}=applyAspectResize(gesture,d,x,y,w,h,gesture.lockAspect||e.shiftKey));
   if(w<20){if(d.includes('w'))x=gesture.orig.x+gesture.orig.w-20;w=20}if(h<20){if(d.includes('n'))y=gesture.orig.y+gesture.orig.h-20;h=20}
   o.x=x;o.y=y;o.w=w;o.h=h;renderObjects(false);syncPositionFields(o)
 });
@@ -458,12 +548,31 @@ viewport.addEventListener('pointerdown',e=>{
   if(e.button===1||(e.button===0&&spacePanHeld)){beginPan(e);return}
   if(e.button!==0)return;
   if(e.target===viewport||e.target===world||e.target.classList.contains('canvas-image-layer')||e.target.classList.contains('canvas-bg-layer')){
-    clearSelection();gesture=null;renderObjects()
+    const r=viewport.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+    gesture={type:'marquee',sx:e.clientX,sy:e.clientY,baseIds:e.shiftKey?[...state.selectedBoxIds]:[]};
+    selectionMarquee.style.left=x+'px';selectionMarquee.style.top=y+'px';selectionMarquee.style.width='0px';selectionMarquee.style.height='0px';selectionMarquee.classList.add('show');viewport.setPointerCapture(e.pointerId)
   }
 });
 viewport.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault()});
-viewport.addEventListener('pointerup',()=>{if(!gesture||gesture.type==='guide')return;const type=gesture.type;gesture=null;viewport.classList.remove('panning');if(type==='move'||type==='moveGroup')commitHistory('移动对象');else if(type==='resize')commitHistory('调整方框尺寸')});
-viewport.addEventListener('pointercancel',()=>{if(!gesture||gesture.type==='guide')return;const type=gesture.type;gesture=null;viewport.classList.remove('panning');if(type==='move'||type==='moveGroup'||type==='resize')commitHistory(type==='resize'?'调整方框尺寸':'移动对象')});
+viewport.addEventListener('pointerup',e=>{
+  if(!gesture||gesture.type==='guide')return;const g=gesture,type=g.type;gesture=null;viewport.classList.remove('panning');world.querySelectorAll('.rotating').forEach(el=>el.classList.remove('rotating'));
+  if(type==='marquee'){
+    const moved=Math.hypot(e.clientX-g.sx,e.clientY-g.sy),a=clientToWorld(g.sx,g.sy),b=clientToWorld(e.clientX,e.clientY);
+    selectionMarquee.classList.remove('show');
+    if(moved<3){if(!g.baseIds.length)clearSelection()}
+    else{
+      const rect={x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)},hits=state.objects.filter(o=>o.visible!==false&&rectsIntersect(getObjectBounds(o),rect)).map(o=>o.id);
+      state.selectedBoxIds=[...new Set([...g.baseIds,...hits])];state.selectedId=state.selectedBoxIds.at(-1)||null
+    }
+    renderObjects();updateSmartHint();return
+  }
+  clearSnapFeedback();
+  if(type==='move'||type==='moveGroup')commitHistory('移动对象');else if(type==='resize')commitHistory('调整方框尺寸');else if(type==='rotate')commitHistory('旋转对象')
+});
+viewport.addEventListener('pointercancel',()=>{
+  if(!gesture||gesture.type==='guide')return;const type=gesture.type;gesture=null;viewport.classList.remove('panning');selectionMarquee.classList.remove('show');world.querySelectorAll('.rotating').forEach(el=>el.classList.remove('rotating'));clearSnapFeedback();
+  if(type==='move'||type==='moveGroup'||type==='resize'||type==='rotate')commitHistory(type==='resize'?'调整方框尺寸':type==='rotate'?'旋转对象':'移动对象')
+});
 
 const RULER_SIZE=28;
 function chooseRulerStep(){const xs=[5,10,20,25,50,100,200,250,500,1000,2000];return xs.find(v=>v*state.zoom>=62)||2000}
@@ -522,7 +631,10 @@ $('#fitView').onclick=()=>{const pad=100;state.zoom=clamp(Math.min((viewport.cli
 function mutateSelected(fn,syncUI=false){const o=selected();if(!o||hasMultiBoxes()||o.locked)return;fn(o);renderObjects(syncUI)}
 $('#layerName').oninput=e=>{const o=selected();if(!o||hasMultiBoxes()||o.locked)return;o.name=e.target.value;renderLayers()};
 $('#objX').oninput=e=>mutateSelected(o=>o.x=+e.target.value||0);$('#objY').oninput=e=>mutateSelected(o=>o.y=+e.target.value||0);
-$('#objW').oninput=e=>mutateSelected(o=>{if(o.type==='box')o.w=Math.max(20,+e.target.value||20)});$('#objH').oninput=e=>mutateSelected(o=>{if(o.type==='box')o.h=Math.max(20,+e.target.value||20)});
+$('#objRotation').oninput=e=>mutateSelected(o=>o.rotation=finiteNumber(e.target.value,0));
+$('#lockAspect').onchange=e=>mutateSelected(o=>{if(o.type==='box')o.lockAspect=e.target.checked});
+$('#objW').oninput=e=>mutateSelected(o=>{if(o.type!=='box')return;const ratio=o.w/Math.max(1,o.h),w=Math.max(20,+e.target.value||20);o.w=w;if(o.lockAspect)o.h=Math.max(20,w/ratio)},true);
+$('#objH').oninput=e=>mutateSelected(o=>{if(o.type!=='box')return;const ratio=o.w/Math.max(1,o.h),h=Math.max(20,+e.target.value||20);o.h=h;if(o.lockAspect)o.w=Math.max(20,h*ratio)},true);
 $('#radius').oninput=e=>{mutateSelected(o=>o.radius=+e.target.value);$('#radiusVal').textContent=e.target.value+'px'};
 $('#bgOpacity').oninput=e=>{mutateSelected(o=>o.bgOpacity=+e.target.value/100);$('#bgOpacityVal').textContent=e.target.value+'%'};
 $('#angle').oninput=e=>{mutateSelected(o=>o.angle=+e.target.value);$('#angleVal').textContent=e.target.value+'°'};
@@ -566,22 +678,22 @@ function duplicateSelection(){
 
 function alignBoxes(kind){
   const items=editableSelectedObjects();if(items.length<2)return;
-  const rects=items.map(o=>{const s=getObjectSize(o);return{o,w:s.w,h:s.h}});
-  if(kind==='left'){const v=Math.min(...rects.map(r=>r.o.x));rects.forEach(r=>r.o.x=v)}
-  if(kind==='right'){const v=Math.max(...rects.map(r=>r.o.x+r.w));rects.forEach(r=>r.o.x=v-r.w)}
-  if(kind==='top'){const v=Math.min(...rects.map(r=>r.o.y));rects.forEach(r=>r.o.y=v)}
-  if(kind==='bottom'){const v=Math.max(...rects.map(r=>r.o.y+r.h));rects.forEach(r=>r.o.y=v-r.h)}
-  if(kind==='centerX'){const left=Math.min(...rects.map(r=>r.o.x)),right=Math.max(...rects.map(r=>r.o.x+r.w)),center=(left+right)/2;rects.forEach(r=>r.o.x=center-r.w/2)}
-  if(kind==='centerY'){const top=Math.min(...rects.map(r=>r.o.y)),bottom=Math.max(...rects.map(r=>r.o.y+r.h)),center=(top+bottom)/2;rects.forEach(r=>r.o.y=center-r.h/2)}
+  const rects=items.map(o=>({o,b:getObjectBounds(o)}));
+  if(kind==='left'){const v=Math.min(...rects.map(r=>r.b.x));rects.forEach(r=>r.o.x+=v-r.b.x)}
+  if(kind==='right'){const v=Math.max(...rects.map(r=>r.b.x+r.b.w));rects.forEach(r=>r.o.x+=v-(r.b.x+r.b.w))}
+  if(kind==='top'){const v=Math.min(...rects.map(r=>r.b.y));rects.forEach(r=>r.o.y+=v-r.b.y)}
+  if(kind==='bottom'){const v=Math.max(...rects.map(r=>r.b.y+r.b.h));rects.forEach(r=>r.o.y+=v-(r.b.y+r.b.h))}
+  if(kind==='centerX'){const left=Math.min(...rects.map(r=>r.b.x)),right=Math.max(...rects.map(r=>r.b.x+r.b.w)),center=(left+right)/2;rects.forEach(r=>r.o.x+=center-(r.b.x+r.b.w/2))}
+  if(kind==='centerY'){const top=Math.min(...rects.map(r=>r.b.y)),bottom=Math.max(...rects.map(r=>r.b.y+r.b.h)),center=(top+bottom)/2;rects.forEach(r=>r.o.y+=center-(r.b.y+r.b.h/2))}
   renderObjects();commitHistory('多选对齐')
 }
 function distributeBoxes(axis){
   const items=editableSelectedObjects();if(items.length<3)return;
-  const rects=items.map(o=>{const s=getObjectSize(o);return{o,w:s.w,h:s.h}});
+  const rects=items.map(o=>({o,b:getObjectBounds(o)}));
   if(axis==='h'){
-    const a=[...rects].sort((x,y)=>x.o.x-y.o.x),start=a[0].o.x,end=a.at(-1).o.x+a.at(-1).w,total=a.reduce((s,r)=>s+r.w,0),gap=(end-start-total)/(a.length-1);let cur=start;a.forEach(r=>{r.o.x=cur;cur+=r.w+gap})
+    const a=[...rects].sort((x,y)=>x.b.x-y.b.x),start=a[0].b.x,end=a.at(-1).b.x+a.at(-1).b.w,total=a.reduce((s,r)=>s+r.b.w,0),gap=(end-start-total)/(a.length-1);let cur=start;a.forEach(r=>{r.o.x+=cur-r.b.x;cur+=r.b.w+gap})
   }else{
-    const a=[...rects].sort((x,y)=>x.o.y-y.o.y),start=a[0].o.y,end=a.at(-1).o.y+a.at(-1).h,total=a.reduce((s,r)=>s+r.h,0),gap=(end-start-total)/(a.length-1);let cur=start;a.forEach(r=>{r.o.y=cur;cur+=r.h+gap})
+    const a=[...rects].sort((x,y)=>x.b.y-y.b.y),start=a[0].b.y,end=a.at(-1).b.y+a.at(-1).b.h,total=a.reduce((s,r)=>s+r.b.h,0),gap=(end-start-total)/(a.length-1);let cur=start;a.forEach(r=>{r.o.y+=cur-r.b.y;cur+=r.b.h+gap})
   }
   renderObjects();commitHistory(axis==='h'?'水平等间距':'垂直等间距')
 }
@@ -608,8 +720,8 @@ function pasteSelectedBoxes(){
 }
 function selectedProjectSnapshot(){
   const items=selectedObjects();if(!items.length)return null;
-  const rects=items.map(o=>{const s=getObjectSize(o);return{o,w:s.w,h:s.h}});
-  const pad=20,minX=Math.min(...rects.map(r=>r.o.x)),minY=Math.min(...rects.map(r=>r.o.y)),maxX=Math.max(...rects.map(r=>r.o.x+r.w)),maxY=Math.max(...rects.map(r=>r.o.y+r.h));
+  const rects=items.map(o=>({o,b:getObjectBounds(o)}));
+  const pad=20,minX=Math.min(...rects.map(r=>r.b.x)),minY=Math.min(...rects.map(r=>r.b.y)),maxX=Math.max(...rects.map(r=>r.b.x+r.b.w)),maxY=Math.max(...rects.map(r=>r.b.y+r.b.h));
   const objects=items.map((src,i)=>{const o=structuredClone(src);o.id=i+1;o.x=src.x-minX+pad;o.y=src.y-minY+pad;return o});
   const refs=usedImageAssetRefs(objects,null);
   return{
@@ -731,6 +843,10 @@ document.addEventListener('keydown',e=>{
   if(mod&&key==='y'&&!editing){e.preventDefault();redoHistory();return}
   if(e.key==='?'&&!editing){e.preventDefault();$('#rightbarShell').classList.toggle('shortcuts-open');return}
   if(editing)return;
+  if(mod&&key==='a'){e.preventDefault();state.selectedBoxIds=state.objects.filter(o=>o.visible!==false).map(o=>o.id);state.selectedId=state.selectedBoxIds.at(-1)||null;renderObjects();return}
+  if(e.key==='Escape'){e.preventDefault();clearSelection();renderObjects();return}
+  if(e.key==='Home'){e.preventDefault();const b=selectionBounds();if(b)focusBounds(b,false);else setDataStatus('请先选择对象','err');return}
+  if(key==='f'&&!mod&&!e.altKey){e.preventDefault();const b=selectionBounds();if(b)focusBounds(b,true);else setDataStatus('请先选择对象','err');return}
   if((e.key==='Delete'||e.key==='Backspace')&&(state.selectedId!=null||state.selectedBoxIds.length)){e.preventDefault();deleteSelected();return}
   if(mod&&key==='d'){e.preventDefault();duplicateSelection();return}
   if(mod&&key==='c'){e.preventDefault();copySelectedBoxes();return}
@@ -823,7 +939,7 @@ function jumpHistory(id){
   $('#rightbarShell').classList.add('history-open');$('.history-group').classList.add('open')
 }
 
-const PROJECT_FORMAT='transparent-canvas-editor',PROJECT_VERSION=5;
+const PROJECT_FORMAT='transparent-canvas-editor',PROJECT_VERSION=6;
 function projectSnapshot(){return{format:PROJECT_FORMAT,version:PROJECT_VERSION,savedAt:new Date().toISOString(),assets:{images:exportImageAssets(),fonts:structuredClone(state.customFonts)},canvas:{width:state.canvasW,height:state.canvasH,backgroundOpacity:state.canvasBgOpacity,gradientAngle:state.canvasAngle,colors:structuredClone(state.canvasColors),imageRef:state.canvasImageRef,imageOpacity:state.canvasImageOpacity,imageFit:state.canvasImageFit},objects:structuredClone(state.objects),assists:{snapEnabled:state.snapEnabled,guidesVisible:state.guidesVisible,guides:structuredClone(state.guides)},view:{zoom:state.zoom,panX:state.panX,panY:state.panY},selectedId:state.selectedId,selectedBoxIds:[...state.selectedBoxIds]}}
 function setDataStatus(msg,type=''){
   const el=$('#dataStatus');clearTimeout(statusTimer);el.textContent=msg;el.className='right-status show'+(type?' '+type:'');
@@ -841,9 +957,9 @@ function normalizeObject(raw,idFallback,assetAliases=new Map()){
   if(raw.type==='box'){
     const legacyRef=typeof raw.image==='string'?registerImageAsset(raw.image):null;
     const imageRef=assetAliases.get(raw.imageRef)||raw.imageRef||legacyRef||null;
-    return{id,type:'box',name:typeof raw.name==='string'?raw.name:'方框',visible:raw.visible!==false,locked:raw.locked===true,x:finiteNumber(raw.x,180),y:finiteNumber(raw.y,150),w:Math.max(20,finiteNumber(raw.w,420)),h:Math.max(20,finiteNumber(raw.h,300)),radius:Math.max(0,finiteNumber(raw.radius,28)),bgOpacity:clamp(finiteNumber(raw.bgOpacity,.88),0,1),angle:finiteNumber(raw.angle,135),colors:cleanStops(raw.colors,[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}]),imageRef,imageOpacity:clamp(finiteNumber(raw.imageOpacity,1),0,1),imageFit:cleanFit(raw.imageFit),borderOn:raw.borderOn!==false,borderWidth:Math.max(0,finiteNumber(raw.borderWidth,2)),borderColor:cleanColor(raw.borderColor,'#ffffff'),borderOpacity:clamp(finiteNumber(raw.borderOpacity,.9),0,1),shadowOn:raw.shadowOn!==false}
+    return{id,type:'box',name:typeof raw.name==='string'?raw.name:'方框',visible:raw.visible!==false,locked:raw.locked===true,rotation:finiteNumber(raw.rotation,0),lockAspect:raw.lockAspect===true,x:finiteNumber(raw.x,180),y:finiteNumber(raw.y,150),w:Math.max(20,finiteNumber(raw.w,420)),h:Math.max(20,finiteNumber(raw.h,300)),radius:Math.max(0,finiteNumber(raw.radius,28)),bgOpacity:clamp(finiteNumber(raw.bgOpacity,.88),0,1),angle:finiteNumber(raw.angle,135),colors:cleanStops(raw.colors,[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}]),imageRef,imageOpacity:clamp(finiteNumber(raw.imageOpacity,1),0,1),imageFit:cleanFit(raw.imageFit),borderOn:raw.borderOn!==false,borderWidth:Math.max(0,finiteNumber(raw.borderWidth,2)),borderColor:cleanColor(raw.borderColor,'#ffffff'),borderOpacity:clamp(finiteNumber(raw.borderOpacity,.9),0,1),shadowOn:raw.shadowOn!==false}
   }
-  return{id,type:'text',name:typeof raw.name==='string'?raw.name:'文字',visible:raw.visible!==false,locked:raw.locked===true,x:finiteNumber(raw.x,260),y:finiteNumber(raw.y,230),content:typeof raw.content==='string'?raw.content:'文字',fontSize:clamp(finiteNumber(raw.fontSize,48),6,400),color:cleanColor(raw.color,'#111827'),opacity:clamp(finiteNumber(raw.opacity,1),0,1),fontWeight:['400','500','600','700'].includes(String(raw.fontWeight))?String(raw.fontWeight):'400',fontFamily:typeof raw.fontFamily==='string'?raw.fontFamily:'"Microsoft YaHei",sans-serif'}
+  return{id,type:'text',name:typeof raw.name==='string'?raw.name:'文字',visible:raw.visible!==false,locked:raw.locked===true,rotation:finiteNumber(raw.rotation,0),x:finiteNumber(raw.x,260),y:finiteNumber(raw.y,230),content:typeof raw.content==='string'?raw.content:'文字',fontSize:clamp(finiteNumber(raw.fontSize,48),6,400),color:cleanColor(raw.color,'#111827'),opacity:clamp(finiteNumber(raw.opacity,1),0,1),fontWeight:['400','500','600','700'].includes(String(raw.fontWeight))?String(raw.fontWeight):'400',fontFamily:typeof raw.fontFamily==='string'?raw.fontFamily:'"Microsoft YaHei",sans-serif'}
 }
 async function loadProjectData(data){
   if(!data||typeof data!=='object')throw new Error('JSON 根节点不是对象');const canvas=data.canvas&&typeof data.canvas==='object'?data.canvas:data,rawObjects=Array.isArray(data.objects)?data.objects:[];
@@ -860,7 +976,7 @@ async function loadProjectData(data){
 $('#importDataFile').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{await loadProjectData(JSON.parse(await file.text()));commitHistory('加载项目数据');setDataStatus('已导入：'+state.objects.length+' 个图层','ok')}catch(err){setDataStatus('导入失败：'+(err?.message||'JSON 无效'),'err')}finally{e.target.value=''}};
 
 function textMetrics(ctx,o){ctx.save();ctx.font=`${o.fontWeight} ${o.fontSize}px ${o.fontFamily}`;let w=0;const lines=o.content.split('\n');lines.forEach(l=>w=Math.max(w,ctx.measureText(l||' ').width));ctx.restore();return{w,h:Math.max(o.fontSize*1.2,lines.length*o.fontSize*1.2)}}
-function contentBounds(){const visible=state.objects.filter(o=>o.visible!==false);if(!visible.length)return{x:0,y:0,w:state.canvasW,h:state.canvasH};let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;visible.forEach(o=>{let b;if(o.type==='box'){const m=o.shadowOn?40:0;b={x:o.x-m,y:o.y-m,w:o.w+2*m,h:o.h+2*m}}else{const m=textMetrics(measureCtx,o);b={x:o.x,y:o.y,w:m.w,h:m.h}};minX=Math.min(minX,b.x);minY=Math.min(minY,b.y);maxX=Math.max(maxX,b.x+b.w);maxY=Math.max(maxY,b.y+b.h)});const p=10;return{x:Math.floor(minX-p),y:Math.floor(minY-p),w:Math.ceil(maxX-minX+2*p),h:Math.ceil(maxY-minY+2*p)}}
+function contentBounds(){const visible=state.objects.filter(o=>o.visible!==false);if(!visible.length)return{x:0,y:0,w:state.canvasW,h:state.canvasH};let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;visible.forEach(o=>{let b=getObjectBounds(o);if(o.type==='box'&&o.shadowOn){const m=40;b={x:b.x-m,y:b.y-m,w:b.w+2*m,h:b.h+2*m}}minX=Math.min(minX,b.x);minY=Math.min(minY,b.y);maxX=Math.max(maxX,b.x+b.w);maxY=Math.max(maxY,b.y+b.h)});const p=10;return{x:Math.floor(minX-p),y:Math.floor(minY-p),w:Math.ceil(maxX-minX+2*p),h:Math.ceil(maxY-minY+2*p)}}
 function roundRect(ctx,x,y,w,h,r){r=Math.max(0,Math.min(r,w/2,h/2));ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
 function createGradient(ctx,x,y,w,h,colors,angle){const ss=[...colors].sort((a,b)=>a.p-b.p);if(ss.length===1)return ss[0].c;const rad=(angle-90)*Math.PI/180,cx=x+w/2,cy=y+h/2,len=Math.abs(w*Math.cos(rad))+Math.abs(h*Math.sin(rad)),g=ctx.createLinearGradient(cx-Math.cos(rad)*len/2,cy-Math.sin(rad)*len/2,cx+Math.cos(rad)*len/2,cy+Math.sin(rad)*len/2);ss.forEach(s=>g.addColorStop(clamp(s.p/100,0,1),s.c));return g}
 function loadImage(src){if(!src)return Promise.resolve(null);if(imageCache.has(src))return imageCache.get(src);const p=new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error('图片加载失败'));im.src=src});imageCache.set(src,p);return p}
@@ -876,6 +992,7 @@ async function drawCanvasBackground(ctx){
 }
 async function drawBox(ctx,o){
   ctx.save();
+  if(o.rotation){const cx=o.x+o.w/2,cy=o.y+o.h/2;ctx.translate(cx,cy);ctx.rotate((o.rotation||0)*Math.PI/180);ctx.translate(-cx,-cy)}
   if(o.shadowOn){ctx.shadowColor='rgba(35,46,63,.22)';ctx.shadowBlur=30;ctx.shadowOffsetY=16;ctx.fillStyle='rgba(255,255,255,.01)';roundRect(ctx,o.x,o.y,o.w,o.h,o.radius);ctx.fill();ctx.shadowColor='transparent'}
   ctx.save();roundRect(ctx,o.x,o.y,o.w,o.h,o.radius);ctx.clip();
   const boxSrc=imageAssetValue(o.imageRef);if(boxSrc){const img=await loadImage(boxSrc);ctx.save();ctx.globalAlpha=o.imageOpacity;drawImageFit(ctx,img,o.x,o.y,o.w,o.h,o.imageFit);ctx.restore()}
@@ -884,7 +1001,7 @@ async function drawBox(ctx,o){
   if(o.borderOn&&o.borderWidth>0){ctx.strokeStyle=rgba(o.borderColor,o.borderOpacity);ctx.lineWidth=o.borderWidth;roundRect(ctx,o.x+o.borderWidth/2,o.y+o.borderWidth/2,o.w-o.borderWidth,o.h-o.borderWidth,Math.max(0,o.radius-o.borderWidth/2));ctx.stroke()}
   ctx.restore()
 }
-function drawText(ctx,o){ctx.save();ctx.globalAlpha=o.opacity;ctx.fillStyle=o.color;ctx.font=`${o.fontWeight} ${o.fontSize}px ${o.fontFamily}`;ctx.textBaseline='top';const lh=o.fontSize*1.2;o.content.split('\n').forEach((line,i)=>ctx.fillText(line,o.x,o.y+i*lh));ctx.restore()}
+function drawText(ctx,o){ctx.save();const s=getObjectSize(o);if(o.rotation){const cx=o.x+s.w/2,cy=o.y+s.h/2;ctx.translate(cx,cy);ctx.rotate((o.rotation||0)*Math.PI/180);ctx.translate(-cx,-cy)}ctx.globalAlpha=o.opacity;ctx.fillStyle=o.color;ctx.font=`${o.fontWeight} ${o.fontSize}px ${o.fontFamily}`;ctx.textBaseline='top';const lh=o.fontSize*1.2;o.content.split('\n').forEach((line,i)=>ctx.fillText(line,o.x,o.y+i*lh));ctx.restore()}
 async function drawScene(ctx,originX,originY,scale){ctx.save();ctx.scale(scale,scale);ctx.translate(-originX,-originY);await drawCanvasBackground(ctx);for(const o of state.objects){if(o.visible===false)continue;if(o.type==='box')await drawBox(ctx,o);else drawText(ctx,o)}ctx.restore()}
 async function exportPNG(crop){
   const scale=+$('#exportScale').value||1,b=crop?contentBounds():{x:0,y:0,w:state.canvasW,h:state.canvasH},c=document.createElement('canvas');c.width=Math.max(1,Math.round(b.w*scale));c.height=Math.max(1,Math.round(b.h*scale));const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);
