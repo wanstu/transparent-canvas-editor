@@ -40,10 +40,14 @@ func run() error {
 	}
 
 	window := desktopkit.DefaultWindowConfig()
-	window.Width = 1440
-	window.Height = 900
-	window.MinWidth = 1024
-	window.MinHeight = 680
+	// Keep the initial client area safely inside common desktop work areas.
+	// Wails adds the native title bar outside the client area on Windows;
+	// an initial 1440x900 client area can push the title bar off-screen on
+	// 1600x900-class displays and make the window appear borderless.
+	window.Width = 1200
+	window.Height = 720
+	window.MinWidth = 900
+	window.MinHeight = 600
 	window.HidePolicy = desktopkit.HideNever
 	window.StartHiddenOnAutoStart = false
 

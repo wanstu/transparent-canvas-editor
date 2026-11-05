@@ -2,7 +2,7 @@ module github.com/wanstu/transparent-canvas-editor
 
 go 1.26
 
-require github.com/wanstu/wails-desktop-kit v0.11.3
+require github.com/wanstu/wails-desktop-kit v0.12.1
 
 require (
 	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
