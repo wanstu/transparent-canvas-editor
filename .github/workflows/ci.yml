@@ -1,0 +1,268 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: transparent-canvas-editor-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+jobs:
+  meta:
+    name: Build metadata
+    runs-on: ubuntu-24.04
+    outputs:
+      artifact_suffix: ${{ steps.meta.outputs.artifact_suffix }}
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Resolve version and artifact suffix
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          short="${GITHUB_SHA::12}"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            suffix="${GITHUB_REF_NAME}"
+            version="${GITHUB_REF_NAME#v}"
+          else
+            ref="${GITHUB_REF_NAME//\//-}"
+            ref="${ref// /-}"
+            suffix="${ref}-${short}"
+            version="0.0.0+git.${short}"
+          fi
+          echo "artifact_suffix=${suffix}" >> "${GITHUB_OUTPUT}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+  quality:
+    name: Quality checks
+    needs: meta
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            pkg-config \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev
+
+      - name: Check JavaScript
+        run: node --check app.js
+
+      - name: Rebuild portable HTML
+        run: node build-single.js
+
+      - name: Verify generated portable HTML is committed
+        run: git diff --exit-code -- transparent_canvas_editor.html
+
+      - name: Go tests
+        run: go test -tags webkit2_41 ./...
+
+      - name: Go vet
+        run: go vet -tags webkit2_41 ./...
+
+  portable:
+    name: Portable HTML
+    needs:
+      - meta
+      - quality
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Build portable single HTML
+        run: |
+          node --check app.js
+          node build-single.js
+          mkdir -p dist
+          cp transparent_canvas_editor.html "dist/transparent-canvas-editor-portable-${{ needs.meta.outputs.artifact_suffix }}.html"
+
+      - name: Verify no external CSS or JavaScript references
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Eq 'href="style\.css"|src="app\.js"' transparent_canvas_editor.html; then
+            echo "portable HTML still contains external CSS/JS references"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portable-html-${{ needs.meta.outputs.artifact_suffix }}
+          path: dist/*
+          if-no-files-found: error
+
+  windows:
+    name: Windows amd64
+    needs:
+      - meta
+      - quality
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install Wails CLI
+        shell: pwsh
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
+          "$(go env GOPATH)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Build application
+        shell: pwsh
+        run: |
+          node --check app.js
+          node build-single.js
+          go test ./...
+          wails build -clean
+
+      - name: Package Windows release
+        shell: pwsh
+        run: |
+          $suffix = "${{ needs.meta.outputs.artifact_suffix }}"
+          New-Item -ItemType Directory -Force -Path dist/windows | Out-Null
+          Copy-Item build/bin/transparent-canvas-editor.exe dist/windows/
+          Copy-Item transparent_canvas_editor.html dist/windows/
+          Copy-Item README.md dist/windows/
+          Compress-Archive -Path dist/windows/* -DestinationPath "dist/transparent-canvas-editor-windows-amd64-$suffix.zip" -Force
+          Copy-Item build/bin/transparent-canvas-editor.exe "dist/transparent-canvas-editor-windows-amd64-$suffix.exe"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-amd64-${{ needs.meta.outputs.artifact_suffix }}
+          path: |
+            dist/*.zip
+            dist/*.exe
+          if-no-files-found: error
+
+  linux:
+    name: Linux amd64
+    needs:
+      - meta
+      - quality
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            pkg-config \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev
+
+      - name: Install Wails CLI
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Build application
+        run: |
+          node --check app.js
+          node build-single.js
+          go test ./...
+          wails build -clean -tags webkit2_41
+
+      - name: Package Linux release
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${{ needs.meta.outputs.artifact_suffix }}"
+          mkdir -p dist
+          tar -C build/bin -czf "dist/transparent-canvas-editor-linux-amd64-${suffix}.tar.gz" transparent-canvas-editor
+          bash scripts/package-linux-deb.sh "${{ needs.meta.outputs.version }}" "dist/transparent-canvas-editor-linux-amd64-${suffix}.deb"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-amd64-${{ needs.meta.outputs.artifact_suffix }}
+          path: |
+            dist/*.tar.gz
+            dist/*.deb
+          if-no-files-found: error
+
+  release:
+    name: GitHub Release
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    needs:
+      - meta
+      - quality
+      - portable
+      - windows
+      - linux
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-${{ needs.meta.outputs.artifact_suffix }}"
+          path: release
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            gh release upload "${tag}" release/* --clobber
+          else
+            gh release create "${tag}" release/* \
+              --title "${tag}" \
+              --generate-notes \
+              --verify-tag
+          fi

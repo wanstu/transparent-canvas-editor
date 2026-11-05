@@ -66,3 +66,38 @@ wails.json
 ```
 
 根目录的 HTML / CSS / JS 是编辑器源码；`sync-frontend.js` 会在 Wails 构建时同步到 `frontend/`。
+
+## CI/CD
+
+GitHub Actions 配置位于：
+
+```text
+.github/workflows/ci.yml
+```
+
+触发规则：
+
+- Pull Request 到 `master`：运行质量检查并构建各平台产物
+- Push 到 `master`：运行完整 CI，并保留构建 artifacts
+- Push `v*` tag：在 CI 全绿后自动创建 / 更新 GitHub Release
+
+自动构建产物：
+
+- 单文件 HTML 便携版
+- Windows amd64 EXE
+- Windows amd64 ZIP（EXE + HTML + README）
+- Linux amd64 tar.gz
+- Linux amd64 `.deb`
+
+普通分支构建的 artifact 名包含分支名和 commit SHA；tag 构建的 artifact / Release 文件名包含 tag。
+
+### 发布版本
+
+例如发布 `v0.1.0`：
+
+```powershell
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+CI 会自动测试、构建 Windows / Linux / 便携版，并在全部成功后发布 GitHub Release。
