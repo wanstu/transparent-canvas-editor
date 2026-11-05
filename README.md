@@ -29,7 +29,7 @@
 
 - Go 1.26+
 - Wails v2.15.0
-- [wanstu/wails-desktop-kit](https://github.com/wanstu/wails-desktop-kit) v0.11.3
+- [wanstu/wails-desktop-kit](https://github.com/wanstu/wails-desktop-kit) v0.12.1
 
 桌面版增加：
 
@@ -51,6 +51,17 @@ Windows 构建产物：
 ```text
 build/bin/transparent-canvas-editor.exe
 ```
+
+### 应用图标
+
+构建前会执行 `tools/prepare-desktop-assets`：
+
+- 如果存在 `assets/icons/transparent-canvas-editor-app.png`，使用 Desktop Kit 规范化为 `build/appicon.png`
+- 如果没有自定义图标，使用 Desktop Kit `icon.GenerateBadgeFile` 自动生成 `T` 徽标作为 fallback
+- Windows 构建前删除旧的 `build/windows/icon.ico`，让 Wails 从最新 `build/appicon.png` 重新生成 EXE 图标
+- Windows Setup 使用同一份生成后的 `build/windows/icon.ico`
+
+这样 EXE、开始菜单快捷方式和安装器使用同一套应用图标。
 
 ## 项目结构
 
@@ -85,6 +96,7 @@ GitHub Actions 配置位于：
 
 - 单文件 HTML 便携版
 - Windows amd64 EXE
+- Windows amd64 Setup 安装包（NSIS，默认当前用户安装，无需 UAC）
 - Windows amd64 ZIP（EXE + HTML + README）
 - Linux amd64 tar.gz
 - Linux amd64 `.deb`

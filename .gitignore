@@ -4,3 +4,4 @@
 /.gomodcache/
 /.gotmp/
 .single-check.js
+/dist/

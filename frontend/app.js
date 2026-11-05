@@ -292,7 +292,7 @@ document.querySelectorAll('.tool-group>.group-trigger').forEach(trigger=>{
 });
 $('#historyToggle').onclick=e=>{e.stopPropagation();const shell=$('#rightbarShell');shell.classList.toggle('history-open');$('.history-group').classList.add('open')};
 const shortcutPanel=$('#shortcutPanel');
-shortcutPanel.innerHTML='<div class="shortcut-head"><strong>快捷键</strong><button id="shortcutClose">×</button></div><div class="shortcut-list"><div><span>撤回</span><span><kbd>Ctrl</kbd> + <kbd>Z</kbd></span></div><div><span>反撤回</span><span><kbd>Ctrl</kbd> + <kbd>Y</kbd></span></div><div><span>复制 / 粘贴</span><span><kbd>Ctrl</kbd> + <kbd>C</kbd> / <kbd>V</kbd></span></div><div><span>复制一份</span><span><kbd>Ctrl</kbd> + <kbd>D</kbd></span></div><div><span>删除</span><kbd>Delete</kbd></div><div><span>移动 1px</span><kbd>方向键</kbd></div><div><span>移动 10px</span><span><kbd>Shift</kbd> + <kbd>方向键</kbd></span></div><div><span>混合多选</span><span><kbd>Shift</kbd> + 点击</span></div><div><span>移动画布</span><span>鼠标中键拖动</span></div><div><span>缩放画布</span><span>鼠标滚轮</span></div><div><span>显示 / 隐藏本面板</span><kbd>?</kbd></div></div>';
+shortcutPanel.innerHTML='<div class="shortcut-head"><strong>快捷键</strong><button id="shortcutClose">×</button></div><div class="shortcut-list"><div><span>撤回</span><span><kbd>Ctrl</kbd> + <kbd>Z</kbd></span></div><div><span>反撤回</span><span><kbd>Ctrl</kbd> + <kbd>Y</kbd></span></div><div><span>复制 / 粘贴</span><span><kbd>Ctrl</kbd> + <kbd>C</kbd> / <kbd>V</kbd></span></div><div><span>复制一份</span><span><kbd>Ctrl</kbd> + <kbd>D</kbd></span></div><div><span>删除</span><kbd>Delete</kbd></div><div><span>移动 1px</span><kbd>方向键</kbd></div><div><span>移动 10px</span><span><kbd>Shift</kbd> + <kbd>方向键</kbd></span></div><div><span>混合多选</span><span><kbd>Shift</kbd> + 点击</span></div><div><span>移动画布</span><span>鼠标中键 / <kbd>Space</kbd> + 左键拖动</span></div><div><span>缩放画布</span><span>鼠标滚轮</span></div><div><span>显示 / 隐藏本面板</span><kbd>?</kbd></div></div>';
 $('#shortcutToggle').onclick=e=>{e.stopPropagation();$('#rightbarShell').classList.toggle('shortcuts-open')};
 $('#shortcutClose').onclick=e=>{e.stopPropagation();$('#rightbarShell').classList.remove('shortcuts-open')};
 $('#undoBtn').onclick=undoHistory;$('#redoBtn').onclick=redoHistory;
@@ -380,12 +380,20 @@ function renderCanvasColorControls(){
 }
 
 let gesture=null;
+let spacePanHeld=false;
+function setSpacePanHeld(active){
+  spacePanHeld=active;
+  viewport.classList.toggle('space-pan-ready',active)
+}
 function beginPan(e){
-  e.preventDefault();gesture={type:'pan',sx:e.clientX,sy:e.clientY,orig:{x:state.panX,y:state.panY}};viewport.setPointerCapture(e.pointerId)
+  e.preventDefault();
+  gesture={type:'pan',sx:e.clientX,sy:e.clientY,orig:{x:state.panX,y:state.panY}};
+  viewport.classList.add('panning');
+  viewport.setPointerCapture(e.pointerId)
 }
 function bindObjectEvents(el,o){
   el.addEventListener('pointerdown',e=>{
-    if(e.button===1){e.stopPropagation();beginPan(e);return}
+    if(e.button===1||(e.button===0&&spacePanHeld)){e.stopPropagation();beginPan(e);return}
     if(e.button!==0)return;
     e.stopPropagation();
     const dir=e.target.dataset.dir;
@@ -447,15 +455,15 @@ viewport.addEventListener('pointermove',e=>{
   o.x=x;o.y=y;o.w=w;o.h=h;renderObjects(false);syncPositionFields(o)
 });
 viewport.addEventListener('pointerdown',e=>{
-  if(e.button===1){beginPan(e);return}
+  if(e.button===1||(e.button===0&&spacePanHeld)){beginPan(e);return}
   if(e.button!==0)return;
   if(e.target===viewport||e.target===world||e.target.classList.contains('canvas-image-layer')||e.target.classList.contains('canvas-bg-layer')){
     clearSelection();gesture=null;renderObjects()
   }
 });
 viewport.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault()});
-viewport.addEventListener('pointerup',()=>{if(!gesture||gesture.type==='guide')return;const type=gesture.type;gesture=null;if(type==='move'||type==='moveGroup')commitHistory('移动对象');else if(type==='resize')commitHistory('调整方框尺寸')});
-viewport.addEventListener('pointercancel',()=>{if(!gesture||gesture.type==='guide')return;const type=gesture.type;gesture=null;if(type==='move'||type==='moveGroup'||type==='resize')commitHistory(type==='resize'?'调整方框尺寸':'移动对象')});
+viewport.addEventListener('pointerup',()=>{if(!gesture||gesture.type==='guide')return;const type=gesture.type;gesture=null;viewport.classList.remove('panning');if(type==='move'||type==='moveGroup')commitHistory('移动对象');else if(type==='resize')commitHistory('调整方框尺寸')});
+viewport.addEventListener('pointercancel',()=>{if(!gesture||gesture.type==='guide')return;const type=gesture.type;gesture=null;viewport.classList.remove('panning');if(type==='move'||type==='moveGroup'||type==='resize')commitHistory(type==='resize'?'调整方框尺寸':'移动对象')});
 
 const RULER_SIZE=28;
 function chooseRulerStep(){const xs=[5,10,20,25,50,100,200,250,500,1000,2000];return xs.find(v=>v*state.zoom>=62)||2000}
@@ -490,7 +498,7 @@ function renderGuides(){
 function guideCoord(axis,e){const r=viewport.getBoundingClientRect();return axis==='vertical'?(e.clientX-r.left-state.panX)/state.zoom:(e.clientY-r.top-state.panY)/state.zoom}
 function showGuideLabel(axis,value,cx,cy){let el=$('#guideDragLabel');if(!el){el=document.createElement('div');el.id='guideDragLabel';el.className='guide-label';document.querySelector('.workspace').appendChild(el)}const r=document.querySelector('.workspace').getBoundingClientRect();el.style.display='block';el.style.left=(cx-r.left+10)+'px';el.style.top=(cy-r.top+10)+'px';el.textContent=(axis==='vertical'?'X ':'Y ')+Math.round(value)}
 function hideGuideLabel(){const el=$('#guideDragLabel');if(el)el.style.display='none'}
-function beginGuide(axis,e){e.preventDefault();e.stopPropagation();if(!state.guidesVisible){state.guidesVisible=true;refreshRightbar()}const value=guideCoord(axis,e),list=state.guides[axis];list.push(value);gesture={type:'guide',axis,index:list.length-1,newGuide:true};renderGuides();showGuideLabel(axis,value,e.clientX,e.clientY)}
+function beginGuide(axis,e){if(e.button===1||(e.button===0&&spacePanHeld)){e.preventDefault();e.stopPropagation();beginPan(e);return}e.preventDefault();e.stopPropagation();if(!state.guidesVisible){state.guidesVisible=true;refreshRightbar()}const value=guideCoord(axis,e),list=state.guides[axis];list.push(value);gesture={type:'guide',axis,index:list.length-1,newGuide:true};renderGuides();showGuideLabel(axis,value,e.clientX,e.clientY)}
 topRuler.addEventListener('pointerdown',e=>beginGuide('vertical',e));
 leftRuler.addEventListener('pointerdown',e=>beginGuide('horizontal',e));
 document.addEventListener('pointermove',e=>{if(!gesture||gesture.type!=='guide')return;const list=state.guides[gesture.axis];if(!list||gesture.index>=list.length)return;const value=guideCoord(gesture.axis,e);list[gesture.index]=value;renderGuides();showGuideLabel(gesture.axis,value,e.clientX,e.clientY)});
@@ -713,14 +721,16 @@ document.querySelector('.workspace').addEventListener('contextmenu',e=>{
   e.preventDefault();showContextMenu(e.clientX,e.clientY,null)
 });
 document.addEventListener('pointerdown',e=>{if(!$('#contextMenu').contains(e.target))hideContextMenu()});
-window.addEventListener('blur',hideContextMenu);
+window.addEventListener('blur',()=>{hideContextMenu();setSpacePanHeld(false);viewport.classList.remove('panning');if(gesture?.type==='pan')gesture=null});
 
+document.addEventListener('keyup',e=>{if(e.code==='Space'){e.preventDefault();setSpacePanHeld(false)}});
 document.addEventListener('keydown',e=>{
-  const key=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey;
-  if(mod&&key==='z'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){e.preventDefault();e.shiftKey?redoHistory():undoHistory();return}
-  if(mod&&key==='y'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){e.preventDefault();redoHistory();return}
-  if(e.key==='?'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();$('#rightbarShell').classList.toggle('shortcuts-open');return}
-  if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;
+  const key=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey,editing=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)||document.activeElement?.isContentEditable;
+  if(e.code==='Space'&&!editing){e.preventDefault();setSpacePanHeld(true);return}
+  if(mod&&key==='z'&&!editing){e.preventDefault();e.shiftKey?redoHistory():undoHistory();return}
+  if(mod&&key==='y'&&!editing){e.preventDefault();redoHistory();return}
+  if(e.key==='?'&&!editing){e.preventDefault();$('#rightbarShell').classList.toggle('shortcuts-open');return}
+  if(editing)return;
   if((e.key==='Delete'||e.key==='Backspace')&&(state.selectedId!=null||state.selectedBoxIds.length)){e.preventDefault();deleteSelected();return}
   if(mod&&key==='d'){e.preventDefault();duplicateSelection();return}
   if(mod&&key==='c'){e.preventDefault();copySelectedBoxes();return}
