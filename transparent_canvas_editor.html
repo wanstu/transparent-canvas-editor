@@ -16,7 +16,7 @@ button,input,textarea,select{font:inherit}.app{height:100%;display:grid;grid-tem
 .hint-mini{font-size:11px;color:#8a95a7;font-weight:500}.hint{font-size:11px;color:#7d899c;line-height:1.55}.row{display:grid;grid-template-columns:1fr 104px;gap:10px;align-items:center;margin:9px 0}.row label{font-size:13px;color:#4d5870}.color-value-row{grid-template-columns:1fr 178px}
 .row input[type=number],.row input[type=text],.row select,textarea{width:100%;border:1px solid #d8dfe9;background:#fff;border-radius:9px;padding:8px 10px;color:#253148;outline:none}.row input:focus,textarea:focus,.row select:focus{border-color:#7da2df;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
 input[type=range]{width:100%}input[type=color]{width:40px;height:34px;padding:0;border:0;background:transparent;cursor:pointer}.color-editor{display:grid;grid-template-columns:40px minmax(0,1fr);gap:7px;align-items:center}.color-editor input[type=text]{width:100%;min-width:0;border:1px solid #d8dfe9;background:#fff;border-radius:9px;padding:8px 9px;color:#253148;outline:none;font-size:11px}.color-editor input[type=text]:focus{border-color:#7da2df;box-shadow:0 0 0 3px rgba(37,99,235,.1)}.color-editor input[type=text].invalid{border-color:#d95b68;box-shadow:0 0 0 3px rgba(217,91,104,.1)}textarea{resize:vertical;min-height:84px;line-height:1.5}
-.toggle{display:flex;gap:8px;align-items:center;font-size:13px;color:#4e5a70;margin:8px 0}.toggle input{accent-color:var(--accent)}.inline2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.inline3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.toggle{display:flex;gap:8px;align-items:center;font-size:13px;color:#4e5a70;margin:8px 0}.toggle input{accent-color:var(--accent)}.inline2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.inline3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.corner-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.corner-grid label{display:grid;grid-template-columns:42px 1fr;align-items:center;gap:6px;font-size:11px;color:#667287}.corner-grid input{width:100%;border:1px solid #d8dfe9;background:#fff;border-radius:8px;padding:7px 8px;color:#253148;outline:none}
 .smallbtn{border:1px solid #dce3ec;background:#fff;border-radius:9px;padding:8px 9px;cursor:pointer;color:#455269}.smallbtn:disabled{opacity:.42;cursor:not-allowed}.smallbtn.active{border-color:#8ab0ec;background:#edf4ff;color:#1e5bc2}.full{width:100%}.mt6{margin-top:6px}.mt8{margin-top:8px}
 .color-row{display:grid;grid-template-columns:minmax(0,138px) 1fr 34px;gap:8px;align-items:center;margin-bottom:7px}.color-row .color-editor{grid-template-columns:36px minmax(0,1fr)}.color-row .color-editor input[type=color]{width:36px;height:32px}.color-row .color-editor input[type=text]{padding:7px 8px;font-size:10px}.remove{height:32px;border:0;border-radius:8px;background:#f1f4f8;color:#6c788b;cursor:pointer}.add-stop{width:100%;padding:8px;border:1px dashed #c9d2df;background:#fbfcfd;color:#526176;border-radius:9px;cursor:pointer}
 .image-actions,.export-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.layers{display:flex;flex-direction:column;gap:6px;max-height:230px;overflow:auto}.layer{display:flex;align-items:center;gap:6px;border:1px solid #e2e7ef;border-radius:9px;padding:6px 7px;background:#fff;cursor:grab;user-select:none}.layer:active{cursor:grabbing}.layer.dragging{opacity:.45}.layer.drop-target{box-shadow:0 0 0 2px #76a6ef inset}.layer.active{border-color:#89afea;background:#eef5ff}.layer.multi{box-shadow:inset 3px 0 0 #2563eb}.layer-control{width:25px;height:25px;border:0;border-radius:6px;background:#f1f4f8;color:#59677d;display:grid;place-items:center;cursor:pointer;padding:0}.layer-control:hover{background:#e5ebf3}.layer-control.on{color:#1e5bc2;background:#eaf2ff}.layer-control.locked{color:#a14e16;background:#fff2e8}.layer-icon{width:22px;height:22px;display:grid;place-items:center;border-radius:6px;background:#f0f3f8;color:#59677d;font-size:12px}.layer-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}.layer-name-input{flex:1;min-width:0;border:1px solid #84aef0;border-radius:6px;padding:4px 6px;font-size:12px;outline:none;box-shadow:0 0 0 2px rgba(37,99,235,.09)}.layer-z{font-size:10px;color:#8792a3}.empty-state{font-size:12px;color:#8a95a7;padding:10px;border:1px dashed #d7dee8;border-radius:9px;text-align:center}
@@ -28,7 +28,7 @@ input[type=range]{width:100%}input[type=color]{width:40px;height:34px;padding:0;
 .bottom-actions{position:sticky;bottom:-28px;margin:18px -18px -28px;padding:12px 18px 18px;background:linear-gradient(180deg,rgba(255,255,255,.78),#fff 30%);border-top:1px solid #edf0f4}.export-row .btn{padding:11px 8px}
 .workspace{position:relative;overflow:hidden;background:#dfe4eb}.viewport{position:absolute;inset:0;overflow:hidden;cursor:default;background:#dfe4eb}.viewport.space-pan-ready,.viewport.space-pan-ready .object{cursor:grab!important}.viewport.panning,.viewport.panning .object{cursor:grabbing!important}
 .world{position:absolute;left:0;top:0;width:1600px;height:1000px;transform-origin:0 0;background-color:#fff;background-image:linear-gradient(45deg,#eef2f6 25%,transparent 25%),linear-gradient(-45deg,#eef2f6 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#eef2f6 75%),linear-gradient(-45deg,transparent 75%,#eef2f6 75%);background-size:28px 28px;background-position:0 0,0 14px,14px -14px,-14px 0;box-shadow:0 0 0 1px rgba(116,128,148,.13),0 12px 36px rgba(45,55,72,.08)}
-.canvas-image-layer,.canvas-bg-layer{position:absolute;inset:0;pointer-events:none}.canvas-image-layer{z-index:0;background-repeat:no-repeat;background-position:center}.canvas-bg-layer{z-index:1}.object{position:absolute;touch-action:none;user-select:none;z-index:3}.box-object,.ellipse-object,.line-object,.text-object{cursor:move}.object.locked{cursor:default}.object.selected,.object.multi-selected{outline:1.5px solid var(--accent);outline-offset:-1px}.object.multi-selected:not(.selected){outline-style:dashed}.box-image,.box-fill,.inner-shadow-layer{position:absolute;inset:0;pointer-events:none;border-radius:inherit}.deform-canvas{position:absolute;pointer-events:none;z-index:0}.deform-handle{position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #8b5cf6;box-shadow:0 2px 8px rgba(91,33,182,.25);z-index:9;display:none;cursor:grab}.object.deform-active.selected.single-selection:not(.locked)>.deform-handle{display:block}.object.deforming>.deform-handle{cursor:grabbing}.deform-handle.top,.deform-handle.bottom{transform:translate(-50%,-50%)}.deform-handle.left,.deform-handle.right{transform:translate(-50%,-50%)}.box-image{z-index:0;background-repeat:no-repeat;background-position:center}.box-fill{z-index:1}.inner-shadow-layer{z-index:2}.ellipse-object{border-radius:50%}.line-object{min-height:20px;background:transparent}.line-stroke{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);border-radius:999px;pointer-events:none}.text-object{cursor:move;white-space:pre-wrap;line-height:1.2;min-width:12px;min-height:16px}.text-content{display:block;white-space:pre-wrap;pointer-events:none}
+.canvas-image-layer,.canvas-bg-layer{position:absolute;inset:0;pointer-events:none}.canvas-image-layer{z-index:0;background-repeat:no-repeat;background-position:center}.canvas-bg-layer{z-index:1}.object{position:absolute;touch-action:none;user-select:none;z-index:3}.box-object,.ellipse-object,.line-object,.text-object{cursor:move}.object.locked{cursor:default}.object.selected,.object.multi-selected{outline:1.5px solid var(--accent);outline-offset:-1px}.object.multi-selected:not(.selected){outline-style:dashed}.box-image,.box-fill,.inner-shadow-layer{position:absolute;inset:0;pointer-events:none;border-radius:inherit}.deform-canvas{position:absolute;pointer-events:none;z-index:0}.deform-handle{position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #8b5cf6;box-shadow:0 2px 8px rgba(91,33,182,.25);z-index:9;display:none;cursor:grab;transform:translate(-50%,-50%)}.deform-handle.selected-point{background:#8b5cf6;border-color:#fff;box-shadow:0 0 0 2px #8b5cf6,0 3px 10px rgba(91,33,182,.35)}.object.deform-active.selected.single-selection:not(.locked)>.deform-handle{display:block}.object.deforming>.deform-handle{cursor:grabbing}.deform-handle.top,.deform-handle.bottom{transform:translate(-50%,-50%)}.deform-handle.left,.deform-handle.right{transform:translate(-50%,-50%)}.box-image{z-index:0;background-repeat:no-repeat;background-position:center}.box-fill{z-index:1}.inner-shadow-layer{z-index:2}.ellipse-object{border-radius:50%}.line-object{min-height:20px;background:transparent}.line-stroke{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);border-radius:999px;pointer-events:none}.text-object{cursor:move;white-space:pre-wrap;line-height:1.2;min-width:12px;min-height:16px}.text-content{display:block;white-space:pre-wrap;pointer-events:none}
 .handle{position:absolute;width:11px;height:11px;border-radius:3px;background:#fff;border:2px solid var(--accent);z-index:6;display:none}.box-object.selected.single-selection .handle,.ellipse-object.selected.single-selection .handle,.line-object.selected.single-selection .handle{display:block}.nw{left:-7px;top:-7px;cursor:nwse-resize}.n{left:50%;top:-7px;transform:translateX(-50%);cursor:ns-resize}.ne{right:-7px;top:-7px;cursor:nesw-resize}.e{right:-7px;top:50%;transform:translateY(-50%);cursor:ew-resize}.se{right:-7px;bottom:-7px;cursor:nwse-resize}.s{left:50%;bottom:-7px;transform:translateX(-50%);cursor:ns-resize}.sw{left:-7px;bottom:-7px;cursor:nesw-resize}.w{left:-7px;top:50%;transform:translateY(-50%);cursor:ew-resize}.rotate-handle{position:absolute;left:50%;top:-34px;width:15px;height:15px;border-radius:50%;background:#fff;border:2px solid var(--accent);transform:translateX(-50%);cursor:grab;z-index:8;display:none;box-shadow:0 2px 7px rgba(37,99,235,.18)}.rotate-handle::after{content:"";position:absolute;left:50%;top:13px;width:1px;height:18px;background:var(--accent)}.object.selected.single-selection:not(.locked)>.rotate-handle{display:block}.object.rotating>.rotate-handle{cursor:grabbing}
 .ruler{position:absolute;z-index:25;background:rgba(248,250,252,.98);touch-action:none;user-select:none;border:1px solid rgba(110,125,145,.16)}.ruler.top{height:var(--ruler);cursor:ns-resize;box-shadow:0 2px 6px rgba(76,89,108,.08)}.ruler.left{width:var(--ruler);cursor:ew-resize;box-shadow:2px 0 6px rgba(76,89,108,.08)}.ruler-corner{position:absolute;width:var(--ruler);height:var(--ruler);z-index:26;background:#f8fafc;border:1px solid rgba(110,125,145,.16);box-shadow:0 2px 6px rgba(76,89,108,.06)}
 .snap-overlay{position:absolute;inset:0;z-index:17;pointer-events:none;overflow:hidden}.snap-line{position:absolute;background:#e246b7;opacity:.95}.snap-line.vertical{top:0;bottom:0;width:1px}.snap-line.horizontal{left:0;right:0;height:1px}.snap-distance{position:absolute;background:#e246b7;color:#fff;border-radius:5px;padding:3px 5px;font-size:10px;line-height:1;white-space:nowrap;box-shadow:0 2px 8px rgba(226,70,183,.22)}.selection-marquee{display:none;position:absolute;z-index:19;border:1px solid #2f7df6;background:rgba(47,125,246,.1);pointer-events:none}.selection-marquee.show{display:block}.guide-layer{position:absolute;inset:0;z-index:18;pointer-events:none;overflow:hidden}.guide{position:absolute;background:#2f7df6;pointer-events:auto;touch-action:none;user-select:none;opacity:.88}.guide.vertical{top:0;bottom:0;width:1px;cursor:ew-resize}.guide.horizontal{left:0;right:0;height:1px;cursor:ns-resize}.guide::before{content:"";position:absolute}.guide.vertical::before{left:-5px;top:0;bottom:0;width:11px}.guide.horizontal::before{top:-5px;left:0;right:0;height:11px}.guide:hover{opacity:1;box-shadow:0 0 0 1px rgba(47,125,246,.2)}.guide-label{position:absolute;z-index:60;pointer-events:none;background:#2563eb;color:#fff;font-size:10px;line-height:1;border-radius:5px;padding:4px 5px;box-shadow:0 2px 8px rgba(37,99,235,.24)}
@@ -108,7 +108,16 @@ input[type=range]{width:100%}input[type=color]{width:40px;height:34px;padding:0;
 
       <section class="section object-card" id="boxPanel">
         <div class="section-title" id="shapePanelTitle">方框外观</div>
-        <div class="row" id="radiusRow"><label>圆角 <span id="radiusVal"></span></label><input id="radius" type="range" min="0" max="240"></div>
+        <div id="radiusRow">
+          <div class="section-title sub-title">四角圆角</div>
+          <div class="corner-grid">
+            <label>左上 <input id="radiusTL" type="number" min="0" max="2000" step="1"></label>
+            <label>右上 <input id="radiusTR" type="number" min="0" max="2000" step="1"></label>
+            <label>左下 <input id="radiusBL" type="number" min="0" max="2000" step="1"></label>
+            <label>右下 <input id="radiusBR" type="number" min="0" max="2000" step="1"></label>
+          </div>
+          <button class="smallbtn full mt6" id="syncCorners">用左上值同步四角</button>
+        </div>
         <div class="row"><label>渐变类型</label><select id="gradientType"><option value="linear">线性渐变</option><option value="radial">中心渐变</option></select></div>
         <div class="row"><label>渐变蒙层透明度 <span id="bgOpacityVal"></span></label><input id="bgOpacity" type="range" min="0" max="100"></div>
         <div class="row" id="angleRow"><label>渐变角度 <span id="angleVal"></span></label><input id="angle" type="range" min="0" max="360"></div>
@@ -129,11 +138,17 @@ input[type=range]{width:100%}input[type=color]{width:40px;height:34px;padding:0;
         </div>
 
         <div class="subsection">
-          <div class="section-title">边框</div>
+          <div class="section-title">四边边框</div>
           <label class="toggle"><input id="borderOn" type="checkbox"> 显示边框</label>
-          <div class="row"><label>边框宽度</label><input id="borderWidth" type="number" min="0" max="30"></div>
-          <div class="row color-value-row"><label>边框颜色</label><div class="color-editor"><input id="borderColorPicker" type="color"><input id="borderColor" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
-          <div class="row"><label>边框透明度 <span id="borderOpacityVal"></span></label><input id="borderOpacity" type="range" min="0" max="100"></div>
+          <div class="row"><label>当前编辑边</label><select id="borderSide"><option value="top">上边</option><option value="right">右边</option><option value="bottom">下边</option><option value="left">左边</option></select></div>
+          <label class="toggle"><input id="borderSideOn" type="checkbox"> 启用当前边</label>
+          <div class="row"><label>粗细</label><input id="borderWidth" type="number" min="0" max="200" step="1"></div>
+          <div class="row"><label>颜色模式</label><select id="borderPaint"><option value="solid">纯色</option><option value="linear">线性渐变</option><option value="radial">中心渐变</option></select></div>
+          <div class="row color-value-row"><label>颜色 1</label><div class="color-editor"><input id="borderColorPicker" type="color"><input id="borderColor" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+          <div class="row color-value-row" id="borderColor2Row"><label>颜色 2</label><div class="color-editor"><input id="borderColor2Picker" type="color"><input id="borderColor2" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+          <div class="row"><label>透明度 <span id="borderOpacityVal"></span></label><input id="borderOpacity" type="range" min="0" max="100"></div>
+          <button class="smallbtn full mt6" id="copyBorderToAll">复制当前边参数到四边</button>
+          <div class="hint mt8">四边可分别设置开关、粗细、透明度与颜色。渐变支持“线性渐变”和“中心渐变”。</div>
         </div>
       </section>
 
@@ -141,8 +156,12 @@ input[type=range]{width:100%}input[type=color]{width:40px;height:34px;padding:0;
         <div class="section-title">局部弧度形变</div>
         <label class="toggle"><input id="deformEnabled" type="checkbox"> 启用形变点</label>
         <div class="row"><label>平滑范围 <span id="deformSmoothnessVal"></span></label><input id="deformSmoothness" type="range" min="20" max="90" value="58"></div>
-        <button class="smallbtn full" id="resetDeform">重置形变</button>
-        <div class="hint mt8">启用后对象四边出现紫色形变点。向外拖形成鼓包，向内拖形成凹弧；旁边轮廓会按平滑范围自动过渡。</div>
+        <div class="inline2">
+          <button class="smallbtn" id="addDeformPoint">＋ 增加形变点</button>
+          <button class="smallbtn" id="deleteDeformPoint">－ 删除选中点</button>
+        </div>
+        <button class="smallbtn full mt6" id="resetDeform">重置形变</button>
+        <div class="hint mt8">可直接双击边缘增加点；单击紫色点选中后按 Delete 删除。也可点“增加形变点”后再点击轮廓。拖动点会按平滑范围自动影响附近轮廓。</div>
       </section>
 
       <section class="section object-card" id="shadowPanel" hidden>
@@ -369,6 +388,8 @@ const loadedCustomFontFamilies=new Set();
 const layerNodeCache=new Map();
 const objectNodeCache=new Map();
 let worldUpdateRAF=0;
+let selectedDeformPointId=null;
+let deformAddMode=false;
 const measureCtx=document.createElement('canvas').getContext('2d');
 const uid=()=>state.nextId++;
 function parseColorValue(value){
@@ -509,8 +530,18 @@ function cleanupUnusedResources(){
   return{imagesRemoved,fontsRemoved}
 }
 
-function defaultBox(){return{id:uid(),type:'box',shape:'rect',name:'方框',visible:true,locked:false,rotation:0,lockAspect:false,x:180,y:150,w:420,h:300,radius:28,bgOpacity:.88,gradientType:'linear',angle:135,colors:[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:true,borderWidth:2,borderColor:'#ffffff',borderOpacity:.9,shadowOn:true,shadowX:0,shadowY:16,shadowBlur:34,shadowSpread:0,shadowColor:'#232e3f',shadowOpacity:.22,innerShadowOn:false,innerShadowX:0,innerShadowY:4,innerShadowBlur:12,innerShadowSpread:0,innerShadowColor:'#000000',innerShadowOpacity:.18,deformEnabled:false,deformSmoothness:58,deform:{top:0,right:0,bottom:0,left:0}}}
-function defaultCircle(){return{id:uid(),type:'box',shape:'ellipse',name:'圆形',visible:true,locked:false,rotation:0,lockAspect:true,x:250,y:180,w:240,h:240,radius:120,bgOpacity:.9,gradientType:'radial',angle:135,colors:[{c:'#ffffff',p:0},{c:'#dce8ff',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:true,borderWidth:2,borderColor:'#8fb6ff',borderOpacity:.9,shadowOn:false,shadowX:0,shadowY:12,shadowBlur:28,shadowSpread:0,shadowColor:'#315887',shadowOpacity:.22,innerShadowOn:false,innerShadowX:0,innerShadowY:4,innerShadowBlur:12,innerShadowSpread:0,innerShadowColor:'#315887',innerShadowOpacity:.16,deformEnabled:false,deformSmoothness:58,deform:{top:0,right:0,bottom:0,left:0}}}
+function defaultBorderSpec(color='#ffffff',width=2,opacity=.9){return{on:true,width,opacity,paint:'solid',color1:color,color2:color}}
+function defaultBorders(color='#ffffff',width=2,opacity=.9){return{top:defaultBorderSpec(color,width,opacity),right:defaultBorderSpec(color,width,opacity),bottom:defaultBorderSpec(color,width,opacity),left:defaultBorderSpec(color,width,opacity)}}
+function defaultDeformPoints(shape='rect'){
+  if(shape==='ellipse')return[
+    {id:1,side:'ellipse',t:0,dx:0,dy:0},{id:2,side:'ellipse',t:.25,dx:0,dy:0},{id:3,side:'ellipse',t:.5,dx:0,dy:0},{id:4,side:'ellipse',t:.75,dx:0,dy:0}
+  ];
+  return[
+    {id:1,side:'top',t:.5,dx:0,dy:0},{id:2,side:'right',t:.5,dx:0,dy:0},{id:3,side:'bottom',t:.5,dx:0,dy:0},{id:4,side:'left',t:.5,dx:0,dy:0}
+  ]
+}
+function defaultBox(){return{id:uid(),type:'box',shape:'rect',name:'方框',visible:true,locked:false,rotation:0,lockAspect:false,x:180,y:150,w:420,h:300,radius:28,cornerRadii:{tl:28,tr:28,br:28,bl:28},bgOpacity:.88,gradientType:'linear',angle:135,colors:[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:true,borderWidth:2,borderColor:'#ffffff',borderOpacity:.9,borders:defaultBorders('#ffffff',2,.9),shadowOn:true,shadowX:0,shadowY:16,shadowBlur:34,shadowSpread:0,shadowColor:'#232e3f',shadowOpacity:.22,innerShadowOn:false,innerShadowX:0,innerShadowY:4,innerShadowBlur:12,innerShadowSpread:0,innerShadowColor:'#000000',innerShadowOpacity:.18,deformEnabled:false,deformSmoothness:58,deform:{top:0,right:0,bottom:0,left:0},deformPoints:defaultDeformPoints('rect'),nextDeformPointId:5}}
+function defaultCircle(){return{id:uid(),type:'box',shape:'ellipse',name:'圆形',visible:true,locked:false,rotation:0,lockAspect:true,x:250,y:180,w:240,h:240,radius:120,cornerRadii:{tl:120,tr:120,br:120,bl:120},bgOpacity:.9,gradientType:'radial',angle:135,colors:[{c:'#ffffff',p:0},{c:'#dce8ff',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:true,borderWidth:2,borderColor:'#8fb6ff',borderOpacity:.9,borders:defaultBorders('#8fb6ff',2,.9),shadowOn:false,shadowX:0,shadowY:12,shadowBlur:28,shadowSpread:0,shadowColor:'#315887',shadowOpacity:.22,innerShadowOn:false,innerShadowX:0,innerShadowY:4,innerShadowBlur:12,innerShadowSpread:0,innerShadowColor:'#315887',innerShadowOpacity:.16,deformEnabled:false,deformSmoothness:58,deform:{top:0,right:0,bottom:0,left:0},deformPoints:defaultDeformPoints('ellipse'),nextDeformPointId:5}}
 function defaultLine(){return{id:uid(),type:'box',shape:'line',name:'直线',visible:true,locked:false,rotation:0,lockAspect:false,x:280,y:260,w:300,h:20,radius:0,bgOpacity:0,gradientType:'linear',angle:0,colors:[{c:'#2563eb',p:0},{c:'#2563eb',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:false,borderWidth:0,borderColor:'#2563eb',borderOpacity:1,shadowOn:false,shadowX:0,shadowY:6,shadowBlur:12,shadowSpread:0,shadowColor:'#111827',shadowOpacity:.3,innerShadowOn:false,lineColor:'#2563eb',lineWidth:4,lineOpacity:1}}
 function defaultText(){return{id:uid(),type:'text',name:'文字',visible:true,locked:false,rotation:0,x:260,y:230,content:'文字',fontSize:48,color:'#111827',opacity:1,fontWeight:'400',fontFamily:'"Microsoft YaHei",sans-serif'}}
 function boxShape(o){return o?.type==='box'?(o.shape||'rect'):null}
@@ -535,8 +566,9 @@ function selectedBoxes(){return selectedObjects().filter(o=>o.type==='box')}
 function editableSelectedBoxes(){return editableSelectedObjects().filter(o=>o.type==='box')}
 function hasMultiBoxes(){return selectedObjects().length>1}
 function gradientCSS(colors,angle,type='linear'){const ss=[...colors].sort((a,b)=>a.p-b.p);if(ss.length===1)return ss[0].c;const stops=ss.map(s=>`${s.c} ${s.p}%`).join(',');return type==='radial'?`radial-gradient(circle at center,${stops})`:`linear-gradient(${angle}deg,${stops})`}
-function clearSelection(){state.selectedId=null;state.selectedBoxIds=[]}
+function clearSelection(){state.selectedId=null;state.selectedBoxIds=[];selectedDeformPointId=null;deformAddMode=false;$('#addDeformPoint')?.classList.remove('active')}
 function selectObject(o,additive=false){
+  if(state.selectedId!==o.id){selectedDeformPointId=null;deformAddMode=false;$('#addDeformPoint')?.classList.remove('active')}
   if(additive){
     const i=state.selectedBoxIds.indexOf(o.id);
     if(i>=0){state.selectedBoxIds.splice(i,1);if(state.selectedId===o.id)state.selectedId=state.selectedBoxIds.at(-1)||null}
@@ -561,19 +593,107 @@ function beginInlineLayerRename(row,o){
 }
 function handleHTML(){return'<i class="handle nw" data-dir="nw"></i><i class="handle n" data-dir="n"></i><i class="handle ne" data-dir="ne"></i><i class="handle e" data-dir="e"></i><i class="handle se" data-dir="se"></i><i class="handle s" data-dir="s"></i><i class="handle sw" data-dir="sw"></i><i class="handle w" data-dir="w"></i><i class="rotate-handle" data-dir="rotate" title="拖动旋转；Shift 按 15° 吸附"></i>'}
 function lineHandleHTML(){return'<i class="handle e" data-dir="e"></i><i class="handle w" data-dir="w"></i><i class="rotate-handle" data-dir="rotate" title="拖动旋转；Shift 按 15° 吸附"></i>'}
-function deformHandleHTML(){return'<i class="deform-handle top" data-deform="top" title="拖动上边弧度"></i><i class="deform-handle right" data-deform="right" title="拖动右边弧度"></i><i class="deform-handle bottom" data-deform="bottom" title="拖动下边弧度"></i><i class="deform-handle left" data-deform="left" title="拖动左边弧度"></i>'}
-function deformValues(o){const d=o?.deform||{};return{top:finiteNumber(d.top,0),right:finiteNumber(d.right,0),bottom:finiteNumber(d.bottom,0),left:finiteNumber(d.left,0)}}
+const BORDER_SIDE_KEYS=['top','right','bottom','left'];
+function cornerRadii(o){
+  const legacy=Math.max(0,finiteNumber(o?.radius,0)),r=o?.cornerRadii||{};
+  return{tl:Math.max(0,finiteNumber(r.tl,legacy)),tr:Math.max(0,finiteNumber(r.tr,legacy)),br:Math.max(0,finiteNumber(r.br,legacy)),bl:Math.max(0,finiteNumber(r.bl,legacy))}
+}
+function normalizedCornerRadii(o,inset=0){
+  const r=cornerRadii(o),w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2),limit=Math.min(w,h)/2;
+  return{tl:clamp(r.tl-inset,0,limit),tr:clamp(r.tr-inset,0,limit),br:clamp(r.br-inset,0,limit),bl:clamp(r.bl-inset,0,limit)}
+}
+function ensureBorders(o){
+  if(!o||o.type!=='box')return null;
+  if(!o.borders){
+    const c=o.borderColor||'#ffffff',w=Math.max(0,finiteNumber(o.borderWidth,2)),a=clamp(finiteNumber(o.borderOpacity,.9),0,1);
+    o.borders=defaultBorders(c,w,a)
+  }
+  for(const side of BORDER_SIDE_KEYS){
+    const b=o.borders[side]||(o.borders[side]=defaultBorderSpec(o.borderColor||'#ffffff',o.borderWidth||2,o.borderOpacity??.9));
+    b.on=b.on!==false;b.width=Math.max(0,finiteNumber(b.width,o.borderWidth||2));b.opacity=clamp(finiteNumber(b.opacity,o.borderOpacity??.9),0,1);
+    b.paint=['solid','linear','radial'].includes(b.paint)?b.paint:'solid';b.color1=normalizeColorValue(b.color1||o.borderColor||'#ffffff');b.color2=normalizeColorValue(b.color2||b.color1)
+  }
+  return o.borders
+}
+function activeBorderSpec(o){const borders=ensureBorders(o);return borders?.[$('#borderSide')?.value||'top']||null}
+function syncLegacyBorderFromTop(o){const b=ensureBorders(o)?.top;if(!b)return;o.borderWidth=b.width;o.borderColor=b.color1;o.borderOpacity=b.opacity}
+function refreshBorderControls(o){
+  if(!isFillShape(o))return;const b=activeBorderSpec(o);if(!b)return;
+  $('#borderOn').checked=o.borderOn!==false;$('#borderSideOn').checked=b.on!==false;$('#borderWidth').value=b.width;$('#borderPaint').value=b.paint;$('#borderOpacity').value=Math.round(b.opacity*100);$('#borderOpacityVal').textContent=Math.round(b.opacity*100)+'%';
+  $('#borderColor2Row').style.display=b.paint==='solid'?'none':'';staticColorEditors.borderColor.set(b.color1);staticColorEditors.borderColor2.set(b.color2)
+}
+function maxBorderWidth(o){const b=ensureBorders(o);return b?Math.max(...BORDER_SIDE_KEYS.map(k=>b[k].on?b[k].width:0)):0}
+function bordersNeedCanvas(o){const b=ensureBorders(o);return !!b&&o.borderOn!==false&&BORDER_SIDE_KEYS.some(k=>b[k].on&&b[k].paint!=='solid')}
+function borderRadiusCSS(o){const r=normalizedCornerRadii(o);return `${r.tl}px ${r.tr}px ${r.br}px ${r.bl}px`}
+function applySolidBordersCSS(el,o){
+  if(!o.borderOn||bordersNeedCanvas(o)){el.style.border='none';return}
+  const b=ensureBorders(o);el.style.borderStyle='solid';
+  el.style.borderTopWidth=(b.top.on?b.top.width:0)+'px';el.style.borderRightWidth=(b.right.on?b.right.width:0)+'px';el.style.borderBottomWidth=(b.bottom.on?b.bottom.width:0)+'px';el.style.borderLeftWidth=(b.left.on?b.left.width:0)+'px';
+  el.style.borderTopColor=rgba(b.top.color1,b.top.opacity);el.style.borderRightColor=rgba(b.right.color1,b.right.opacity);el.style.borderBottomColor=rgba(b.bottom.color1,b.bottom.opacity);el.style.borderLeftColor=rgba(b.left.color1,b.left.opacity)
+}
+function ensureDeformPoints(o){
+  if(!isFillShape(o))return[];
+  if(!Array.isArray(o.deformPoints)){
+    const legacy=o.deform||{top:0,right:0,bottom:0,left:0};
+    o.deformPoints=defaultDeformPoints(isEllipse(o)?'ellipse':'rect');
+    if(isEllipse(o)){
+      const vals=[finiteNumber(legacy.top,0),finiteNumber(legacy.right,0),finiteNumber(legacy.bottom,0),finiteNumber(legacy.left,0)];
+      const vec=[[0,-1],[1,0],[0,1],[-1,0]];o.deformPoints.forEach((p,i)=>{p.dx=vec[i][0]*vals[i];p.dy=vec[i][1]*vals[i]})
+    }else{
+      const map={top:[0,-finiteNumber(legacy.top,0)],right:[finiteNumber(legacy.right,0),0],bottom:[0,finiteNumber(legacy.bottom,0)],left:[-finiteNumber(legacy.left,0),0]};
+      o.deformPoints.forEach(p=>{[p.dx,p.dy]=map[p.side]})
+    }
+  }
+  let max=0;o.deformPoints.forEach(p=>{p.id=Math.max(1,Math.floor(finiteNumber(p.id,++max)));max=Math.max(max,p.id);p.t=isEllipse(o)?((finiteNumber(p.t,0)%1)+1)%1:clamp(finiteNumber(p.t,.5),0,1);p.dx=finiteNumber(p.dx,0);p.dy=finiteNumber(p.dy,0)});
+  o.nextDeformPointId=Math.max(max+1,Math.floor(finiteNumber(o.nextDeformPointId,max+1)));return o.deformPoints
+}
+function deformPointBaseLocal(o,p){
+  if(isEllipse(o)||p.side==='ellipse'){const a=-Math.PI/2+p.t*Math.PI*2;return{x:o.w/2+Math.cos(a)*o.w/2,y:o.h/2+Math.sin(a)*o.h/2}}
+  const r=normalizedCornerRadii(o,0);
+  if(p.side==='top')return{x:r.tl+p.t*Math.max(0,o.w-r.tl-r.tr),y:0};
+  if(p.side==='right')return{x:o.w,y:r.tr+p.t*Math.max(0,o.h-r.tr-r.br)};
+  if(p.side==='bottom')return{x:o.w-r.br-p.t*Math.max(0,o.w-r.br-r.bl),y:o.h};
+  return{x:0,y:o.h-r.bl-p.t*Math.max(0,o.h-r.bl-r.tl)}
+}
+function deformPointCurveLocal(o,p){
+  const b=deformPointBaseLocal(o,p),d=isEllipse(o)?ellipseDeformAt(o,p.t):rectDeformAt(o,p.side,p.t);return{x:b.x+d.dx,y:b.y+d.dy}
+}
+function deformHandleHTML(o){return ensureDeformPoints(o).map(p=>`<i class="deform-handle${p.id===selectedDeformPointId?' selected-point':''}" data-deform-point="${p.id}" title="拖动形变点；Delete 删除"></i>`).join('')}
 function syncDeformHandles(el,o){
-  if(!o?.deformEnabled||!isFillShape(o))return;const d=deformValues(o);
-  const top=el.querySelector('[data-deform="top"]'),right=el.querySelector('[data-deform="right"]'),bottom=el.querySelector('[data-deform="bottom"]'),left=el.querySelector('[data-deform="left"]');
-  if(top){top.style.left=(o.w/2)+'px';top.style.top=(-d.top)+'px'}
-  if(right){right.style.left=(o.w+d.right)+'px';right.style.top=(o.h/2)+'px'}
-  if(bottom){bottom.style.left=(o.w/2)+'px';bottom.style.top=(o.h+d.bottom)+'px'}
-  if(left){left.style.left=(-d.left)+'px';left.style.top=(o.h/2)+'px'}
+  if(!o?.deformEnabled||!isFillShape(o))return;
+  ensureDeformPoints(o).forEach(p=>{const h=el.querySelector(`[data-deform-point="${p.id}"]`);if(!h)return;const a=deformPointCurveLocal(o,p);h.style.left=a.x+'px';h.style.top=a.y+'px';h.classList.toggle('selected-point',p.id===selectedDeformPointId)})
+}
+function deformExtents(o){
+  if(!o?.deformEnabled||!isFillShape(o))return{left:0,right:0,top:0,bottom:0};
+  let minX=0,minY=0,maxX=o.w,maxY=o.h;
+  if(isEllipse(o)){
+    for(let i=0;i<128;i++){const tt=i/128,a=-Math.PI/2+tt*Math.PI*2,d=ellipseDeformAt(o,tt),x=o.w/2+Math.cos(a)*o.w/2+d.dx,y=o.h/2+Math.sin(a)*o.h/2+d.dy;minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y)}
+  }else{
+    for(const side of BORDER_SIDE_KEYS)for(let i=0;i<=40;i++){const tt=i/40,base=deformPointBaseLocal(o,{side,t:tt,dx:0,dy:0}),d=rectDeformAt(o,side,tt),x=base.x+d.dx,y=base.y+d.dy;minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y)}
+  }
+  return{left:Math.max(0,-minX),right:Math.max(0,maxX-o.w),top:Math.max(0,-minY),bottom:Math.max(0,maxY-o.h)}
+}
+function nearestDeformLocation(o,local){
+  const candidates=[];
+  if(isEllipse(o)){
+    for(let i=0;i<160;i++){const t=i/160,a=-Math.PI/2+t*Math.PI*2,d=ellipseDeformAt(o,t),x=o.w/2+Math.cos(a)*o.w/2+d.dx,y=o.h/2+Math.sin(a)*o.h/2+d.dy;candidates.push({side:'ellipse',t,distance:Math.hypot(local.x-x,local.y-y)})}
+  }else{
+    for(const side of BORDER_SIDE_KEYS)for(let i=0;i<=80;i++){const t=i/80,b=deformPointBaseLocal(o,{side,t,dx:0,dy:0}),d=rectDeformAt(o,side,t),x=b.x+d.dx,y=b.y+d.dy;candidates.push({side,t,distance:Math.hypot(local.x-x,local.y-y)})}
+  }
+  return candidates.sort((a,b)=>a.distance-b.distance)[0]||null
+}
+function addDeformPointAt(o,local,allowFar=false){
+  if(!isFillShape(o)||!o.deformEnabled)return false;const loc=nearestDeformLocation(o,local),threshold=34/Math.max(.1,state.zoom);if(!loc||(!allowFar&&loc.distance>threshold))return false;
+  if(!isEllipse(o))loc.t=clamp(loc.t,.03,.97);
+  const points=ensureDeformPoints(o),id=o.nextDeformPointId++;points.push({id,side:loc.side,t:loc.t,dx:0,dy:0});selectedDeformPointId=id;return true
+}
+function deleteSelectedDeformPoint(){
+  const o=selected();if(!isFillShape(o)||!o.deformEnabled||selectedDeformPointId==null)return false;const points=ensureDeformPoints(o),i=points.findIndex(p=>p.id===selectedDeformPointId);if(i<0)return false;
+  points.splice(i,1);selectedDeformPointId=points.at(-1)?.id??null;renderObjects();commitHistory('删除形变点');return true
 }
 function deformPreviewPad(o){
-  const outer=o.shadowOn?Math.max(0,finiteNumber(o.shadowBlur,0)*2+finiteNumber(o.shadowSpread,0))+Math.hypot(finiteNumber(o.shadowX,0),finiteNumber(o.shadowY,0)):0,d=deformValues(o),bulge=Math.max(0,d.top,d.right,d.bottom,d.left);
-  return Math.ceil(clamp(Math.max(8,outer+Math.max(0,o.borderWidth||0)+4,bulge+8),8,400))
+  const outer=o.shadowOn?Math.max(0,finiteNumber(o.shadowBlur,0)*2+finiteNumber(o.shadowSpread,0))+Math.hypot(finiteNumber(o.shadowX,0),finiteNumber(o.shadowY,0)):0,d=deformExtents(o),bulge=Math.max(d.left,d.right,d.top,d.bottom);
+  return Math.ceil(clamp(Math.max(8,outer+maxBorderWidth(o)+4,bulge+8),8,500))
 }
 async function renderDeformCanvas(el,o){
   let canvas=el.querySelector('.deform-canvas');if(!canvas){canvas=document.createElement('canvas');canvas.className='deform-canvas';el.prepend(canvas)}
@@ -598,11 +718,11 @@ function updateWorldDom(){
       if(isLine(o)){
         el.style.border='none';el.style.boxShadow='none';el.style.borderRadius='0';
         const stroke=el.querySelector('.line-stroke');if(stroke){stroke.style.height=Math.max(1,o.lineWidth)+'px';stroke.style.background=rgba(o.lineColor,o.lineOpacity);stroke.style.opacity=1;stroke.style.boxShadow=shadowCSS(o)}
-      }else if(o.deformEnabled){
-        el.classList.add('deform-active');el.style.borderRadius='0';el.style.border='none';el.style.boxShadow='none';syncDeformHandles(el,o);renderDeformCanvas(el,o)
+      }else if(o.deformEnabled||bordersNeedCanvas(o)){
+        el.classList.toggle('deform-active',!!o.deformEnabled);el.style.borderRadius='0';el.style.border='none';el.style.boxShadow='none';if(o.deformEnabled)syncDeformHandles(el,o);renderDeformCanvas(el,o)
       }else{
-        el.classList.remove('deform-active');el.style.borderRadius=isEllipse(o)?'50%':o.radius+'px';
-        el.style.border=o.borderOn?`${o.borderWidth}px solid ${rgba(o.borderColor,o.borderOpacity)}`:'none';el.style.boxShadow=outerShadowCSS(o);
+        el.classList.remove('deform-active');el.style.borderRadius=isEllipse(o)?'50%':borderRadiusCSS(o);
+        applySolidBordersCSS(el,o);el.style.boxShadow=outerShadowCSS(o);
         const img=el.querySelector('.box-image'),fill=el.querySelector('.box-fill'),inner=el.querySelector('.inner-shadow-layer'),p=previewImageUrl(o.imageRef);
         if(img){img.style.backgroundImage=p?`url("${p}")`:'none';img.style.backgroundSize=fitCSS(o.imageFit);img.style.opacity=o.imageOpacity}
         if(fill){fill.style.background=gradientCSS(o.colors,o.angle,o.gradientType);fill.style.opacity=o.bgOpacity}
@@ -637,13 +757,13 @@ function renderObjects(syncUI=true){
       if(isLine(o)){
         const stroke=document.createElement('div');stroke.className='line-stroke';stroke.style.height=Math.max(1,o.lineWidth)+'px';stroke.style.background=rgba(o.lineColor,o.lineOpacity);stroke.style.opacity=1;stroke.style.boxShadow=shadowCSS(o);el.appendChild(stroke);
         el.insertAdjacentHTML('beforeend',lineHandleHTML())
-      }else if(o.deformEnabled){
+      }else if(o.deformEnabled||bordersNeedCanvas(o)){
         el.style.border='none';el.style.boxShadow='none';el.style.borderRadius='0';
         const canvas=document.createElement('canvas');canvas.className='deform-canvas';el.appendChild(canvas);
-        el.insertAdjacentHTML('beforeend',handleHTML()+deformHandleHTML());syncDeformHandles(el,o);renderDeformCanvas(el,o)
+        el.insertAdjacentHTML('beforeend',handleHTML()+(o.deformEnabled?deformHandleHTML(o):''));if(o.deformEnabled)syncDeformHandles(el,o);renderDeformCanvas(el,o)
       }else{
-        el.style.borderRadius=isEllipse(o)?'50%':o.radius+'px';
-        el.style.border=o.borderOn?`${o.borderWidth}px solid ${rgba(o.borderColor,o.borderOpacity)}`:'none';
+        el.style.borderRadius=isEllipse(o)?'50%':borderRadiusCSS(o);
+        applySolidBordersCSS(el,o);
         el.style.boxShadow=outerShadowCSS(o);
         const img=document.createElement('div');img.className='box-image';
         const preview=previewImageUrl(o.imageRef);if(preview){img.style.backgroundImage=`url("${preview}")`;img.style.backgroundSize=fitCSS(o.imageFit);img.style.opacity=o.imageOpacity}
@@ -730,12 +850,12 @@ document.querySelectorAll('.tool-group>.group-trigger').forEach(trigger=>{
 });
 $('#historyToggle').onclick=e=>{e.stopPropagation();const shell=$('#rightbarShell');shell.classList.toggle('history-open');$('.history-group').classList.add('open')};
 const shortcutPanel=$('#shortcutPanel');
-shortcutPanel.innerHTML='<div class="shortcut-head"><strong>完整快捷键 / 操作</strong><button id="shortcutClose">×</button></div><div class="shortcut-list"><div><span>撤回</span><span><kbd>Ctrl</kbd>+<kbd>Z</kbd></span></div><div><span>反撤回</span><span><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></span></div><div><span>全选可见对象</span><span><kbd>Ctrl</kbd>+<kbd>A</kbd></span></div><div><span>清除选择</span><kbd>Esc</kbd></div><div><span>追加 / 取消多选</span><span><kbd>Shift</kbd>+点击</span></div><div><span>框选多个对象</span><span>空白处左键拖动</span></div><div><span>复制 / 粘贴</span><span><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd></span></div><div><span>复制一份</span><span><kbd>Ctrl</kbd>+<kbd>D</kbd></span></div><div><span>删除</span><kbd>Delete</kbd></div><div><span>移动 1px / 10px</span><span><kbd>方向键</kbd> / <kbd>Shift</kbd>+<kbd>方向键</kbd></span></div><div><span>居中定位选中对象</span><kbd>Home</kbd></div><div><span>缩放到选中对象</span><kbd>F</kbd></div><div><span>移动画布</span><span>中键拖动 / <kbd>Space</kbd>+左键拖动</span></div><div><span>缩放画布</span><span>鼠标滚轮</span></div><div><span>临时锁定纵横比</span><span>缩放时按 <kbd>Shift</kbd></span></div><div><span>旋转 15° 吸附</span><span>旋转时按 <kbd>Shift</kbd></span></div><div><span>局部弧度形变</span><span>启用形变后拖紫色边缘点</span></div><div><span>颜色值输入</span><span>#HEX / rgb(...) / rgba(...)</span></div><div><span>创建参考线</span><span>从水平 / 垂直刻度拖出</span></div><div><span>删除参考线</span><span>双击参考线</span></div><div><span>重命名图层</span><span>双击图层名称</span></div><div><span>显示 / 隐藏本面板</span><kbd>?</kbd></div></div>';
+shortcutPanel.innerHTML='<div class="shortcut-head"><strong>完整快捷键 / 操作</strong><button id="shortcutClose">×</button></div><div class="shortcut-list"><div><span>撤回</span><span><kbd>Ctrl</kbd>+<kbd>Z</kbd></span></div><div><span>反撤回</span><span><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></span></div><div><span>全选可见对象</span><span><kbd>Ctrl</kbd>+<kbd>A</kbd></span></div><div><span>清除选择</span><kbd>Esc</kbd></div><div><span>追加 / 取消多选</span><span><kbd>Shift</kbd>+点击</span></div><div><span>框选多个对象</span><span>空白处左键拖动</span></div><div><span>复制 / 粘贴</span><span><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd></span></div><div><span>复制一份</span><span><kbd>Ctrl</kbd>+<kbd>D</kbd></span></div><div><span>删除</span><kbd>Delete</kbd></div><div><span>移动 1px / 10px</span><span><kbd>方向键</kbd> / <kbd>Shift</kbd>+<kbd>方向键</kbd></span></div><div><span>居中定位选中对象</span><kbd>Home</kbd></div><div><span>缩放到选中对象</span><kbd>F</kbd></div><div><span>移动画布</span><span>中键拖动 / <kbd>Space</kbd>+左键拖动</span></div><div><span>缩放画布</span><span>鼠标滚轮</span></div><div><span>临时锁定纵横比</span><span>缩放时按 <kbd>Shift</kbd></span></div><div><span>旋转 15° 吸附</span><span>旋转时按 <kbd>Shift</kbd></span></div><div><span>局部弧度形变</span><span>拖紫色点 · 双击轮廓增加点</span></div><div><span>删除形变点</span><span>选中紫色点后 <kbd>Delete</kbd></span></div><div><span>颜色值输入</span><span>#HEX / rgb(...) / rgba(...)</span></div><div><span>创建参考线</span><span>从水平 / 垂直刻度拖出</span></div><div><span>删除参考线</span><span>双击参考线</span></div><div><span>重命名图层</span><span>双击图层名称</span></div><div><span>显示 / 隐藏本面板</span><kbd>?</kbd></div></div>';
 function updateSmartHint(){
   const el=$('#smartHint');if(!el)return;const n=selectedObjects().length;let msg='';
   if(spacePanHeld)msg='平移模式：按住 Space + 左键拖动 · 松开 Space 恢复编辑';
   else if(!n)msg='空白拖动框选 · Ctrl+A 全选 · Space / 中键平移 · 滚轮缩放 · ? 全部快捷键';
-  else if(n===1){const o=selected(),kind=objectKindName(o);msg=isFillShape(o)&&o.deformEnabled?kind+'形变模式 · 拖紫色边缘点形成弧度 · 平滑范围可在左侧调整 · ? 全部操作':isLine(o)?'直线已选中 · 两端手柄调整长度 · 上方圆点旋转 · Home 居中 · F 缩放到选中 · ? 全部快捷键':o?.type==='box'?kind+'已选中 · 上方圆点旋转 · Shift 缩放锁比例 · Home 居中 · F 缩放到选中 · ? 全部快捷键':'文字已选中 · 上方圆点旋转 · Shift+点击追加多选 · Home 居中 · F 缩放到选中 · ? 全部快捷键'}
+  else if(n===1){const o=selected(),kind=objectKindName(o);msg=isFillShape(o)&&o.deformEnabled?kind+'形变模式 · 拖紫色点 · 双击轮廓加点 · Delete 删除选中点 · ? 全部操作':isLine(o)?'直线已选中 · 两端手柄调整长度 · 上方圆点旋转 · Home 居中 · F 缩放到选中 · ? 全部快捷键':o?.type==='box'?kind+'已选中 · 上方圆点旋转 · Shift 缩放锁比例 · Home 居中 · F 缩放到选中 · ? 全部快捷键':'文字已选中 · 上方圆点旋转 · Shift+点击追加多选 · Home 居中 · F 缩放到选中 · ? 全部快捷键'}
   else msg=n+' 个对象已选中 · Shift+点击增减选择 · F 缩放到选中 · 方向键移动 · Delete 删除 · ? 全部快捷键';
   el.textContent=msg;el.title=msg+' · 点击查看完整快捷键'
 }
@@ -803,19 +923,20 @@ function refreshPanels(){
     }else{
       $('#shapePanelTitle').textContent=isEllipse(o)?'圆形外观':'方框外观';$('#radiusRow').style.display=isEllipse(o)?'none':'';
       $('#gradientType').value=o.gradientType||'linear';$('#angleRow').style.display=(o.gradientType||'linear')==='radial'?'none':'';
-      $('#radius').value=o.radius;$('#radiusVal').textContent=Math.round(o.radius)+'px';
+      if(!isEllipse(o)){const cr=cornerRadii(o);$('#radiusTL').value=Math.round(cr.tl);$('#radiusTR').value=Math.round(cr.tr);$('#radiusBR').value=Math.round(cr.br);$('#radiusBL').value=Math.round(cr.bl)}
       $('#bgOpacity').value=Math.round(o.bgOpacity*100);$('#bgOpacityVal').textContent=Math.round(o.bgOpacity*100)+'%';
       $('#angle').value=o.angle;$('#angleVal').textContent=Math.round(o.angle)+'°';
       $('#boxImageOpacity').value=Math.round(o.imageOpacity*100);$('#boxImageOpacityVal').textContent=Math.round(o.imageOpacity*100)+'%';$('#boxImageFit').value=o.imageFit;
-      $('#borderOn').checked=o.borderOn;$('#borderWidth').value=o.borderWidth;staticColorEditors.borderColor.set(o.borderColor);
-      $('#borderOpacity').value=Math.round(o.borderOpacity*100);$('#borderOpacityVal').textContent=Math.round(o.borderOpacity*100)+'%';
+      refreshBorderControls(o);
       renderColorControls(o);
       $('#boxPanel').querySelectorAll('input,select,button,textarea').forEach(el=>el.disabled=locked||multi);
       $('#boxImageRemove').disabled=locked||multi||!o.imageRef
     }
     if(fillShape){
+      const points=ensureDeformPoints(o);if(selectedDeformPointId!=null&&!points.some(p=>p.id===selectedDeformPointId))selectedDeformPointId=null;
       $('#deformEnabled').checked=!!o.deformEnabled;$('#deformSmoothness').value=clamp(finiteNumber(o.deformSmoothness,58),20,90);$('#deformSmoothnessVal').textContent=Math.round(clamp(finiteNumber(o.deformSmoothness,58),20,90))+'%';
-      $('#deformPanel').querySelectorAll('input,select,button,textarea').forEach(el=>el.disabled=locked||multi)
+      $('#deformPanel').querySelectorAll('input,select,button,textarea').forEach(el=>el.disabled=locked||multi);
+      $('#addDeformPoint').disabled=locked||multi||!o.deformEnabled;$('#addDeformPoint').classList.toggle('active',deformAddMode);$('#deleteDeformPoint').disabled=locked||multi||!o.deformEnabled||selectedDeformPointId==null
     }
     $('#shadowOn').checked=!!o.shadowOn;$('#shadowX').value=finiteNumber(o.shadowX,0);$('#shadowY').value=finiteNumber(o.shadowY,0);$('#shadowBlur').value=Math.max(0,finiteNumber(o.shadowBlur,0));$('#shadowSpread').value=finiteNumber(o.shadowSpread,0);staticColorEditors.shadowColor.set(o.shadowColor||'#000000');$('#shadowOpacity').value=Math.round(clamp(finiteNumber(o.shadowOpacity,.25),0,1)*100);$('#shadowOpacityVal').textContent=Math.round(clamp(finiteNumber(o.shadowOpacity,.25),0,1)*100)+'%';
     $('#innerShadowSection').hidden=line;
@@ -879,7 +1000,8 @@ function renderCanvasColorControls(){
   })
 }
 const staticColorEditors={
-  borderColor:bindColorEditor($('#borderColor'),$('#borderColorPicker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o))o.borderColor=value});if(commit)commitHistory('修改边框颜色')}),
+  borderColor:bindColorEditor($('#borderColor'),$('#borderColorPicker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.color1=value;syncLegacyBorderFromTop(o)}});if(commit)commitHistory('修改边框颜色 1')}),
+  borderColor2:bindColorEditor($('#borderColor2'),$('#borderColor2Picker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.color2=value}});if(commit)commitHistory('修改边框颜色 2')}),
   shadowColor:bindColorEditor($('#shadowColor'),$('#shadowColorPicker'),(value,commit)=>{mutateSelected(o=>{if(o.type==='box')o.shadowColor=value});if(commit)commitHistory('修改外阴影颜色')}),
   innerShadowColor:bindColorEditor($('#innerShadowColor'),$('#innerShadowColorPicker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o))o.innerShadowColor=value});if(commit)commitHistory('修改内阴影颜色')}),
   lineColor:bindColorEditor($('#lineColor'),$('#lineColorPicker'),(value,commit)=>{mutateSelected(o=>{if(isLine(o))o.lineColor=value});if(commit)commitHistory('修改直线颜色')}),
@@ -903,12 +1025,17 @@ function bindObjectEvents(el,o){
     if(e.button===1||(e.button===0&&spacePanHeld)){e.stopPropagation();beginPan(e);return}
     if(e.button!==0)return;
     e.stopPropagation();
-    const dir=e.target.dataset.dir,deformSide=e.target.dataset.deform;
-    if(e.shiftKey&&!dir&&!deformSide){selectObject(o,true);renderObjects();return}
+    const dir=e.target.dataset.dir,deformPointId=Number(e.target.dataset.deformPoint)||null;
+    if(e.shiftKey&&!dir&&!deformPointId){selectObject(o,true);renderObjects();return}
     if(!state.selectedBoxIds.includes(o.id)){selectObject(o,false);renderObjects()}
     if(o.locked){gesture=null;return}
-    if(deformSide&&isFillShape(o)&&o.deformEnabled&&state.selectedBoxIds.length===1){
-      gesture={type:'deform',id:o.id,side:deformSide};el.classList.add('deforming')
+    if(deformAddMode&&isFillShape(o)&&o.deformEnabled&&!deformPointId&&!dir){
+      const local=worldPointToObjectLocal(o,clientToWorld(e.clientX,e.clientY));
+      if(addDeformPointAt(o,local)){deformAddMode=false;$('#addDeformPoint').classList.remove('active');renderObjects();commitHistory('增加形变点')}else setDataStatus('请点击更靠近轮廓的位置','err');
+      return
+    }
+    if(deformPointId&&isFillShape(o)&&o.deformEnabled&&state.selectedBoxIds.length===1){
+      selectedDeformPointId=deformPointId;$('#deleteDeformPoint').disabled=false;e.target.classList.add('selected-point');gesture={type:'deformPoint',id:o.id,pointId:deformPointId};el.classList.add('deforming')
     }else if(dir==='rotate'&&state.selectedBoxIds.length===1){
       const s=getObjectSize(o),center={x:o.x+s.w/2,y:o.y+s.h/2},p=clientToWorld(e.clientX,e.clientY);
       gesture={type:'rotate',id:o.id,center,startAngle:Math.atan2(p.y-center.y,p.x-center.x),origRotation:o.rotation||0};
@@ -924,19 +1051,25 @@ function bindObjectEvents(el,o){
     }
     viewport.setPointerCapture(e.pointerId)
   });
+  el.addEventListener('dblclick',e=>{
+    if(!isFillShape(o)||!o.deformEnabled||o.locked||e.target.closest('.deform-handle,.handle,.rotate-handle'))return;
+    e.preventDefault();e.stopPropagation();const local=worldPointToObjectLocal(o,clientToWorld(e.clientX,e.clientY));
+    if(addDeformPointAt(o,local)){renderObjects();commitHistory('增加形变点')}else setDataStatus('双击更靠近轮廓的位置可增加形变点','err')
+  });
   el.addEventListener('contextmenu',e=>{
-    e.preventDefault();e.stopPropagation();
+    e.preventDefault();e.stopPropagation();const pointId=Number(e.target.dataset.deformPoint)||null;
     if(state.selectedBoxIds.includes(o.id)&&state.selectedBoxIds.length>1){state.selectedId=o.id}
     else if(state.selectedId!==o.id){selectObject(o,false);renderObjects()}
-    showContextMenu(e.clientX,e.clientY,o)
+    if(pointId)selectedDeformPointId=pointId;showContextMenu(e.clientX,e.clientY,o,pointId)
   })
 }
 function getObjectSize(o){if(o.type==='box')return{w:o.w,h:o.h};const m=textMetrics(measureCtx,o);return{w:m.w,h:m.h}}
 function getUnrotatedVisualRect(o){
   const base=getObjectSize(o),cy=o.y+base.h/2;
   if(isLine(o)){const h=Math.max(1,o.lineWidth);return{x:o.x,y:cy-h/2,w:o.w,h}}
-  if(isFillShape(o)&&o.deformEnabled){const d=deformValues(o),l=Math.max(0,d.left),r=Math.max(0,d.right),t=Math.max(0,d.top),b=Math.max(0,d.bottom);return{x:o.x-l,y:o.y-t,w:o.w+l+r,h:o.h+t+b}}
-  return{x:o.x,y:o.y,w:base.w,h:base.h}
+  let rect;if(isFillShape(o)&&o.deformEnabled){const d=deformExtents(o);rect={x:o.x-d.left,y:o.y-d.top,w:o.w+d.left+d.right,h:o.h+d.top+d.bottom}}else rect={x:o.x,y:o.y,w:base.w,h:base.h};
+  if(isFillShape(o)&&o.borderOn){const p=maxBorderWidth(o)/2;rect={x:rect.x-p,y:rect.y-p,w:rect.w+p*2,h:rect.h+p*2}}
+  return rect
 }
 function getObjectBounds(o){
   const base=getObjectSize(o),cx=o.x+base.w/2,cy=o.y+base.h/2,rect=getUnrotatedVisualRect(o);
@@ -1024,14 +1157,15 @@ viewport.addEventListener('pointermove',e=>{
     const r=viewport.getBoundingClientRect(),x1=gesture.sx-r.left,y1=gesture.sy-r.top,x2=e.clientX-r.left,y2=e.clientY-r.top;
     selectionMarquee.style.left=Math.min(x1,x2)+'px';selectionMarquee.style.top=Math.min(y1,y2)+'px';selectionMarquee.style.width=Math.abs(x2-x1)+'px';selectionMarquee.style.height=Math.abs(y2-y1)+'px';return
   }
-  if(gesture.type==='deform'){
-    const o=state.objects.find(x=>x.id===gesture.id);if(!o||!isFillShape(o))return;const local=worldPointToObjectLocal(o,clientToWorld(e.clientX,e.clientY)),limit=Math.max(o.w,o.h)*1.5;let value=0;
-    if(gesture.side==='top')value=-local.y;
-    else if(gesture.side==='right')value=local.x-o.w;
-    else if(gesture.side==='bottom')value=local.y-o.h;
-    else if(gesture.side==='left')value=-local.x;
-    value=clamp(value,-limit,limit);if(Math.abs(value)<3/Math.max(.1,state.zoom))value=0;
-    o.deform=o.deform||{top:0,right:0,bottom:0,left:0};o.deform[gesture.side]=Math.round(value*100)/100;renderObjects(false);return
+  if(gesture.type==='deformPoint'){
+    const o=state.objects.find(x=>x.id===gesture.id);if(!o||!isFillShape(o))return;const point=ensureDeformPoints(o).find(p=>p.id===gesture.pointId);if(!point)return;
+    const local=worldPointToObjectLocal(o,clientToWorld(e.clientX,e.clientY)),base=deformPointBaseLocal(o,point),limit=Math.max(o.w,o.h)*1.5;
+    const other=isEllipse(o)?ellipseDeformAt(o,point.t,point.id):rectDeformAt(o,point.side,point.t,point.id);
+    const selfWeight=isEllipse(o)?1:Math.max(.001,Math.min(1,point.t/.12,(1-point.t)/.12));
+    point.dx=clamp(Math.round(((local.x-base.x-other.dx)/selfWeight)*100)/100,-limit,limit);
+    point.dy=clamp(Math.round(((local.y-base.y-other.dy)/selfWeight)*100)/100,-limit,limit);
+    if(Math.abs(point.dx)<3/Math.max(.1,state.zoom))point.dx=0;if(Math.abs(point.dy)<3/Math.max(.1,state.zoom))point.dy=0;
+    renderObjects(false);return
   }
   if(gesture.type==='rotate'){
     const o=state.objects.find(x=>x.id===gesture.id);if(!o)return;const p=clientToWorld(e.clientX,e.clientY),a=Math.atan2(p.y-gesture.center.y,p.x-gesture.center.x),delta=(a-gesture.startAngle)*180/Math.PI;
@@ -1077,11 +1211,11 @@ viewport.addEventListener('pointerup',e=>{
     renderObjects();updateSmartHint();return
   }
   clearSnapFeedback();
-  if(type==='move'||type==='moveGroup')commitHistory('移动对象');else if(type==='resize')commitHistory('调整对象尺寸');else if(type==='rotate')commitHistory('旋转对象');else if(type==='deform')commitHistory('形变对象')
+  if(type==='move'||type==='moveGroup')commitHistory('移动对象');else if(type==='resize')commitHistory('调整对象尺寸');else if(type==='rotate')commitHistory('旋转对象');else if(type==='deformPoint')commitHistory('形变对象')
 });
 viewport.addEventListener('pointercancel',()=>{
   if(!gesture||gesture.type==='guide')return;const type=gesture.type;gesture=null;viewport.classList.remove('panning');selectionMarquee.classList.remove('show');world.querySelectorAll('.rotating,.deforming').forEach(el=>{el.classList.remove('rotating');el.classList.remove('deforming')});clearSnapFeedback();
-  if(type==='move'||type==='moveGroup'||type==='resize'||type==='rotate'||type==='deform')commitHistory(type==='resize'?'调整对象尺寸':type==='rotate'?'旋转对象':type==='deform'?'形变对象':'移动对象')
+  if(type==='move'||type==='moveGroup'||type==='resize'||type==='rotate'||type==='deformPoint')commitHistory(type==='resize'?'调整对象尺寸':type==='rotate'?'旋转对象':type==='deformPoint'?'形变对象':'移动对象')
 });
 
 const RULER_SIZE=28;
@@ -1143,19 +1277,27 @@ $('#layerName').oninput=e=>{const o=selected();if(!o||hasMultiBoxes()||o.locked)
 $('#objX').oninput=e=>mutateSelected(o=>o.x=+e.target.value||0);$('#objY').oninput=e=>mutateSelected(o=>o.y=+e.target.value||0);
 $('#objRotation').oninput=e=>mutateSelected(o=>o.rotation=finiteNumber(e.target.value,0));
 $('#lockAspect').onchange=e=>mutateSelected(o=>{if(isFillShape(o))o.lockAspect=e.target.checked});
-$('#deformEnabled').onchange=e=>{mutateSelected(o=>{if(isFillShape(o)){o.deformEnabled=e.target.checked;o.deform=o.deform||{top:0,right:0,bottom:0,left:0}}},true);commitHistory(e.target.checked?'启用局部形变':'关闭局部形变')};
+$('#deformEnabled').onchange=e=>{mutateSelected(o=>{if(isFillShape(o)){o.deformEnabled=e.target.checked;ensureDeformPoints(o);if(!e.target.checked){selectedDeformPointId=null;deformAddMode=false}}},true);commitHistory(e.target.checked?'启用局部形变':'关闭局部形变')};
 $('#deformSmoothness').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.deformSmoothness=clamp(+e.target.value||58,20,90)});$('#deformSmoothnessVal').textContent=e.target.value+'%'};
 $('#deformSmoothness').onchange=()=>commitHistory('调整形变平滑范围');
-$('#resetDeform').onclick=()=>{mutateSelected(o=>{if(isFillShape(o)){o.deform={top:0,right:0,bottom:0,left:0}}},true);commitHistory('重置形变')};
+$('#addDeformPoint').onclick=()=>{const o=selected();if(!isFillShape(o)||!o.deformEnabled||o.locked)return;deformAddMode=!deformAddMode;$('#addDeformPoint').classList.toggle('active',deformAddMode);setDataStatus(deformAddMode?'点击或双击对象轮廓以增加形变点':'已退出增加形变点模式','ok')};
+$('#deleteDeformPoint').onclick=()=>{if(!deleteSelectedDeformPoint())setDataStatus('请先选中一个紫色形变点','err')};
+$('#resetDeform').onclick=()=>{mutateSelected(o=>{if(isFillShape(o)){ensureDeformPoints(o).forEach(p=>{p.dx=0;p.dy=0})}},true);commitHistory('重置形变')};
 $('#objW').oninput=e=>mutateSelected(o=>{if(o.type!=='box')return;const ratio=o.w/Math.max(1,o.h),w=Math.max(20,+e.target.value||20);o.w=w;if(o.lockAspect&&!isLine(o))o.h=Math.max(20,w/ratio)},true);
 $('#objH').oninput=e=>mutateSelected(o=>{if(o.type!=='box'||isLine(o))return;const ratio=o.w/Math.max(1,o.h),h=Math.max(20,+e.target.value||20);o.h=h;if(o.lockAspect)o.w=Math.max(20,h*ratio)},true);
-$('#radius').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.radius=+e.target.value});$('#radiusVal').textContent=e.target.value+'px'};
+[['radiusTL','tl'],['radiusTR','tr'],['radiusBR','br'],['radiusBL','bl']].forEach(([id,key])=>{$('#'+id).oninput=e=>mutateSelected(o=>{if(isFillShape(o)&&!isEllipse(o)){o.cornerRadii=o.cornerRadii||cornerRadii(o);o.cornerRadii[key]=Math.max(0,+e.target.value||0);o.radius=o.cornerRadii.tl}})});
+$('#syncCorners').onclick=()=>{mutateSelected(o=>{if(isFillShape(o)&&!isEllipse(o)){const v=Math.max(0,+$('#radiusTL').value||0);o.cornerRadii={tl:v,tr:v,br:v,bl:v};o.radius=v}},true);commitHistory('同步四角圆角')};
 $('#gradientType').onchange=e=>mutateSelected(o=>{if(isFillShape(o)){o.gradientType=e.target.value;$('#angleRow').style.display=o.gradientType==='radial'?'none':''}},true);
 $('#bgOpacity').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.bgOpacity=+e.target.value/100});$('#bgOpacityVal').textContent=e.target.value+'%'};
 $('#angle').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.angle=+e.target.value});$('#angleVal').textContent=e.target.value+'°'};
 $('#addColor').onclick=()=>{mutateSelected(o=>{if(isFillShape(o))o.colors.push({c:'#ffffff',p:100})},true);commitHistory('添加对象渐变颜色')};
-$('#borderOn').oninput=e=>mutateSelected(o=>o.borderOn=e.target.checked);$('#borderWidth').oninput=e=>mutateSelected(o=>o.borderWidth=Math.max(0,+e.target.value||0));
-$('#borderOpacity').oninput=e=>{mutateSelected(o=>o.borderOpacity=+e.target.value/100);$('#borderOpacityVal').textContent=e.target.value+'%'};
+$('#borderSide').onchange=()=>{const o=selected();if(isFillShape(o))refreshBorderControls(o)};
+$('#borderOn').oninput=e=>mutateSelected(o=>{if(isFillShape(o))o.borderOn=e.target.checked});
+$('#borderSideOn').oninput=e=>mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.on=e.target.checked}});
+$('#borderWidth').oninput=e=>mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.width=Math.max(0,+e.target.value||0);syncLegacyBorderFromTop(o)}});
+$('#borderPaint').onchange=e=>{mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.paint=e.target.value}},true);const o=selected();if(isFillShape(o))refreshBorderControls(o)};
+$('#borderOpacity').oninput=e=>{mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.opacity=+e.target.value/100;syncLegacyBorderFromTop(o)}});$('#borderOpacityVal').textContent=e.target.value+'%'};
+$('#copyBorderToAll').onclick=()=>{mutateSelected(o=>{if(!isFillShape(o))return;const src=structuredClone(activeBorderSpec(o));const borders=ensureBorders(o);BORDER_SIDE_KEYS.forEach(k=>borders[k]=structuredClone(src));syncLegacyBorderFromTop(o)},true);commitHistory('复制边框到四边')};
 $('#boxImageOpacity').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.imageOpacity=+e.target.value/100});$('#boxImageOpacityVal').textContent=e.target.value+'%'};$('#boxImageFit').onchange=e=>mutateSelected(o=>{if(isFillShape(o))o.imageFit=e.target.value});
 $('#lineWidth').oninput=e=>mutateSelected(o=>{if(isLine(o))o.lineWidth=clamp(+e.target.value||1,1,100)},true);
 $('#lineOpacity').oninput=e=>{mutateSelected(o=>{if(isLine(o))o.lineOpacity=+e.target.value/100});$('#lineOpacityVal').textContent=e.target.value+'%'};
@@ -1288,10 +1430,16 @@ function contextItem(label,action,{disabled=false,danger=false,shortcut=''}={}){
 }
 function contextSep(){const d=document.createElement('div');d.className='context-sep';return d}
 function hideContextMenu(){$('#contextMenu').classList.remove('open')}
-function showContextMenu(clientX,clientY,target=null){
+function showContextMenu(clientX,clientY,target=null,deformPointId=null){
   const menu=$('#contextMenu');menu.innerHTML='';
   const items=selectedObjects(),multi=items.length>1&&target&&state.selectedBoxIds.includes(target.id);
-  if(multi){
+  if(deformPointId&&isFillShape(target)&&target.deformEnabled){
+    selectedDeformPointId=deformPointId;
+    menu.append(
+      contextItem('重置该形变点',()=>{const p=ensureDeformPoints(target).find(x=>x.id===deformPointId);if(p){p.dx=0;p.dy=0;renderObjects();commitHistory('重置形变点')}}),
+      contextItem('删除形变点',deleteSelectedDeformPoint,{danger:true,shortcut:'Delete'})
+    )
+  }else if(multi){
     const editable=editableSelectedObjects();
     menu.append(
       contextItem('复制所选对象',copySelectedBoxes,{shortcut:'Ctrl+C'}),
@@ -1375,9 +1523,10 @@ document.addEventListener('keydown',e=>{
   if(e.key==='?'&&!editing){e.preventDefault();$('#rightbarShell').classList.toggle('shortcuts-open');return}
   if(editing)return;
   if(mod&&key==='a'){e.preventDefault();state.selectedBoxIds=state.objects.filter(o=>o.visible!==false).map(o=>o.id);state.selectedId=state.selectedBoxIds.at(-1)||null;renderObjects();return}
-  if(e.key==='Escape'){e.preventDefault();clearSelection();renderObjects();return}
+  if(e.key==='Escape'){e.preventDefault();if(deformAddMode){deformAddMode=false;$('#addDeformPoint').classList.remove('active');setDataStatus('已退出增加形变点模式');return}if(selectedDeformPointId!=null){selectedDeformPointId=null;renderObjects();return}clearSelection();renderObjects();return}
   if(e.key==='Home'){e.preventDefault();const b=selectionBounds();if(b)focusBounds(b,false);else setDataStatus('请先选择对象','err');return}
   if(key==='f'&&!mod&&!e.altKey){e.preventDefault();const b=selectionBounds();if(b)focusBounds(b,true);else setDataStatus('请先选择对象','err');return}
+  if((e.key==='Delete'||e.key==='Backspace')&&selectedDeformPointId!=null){e.preventDefault();if(deleteSelectedDeformPoint())return}
   if((e.key==='Delete'||e.key==='Backspace')&&(state.selectedId!=null||state.selectedBoxIds.length)){e.preventDefault();deleteSelected();return}
   if(mod&&key==='d'){e.preventDefault();duplicateSelection();return}
   if(mod&&key==='c'){e.preventDefault();copySelectedBoxes();return}
@@ -1472,7 +1621,7 @@ function jumpHistory(id){
   $('#rightbarShell').classList.add('history-open');$('.history-group').classList.add('open')
 }
 
-const PROJECT_FORMAT='transparent-canvas-editor',PROJECT_VERSION=10;
+const PROJECT_FORMAT='transparent-canvas-editor',PROJECT_VERSION=11;
 function projectSnapshot(){return{format:PROJECT_FORMAT,version:PROJECT_VERSION,savedAt:new Date().toISOString(),assets:{images:exportImageAssets(),fonts:structuredClone(state.customFonts)},canvas:{width:state.canvasW,height:state.canvasH,backgroundOpacity:state.canvasBgOpacity,gradientType:state.canvasGradientType,gradientAngle:state.canvasAngle,colors:structuredClone(state.canvasColors),imageRef:state.canvasImageRef,imageOpacity:state.canvasImageOpacity,imageFit:state.canvasImageFit},objects:structuredClone(state.objects),assists:{snapEnabled:state.snapEnabled,guidesVisible:state.guidesVisible,guides:structuredClone(state.guides)},view:{zoom:state.zoom,panX:state.panX,panY:state.panY},selectedId:state.selectedId,selectedBoxIds:[...state.selectedBoxIds]}}
 function setDataStatus(msg,type='',duration=1800){
   const el=$('#dataStatus');clearTimeout(statusTimer);el.textContent=msg;el.className='right-status show'+(type?' '+type:'');
@@ -1509,6 +1658,24 @@ function cleanStops(list,fallback){if(!Array.isArray(list)||!list.length)return 
 function cleanFit(v){return['cover','contain','stretch'].includes(v)?v:'cover'}
 function cleanGradientType(v){return v==='radial'?'radial':'linear'}
 function cleanShape(v){return['rect','ellipse','line'].includes(v)?v:'rect'}
+function cleanBorderSpec(raw,fallbackColor,fallbackWidth,fallbackOpacity){
+  raw=raw&&typeof raw==='object'?raw:{};
+  const c1=cleanColor(raw.color1??raw.color,fallbackColor),c2=cleanColor(raw.color2,c1);
+  return{on:raw.on!==false,width:Math.max(0,finiteNumber(raw.width,fallbackWidth)),opacity:clamp(finiteNumber(raw.opacity,fallbackOpacity),0,1),paint:['solid','linear','radial'].includes(raw.paint)?raw.paint:'solid',color1:c1,color2:c2}
+}
+function cleanBorders(rawBorders,color,width,opacity){
+  const out={};BORDER_SIDE_KEYS.forEach(k=>out[k]=cleanBorderSpec(rawBorders?.[k],color,width,opacity));return out
+}
+function cleanDeformPointList(rawPoints,shape,legacy){
+  let points=Array.isArray(rawPoints)?rawPoints.slice(0,128).map((p,i)=>({id:Math.max(1,Math.floor(finiteNumber(p?.id,i+1))),side:shape==='ellipse'?'ellipse':(BORDER_SIDE_KEYS.includes(p?.side)?p.side:'top'),t:clamp(finiteNumber(p?.t,.5),0,1),dx:clamp(finiteNumber(p?.dx,0),-20000,20000),dy:clamp(finiteNumber(p?.dy,0),-20000,20000)})):[];
+  if(!Array.isArray(rawPoints)){
+    points=defaultDeformPoints(shape).map(p=>({...p}));
+    const d=legacy||{};
+    if(shape==='ellipse'){const vals=[finiteNumber(d.top,0),finiteNumber(d.right,0),finiteNumber(d.bottom,0),finiteNumber(d.left,0)],vec=[[0,-1],[1,0],[0,1],[-1,0]];points.forEach((p,i)=>{p.dx=vec[i][0]*vals[i];p.dy=vec[i][1]*vals[i]})}
+    else{const map={top:[0,-finiteNumber(d.top,0)],right:[finiteNumber(d.right,0),0],bottom:[0,finiteNumber(d.bottom,0)],left:[-finiteNumber(d.left,0),0]};points.forEach(p=>{[p.dx,p.dy]=map[p.side]})}
+  }
+  const used=new Set();let next=1;points.forEach(p=>{while(used.has(p.id))p.id=++next;used.add(p.id);next=Math.max(next,p.id)});return{points,nextId:next+1}
+}
 function normalizeObject(raw,idFallback,assetAliases=new Map()){
   if(!raw||!['box','text'].includes(raw.type))return null;const id=Math.max(1,Math.floor(finiteNumber(raw.id,idFallback)));
   if(raw.type==='box'){
@@ -1517,11 +1684,15 @@ function normalizeObject(raw,idFallback,assetAliases=new Map()){
     const legacyInner=shape!=='line'&&raw.shadowType==='inner'&&raw.shadowOn===true;
     const outerDefaultY=shape==='line'?6:(shape==='ellipse'?12:16),outerDefaultBlur=shape==='line'?12:(shape==='ellipse'?28:34),outerDefaultColor=shape==='ellipse'?'#315887':shape==='line'?'#111827':'#232e3f';
     const innerDefaultColor=shape==='ellipse'?'#315887':'#000000';
+    const legacyRadius=Math.max(0,finiteNumber(raw.radius,shape==='ellipse'?120:28)),cr=raw.cornerRadii&&typeof raw.cornerRadii==='object'?raw.cornerRadii:{};
+    const cornerRadii={tl:Math.max(0,finiteNumber(cr.tl,legacyRadius)),tr:Math.max(0,finiteNumber(cr.tr,legacyRadius)),br:Math.max(0,finiteNumber(cr.br,legacyRadius)),bl:Math.max(0,finiteNumber(cr.bl,legacyRadius))};
+    const legacyBorderColor=cleanColor(raw.borderColor,shape==='ellipse'?'#8fb6ff':'#ffffff'),legacyBorderWidth=Math.max(0,finiteNumber(raw.borderWidth,2)),legacyBorderOpacity=clamp(finiteNumber(raw.borderOpacity,.9),0,1),borders=cleanBorders(raw.borders,legacyBorderColor,legacyBorderWidth,legacyBorderOpacity);
+    const cleanedDeform=shape==='line'?{points:[],nextId:1}:cleanDeformPointList(raw.deformPoints,shape,raw.deform);
     return{
       id,type:'box',shape,name:typeof raw.name==='string'?raw.name:defaultName,visible:raw.visible!==false,locked:raw.locked===true,rotation:finiteNumber(raw.rotation,0),lockAspect:shape!=='line'&&raw.lockAspect===true,
       x:finiteNumber(raw.x,180),y:finiteNumber(raw.y,150),w:Math.max(20,finiteNumber(raw.w,shape==='line'?300:420)),h:shape==='line'?20:Math.max(20,finiteNumber(raw.h,shape==='ellipse'?240:300)),
-      radius:Math.max(0,finiteNumber(raw.radius,28)),bgOpacity:clamp(finiteNumber(raw.bgOpacity,.88),0,1),gradientType:cleanGradientType(raw.gradientType),angle:finiteNumber(raw.angle,135),colors:cleanStops(raw.colors,[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}]),
-      imageRef,imageOpacity:clamp(finiteNumber(raw.imageOpacity,1),0,1),imageFit:cleanFit(raw.imageFit),borderOn:shape==='line'?false:raw.borderOn!==false,borderWidth:Math.max(0,finiteNumber(raw.borderWidth,2)),borderColor:cleanColor(raw.borderColor,'#ffffff'),borderOpacity:clamp(finiteNumber(raw.borderOpacity,.9),0,1),
+      radius:legacyRadius,cornerRadii,bgOpacity:clamp(finiteNumber(raw.bgOpacity,.88),0,1),gradientType:cleanGradientType(raw.gradientType),angle:finiteNumber(raw.angle,135),colors:cleanStops(raw.colors,[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}]),
+      imageRef,imageOpacity:clamp(finiteNumber(raw.imageOpacity,1),0,1),imageFit:cleanFit(raw.imageFit),borderOn:shape==='line'?false:raw.borderOn!==false,borderWidth:legacyBorderWidth,borderColor:legacyBorderColor,borderOpacity:legacyBorderOpacity,borders,
       shadowOn:legacyInner?false:(shape==='line'?raw.shadowOn===true:raw.shadowOn!==false),
       shadowX:legacyInner?0:clamp(finiteNumber(raw.shadowX,0),-200,200),
       shadowY:legacyInner?outerDefaultY:clamp(finiteNumber(raw.shadowY,outerDefaultY),-200,200),
@@ -1538,7 +1709,7 @@ function normalizeObject(raw,idFallback,assetAliases=new Map()){
       innerShadowOpacity:clamp(finiteNumber(raw.innerShadowOpacity,legacyInner?raw.shadowOpacity:(shape==='ellipse'?.16:.18)),0,1),
       deformEnabled:shape!=='line'&&raw.deformEnabled===true,
       deformSmoothness:clamp(finiteNumber(raw.deformSmoothness,58),20,90),
-      deform:shape==='line'?{top:0,right:0,bottom:0,left:0}:{top:clamp(finiteNumber(raw.deform?.top,0),-20000,20000),right:clamp(finiteNumber(raw.deform?.right,0),-20000,20000),bottom:clamp(finiteNumber(raw.deform?.bottom,0),-20000,20000),left:clamp(finiteNumber(raw.deform?.left,0),-20000,20000)},
+      deform:shape==='line'?{top:0,right:0,bottom:0,left:0}:{top:clamp(finiteNumber(raw.deform?.top,0),-20000,20000),right:clamp(finiteNumber(raw.deform?.right,0),-20000,20000),bottom:clamp(finiteNumber(raw.deform?.bottom,0),-20000,20000),left:clamp(finiteNumber(raw.deform?.left,0),-20000,20000)},deformPoints:cleanedDeform.points,nextDeformPointId:cleanedDeform.nextId,
       lineColor:cleanColor(raw.lineColor,'#2563eb'),lineWidth:clamp(finiteNumber(raw.lineWidth,4),1,100),lineOpacity:clamp(finiteNumber(raw.lineOpacity,1),0,1)
     }
   }
@@ -1559,48 +1730,88 @@ async function loadProjectData(data){
 $('#importDataFile').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{await loadProjectData(JSON.parse(await file.text()));commitHistory('加载项目数据');setDataStatus('已导入：'+state.objects.length+' 个图层','ok')}catch(err){setDataStatus('导入失败：'+(err?.message||'JSON 无效'),'err')}finally{e.target.value=''}};
 
 function textMetrics(ctx,o){ctx.save();ctx.font=`${o.fontWeight} ${o.fontSize}px ${o.fontFamily}`;let w=0;const lines=o.content.split('\n');lines.forEach(l=>w=Math.max(w,ctx.measureText(l||' ').width));ctx.restore();return{w,h:Math.max(o.fontSize*1.2,lines.length*o.fontSize*1.2)}}
-function contentBounds(){const visible=state.objects.filter(o=>o.visible!==false);if(!visible.length)return{x:0,y:0,w:state.canvasW,h:state.canvasH};let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;visible.forEach(o=>{let b=getObjectBounds(o);if(o.type==='box'&&o.shadowOn){const reach=Math.max(0,finiteNumber(o.shadowBlur,0)*2+finiteNumber(o.shadowSpread,0))+Math.hypot(finiteNumber(o.shadowX,0),finiteNumber(o.shadowY,0));b={x:b.x-reach,y:b.y-reach,w:b.w+reach*2,h:b.h+reach*2}}minX=Math.min(minX,b.x);minY=Math.min(minY,b.y);maxX=Math.max(maxX,b.x+b.w);maxY=Math.max(maxY,b.y+b.h)});const p=10;return{x:Math.floor(minX-p),y:Math.floor(minY-p),w:Math.ceil(maxX-minX+2*p),h:Math.ceil(maxY-minY+2*p)}}
-function appendRoundedRectPath(ctx,x,y,w,h,r){
-  w=Math.max(.01,w);h=Math.max(.01,h);r=Math.max(0,Math.min(r,w/2,h/2));
-  ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()
+function contentBounds(){const visible=state.objects.filter(o=>o.visible!==false);if(!visible.length)return{x:0,y:0,w:state.canvasW,h:state.canvasH};let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;visible.forEach(o=>{let b=getObjectBounds(o);if(isFillShape(o)&&o.borderOn){const m=maxBorderWidth(o)/2;b={x:b.x-m,y:b.y-m,w:b.w+m*2,h:b.h+m*2}}if(o.type==='box'&&o.shadowOn){const reach=Math.max(0,finiteNumber(o.shadowBlur,0)*2+finiteNumber(o.shadowSpread,0))+Math.hypot(finiteNumber(o.shadowX,0),finiteNumber(o.shadowY,0));b={x:b.x-reach,y:b.y-reach,w:b.w+reach*2,h:b.h+reach*2}}minX=Math.min(minX,b.x);minY=Math.min(minY,b.y);maxX=Math.max(maxX,b.x+b.w);maxY=Math.max(maxY,b.y+b.h)});const p=10;return{x:Math.floor(minX-p),y:Math.floor(minY-p),w:Math.ceil(maxX-minX+2*p),h:Math.ceil(maxY-minY+2*p)}}
+function appendRoundedRectPath4(ctx,o,inset=0){
+  const x=o.x+inset,y=o.y+inset,w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2),r=normalizedCornerRadii(o,inset);
+  ctx.moveTo(x+r.tl,y);ctx.lineTo(x+w-r.tr,y);ctx.arcTo(x+w,y,x+w,y+r.tr,r.tr);ctx.lineTo(x+w,y+h-r.br);ctx.arcTo(x+w,y+h,x+w-r.br,y+h,r.br);ctx.lineTo(x+r.bl,y+h);ctx.arcTo(x,y+h,x,y+h-r.bl,r.bl);ctx.lineTo(x,y+r.tl);ctx.arcTo(x,y,x+r.tl,y,r.tl);ctx.closePath()
 }
-function appendSmoothHorizontalEdge(ctx,sx,sy,mx,my,ex,ey,k){
-  let d=mx-sx;ctx.bezierCurveTo(sx+d*k,sy,mx-d*k,my,mx,my);
-  d=ex-mx;ctx.bezierCurveTo(mx+d*k,my,ex-d*k,ey,ex,ey)
+function deformRange(o){return .055+clamp(finiteNumber(o.deformSmoothness,58),20,90)/100*.38}
+function smoothKernel(distance,range){if(distance>=range)return 0;const q=distance/range;return .5+.5*Math.cos(Math.PI*q)}
+function rectDeformAt(o,side,t,excludeId=null){
+  let dx=0,dy=0;const range=deformRange(o),edgeFade=Math.max(0,Math.min(1,t/.12,(1-t)/.12));
+  ensureDeformPoints(o).forEach(p=>{if(p.side!==side||p.id===excludeId)return;const w=smoothKernel(Math.abs(t-p.t),range)*edgeFade;dx+=p.dx*w;dy+=p.dy*w});return{dx,dy}
 }
-function appendSmoothVerticalEdge(ctx,sx,sy,mx,my,ex,ey,k){
-  let d=my-sy;ctx.bezierCurveTo(sx,sy+d*k,mx,my-d*k,mx,my);
-  d=ey-my;ctx.bezierCurveTo(mx,my+d*k,ex,ey-d*k,ex,ey)
+function ellipseDeformAt(o,t,excludeId=null){
+  let dx=0,dy=0;const range=deformRange(o);
+  ensureDeformPoints(o).forEach(p=>{if(p.side!=='ellipse'||p.id===excludeId)return;const d=Math.abs(t-p.t),cd=Math.min(d,1-d),w=smoothKernel(cd,range);dx+=p.dx*w;dy+=p.dy*w});return{dx,dy}
+}
+function rectSideBase(o,side,t,inset=0){
+  const x=o.x+inset,y=o.y+inset,w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2),r=normalizedCornerRadii(o,inset);
+  if(side==='top')return{x:x+r.tl+t*Math.max(0,w-r.tl-r.tr),y};
+  if(side==='right')return{x:x+w,y:y+r.tr+t*Math.max(0,h-r.tr-r.br)};
+  if(side==='bottom')return{x:x+w-r.br-t*Math.max(0,w-r.br-r.bl),y:y+h};
+  return{x,y:y+h-r.bl-t*Math.max(0,h-r.bl-r.tl)}
 }
 function appendDeformedRectPath(ctx,o,inset=0){
-  const x=o.x+inset,y=o.y+inset,w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2),r=Math.max(0,Math.min(o.radius-inset,w/2,h/2)),d=deformValues(o),smooth=clamp(finiteNumber(o.deformSmoothness,58),20,90)/100,k=.2+smooth*.6;
-  const cx=x+w/2,cy=y+h/2;
-  ctx.moveTo(x+r,y);
-  appendSmoothHorizontalEdge(ctx,x+r,y,cx,y-d.top,x+w-r,y,k);
-  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-  appendSmoothVerticalEdge(ctx,x+w,y+r,x+w+d.right,cy,x+w,y+h-r,k);
-  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-  appendSmoothHorizontalEdge(ctx,x+w-r,y+h,cx,y+h+d.bottom,x+r,y+h,k);
-  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-  appendSmoothVerticalEdge(ctx,x,y+h-r,x-d.left,cy,x,y+r,k);
-  ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath()
+  const x=o.x+inset,y=o.y+inset,w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2),r=normalizedCornerRadii(o,inset),steps=32;
+  const appendSide=side=>{for(let i=0;i<=steps;i++){const t=i/steps,b=rectSideBase(o,side,t,inset),d=rectDeformAt(o,side,t);if(i===0&&side==='top')ctx.moveTo(b.x+d.dx,b.y+d.dy);else if(i>0||side!=='top')ctx.lineTo(b.x+d.dx,b.y+d.dy)}};
+  appendSide('top');ctx.arcTo(x+w,y,x+w,y+r.tr,r.tr);
+  appendSide('right');ctx.arcTo(x+w,y+h,x+w-r.br,y+h,r.br);
+  appendSide('bottom');ctx.arcTo(x,y+h,x,y+h-r.bl,r.bl);
+  appendSide('left');ctx.arcTo(x,y,x+r.tl,y,r.tl);ctx.closePath()
 }
 function appendDeformedEllipsePath(ctx,o,inset=0){
-  const x=o.x+inset,y=o.y+inset,w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2),cx=x+w/2,cy=y+h/2,d=deformValues(o),smooth=clamp(finiteNumber(o.deformSmoothness,58),20,90)/100,k=.35+smooth*.35;
-  const T={x:cx,y:y-d.top},R={x:x+w+d.right,y:cy},B={x:cx,y:y+h+d.bottom},L={x:x-d.left,y:cy};
-  ctx.moveTo(T.x,T.y);
-  ctx.bezierCurveTo(T.x+(R.x-T.x)*k,T.y,R.x,R.y-(R.y-T.y)*k,R.x,R.y);
-  ctx.bezierCurveTo(R.x,R.y+(B.y-R.y)*k,B.x+(R.x-B.x)*k,B.y,B.x,B.y);
-  ctx.bezierCurveTo(B.x+(L.x-B.x)*k,B.y,L.x,L.y+(B.y-L.y)*k,L.x,L.y);
-  ctx.bezierCurveTo(L.x,L.y+(T.y-L.y)*k,T.x+(L.x-T.x)*k,T.y,T.x,T.y);ctx.closePath()
+  const x=o.x+inset,y=o.y+inset,w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2),cx=x+w/2,cy=y+h/2,steps=128;
+  for(let i=0;i<steps;i++){const t=i/steps,a=-Math.PI/2+t*Math.PI*2,d=ellipseDeformAt(o,t),px=cx+Math.cos(a)*w/2+d.dx,py=cy+Math.sin(a)*h/2+d.dy;if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py)}ctx.closePath()
 }
 function appendShapeSubpath(ctx,o,inset=0){
   const x=o.x+inset,y=o.y+inset,w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2);
   if(o.deformEnabled&&isFillShape(o)){if(isEllipse(o))appendDeformedEllipsePath(ctx,o,inset);else appendDeformedRectPath(ctx,o,inset);return}
   if(isEllipse(o)){ctx.moveTo(x+w,y+h/2);ctx.ellipse(x+w/2,y+h/2,w/2,h/2,0,0,Math.PI*2);ctx.closePath()}
-  else appendRoundedRectPath(ctx,x,y,w,h,Math.max(0,o.radius-inset))
+  else appendRoundedRectPath4(ctx,o,inset)
 }
 function beginShapePath(ctx,o,inset=0){ctx.beginPath();appendShapeSubpath(ctx,o,inset)}
+function rectSidePoint(o,side,t){
+  const b=rectSideBase(o,side,t,0),d=o.deformEnabled?rectDeformAt(o,side,t):{dx:0,dy:0};return{x:b.x+d.dx,y:b.y+d.dy}
+}
+function ellipsePoint(o,t){
+  t=((t%1)+1)%1;const a=-Math.PI/2+t*Math.PI*2,d=o.deformEnabled?ellipseDeformAt(o,t):{dx:0,dy:0};return{x:o.x+o.w/2+Math.cos(a)*o.w/2+d.dx,y:o.y+o.h/2+Math.sin(a)*o.h/2+d.dy}
+}
+function appendRectBorderSidePath(ctx,o,side){
+  const x=o.x,y=o.y,w=o.w,h=o.h,r=normalizedCornerRadii(o),steps=28,arc=(cx,cy,rad,a0,a1)=>{if(rad>0)ctx.arc(cx,cy,rad,a0,a1);else ctx.lineTo(cx,cy)};
+  if(side==='top'){
+    const s=r.tl?{x:x+r.tl+Math.cos(Math.PI*1.25)*r.tl,y:y+r.tl+Math.sin(Math.PI*1.25)*r.tl}:{x,y};ctx.moveTo(s.x,s.y);arc(x+r.tl,y+r.tl,r.tl,Math.PI*1.25,Math.PI*1.5);
+    for(let i=0;i<=steps;i++){const p=rectSidePoint(o,'top',i/steps);ctx.lineTo(p.x,p.y)}arc(x+w-r.tr,y+r.tr,r.tr,Math.PI*1.5,Math.PI*1.75)
+  }else if(side==='right'){
+    const s=r.tr?{x:x+w-r.tr+Math.cos(Math.PI*1.75)*r.tr,y:y+r.tr+Math.sin(Math.PI*1.75)*r.tr}:{x:x+w,y};ctx.moveTo(s.x,s.y);arc(x+w-r.tr,y+r.tr,r.tr,Math.PI*1.75,Math.PI*2);
+    for(let i=0;i<=steps;i++){const p=rectSidePoint(o,'right',i/steps);ctx.lineTo(p.x,p.y)}arc(x+w-r.br,y+h-r.br,r.br,0,Math.PI*.25)
+  }else if(side==='bottom'){
+    const s=r.br?{x:x+w-r.br+Math.cos(Math.PI*.25)*r.br,y:y+h-r.br+Math.sin(Math.PI*.25)*r.br}:{x:x+w,y:y+h};ctx.moveTo(s.x,s.y);arc(x+w-r.br,y+h-r.br,r.br,Math.PI*.25,Math.PI*.5);
+    for(let i=0;i<=steps;i++){const p=rectSidePoint(o,'bottom',i/steps);ctx.lineTo(p.x,p.y)}arc(x+r.bl,y+h-r.bl,r.bl,Math.PI*.5,Math.PI*.75)
+  }else{
+    const s=r.bl?{x:x+r.bl+Math.cos(Math.PI*.75)*r.bl,y:y+h-r.bl+Math.sin(Math.PI*.75)*r.bl}:{x,y:y+h};ctx.moveTo(s.x,s.y);arc(x+r.bl,y+h-r.bl,r.bl,Math.PI*.75,Math.PI);
+    for(let i=0;i<=steps;i++){const p=rectSidePoint(o,'left',i/steps);ctx.lineTo(p.x,p.y)}arc(x+r.tl,y+r.tl,r.tl,Math.PI,Math.PI*1.25)
+  }
+}
+function appendEllipseBorderSidePath(ctx,o,side){
+  const ranges={top:[.875,1.125],right:[.125,.375],bottom:[.375,.625],left:[.625,.875]},[a,b]=ranges[side],steps=40;
+  for(let i=0;i<=steps;i++){const p=ellipsePoint(o,a+(b-a)*i/steps);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)}
+}
+function borderStrokeStyle(ctx,o,side,b){
+  const c1=rgba(b.color1,b.opacity),c2=rgba(b.color2,b.opacity);if(b.paint==='solid')return c1;
+  const cx=o.x+o.w/2,cy=o.y+o.h/2;let x1=cx,y1=cy,x2=cx,y2=cy,r=Math.max(1,(side==='top'||side==='bottom'?o.w:o.h)/2),g;
+  if(side==='top'){x1=o.x;y1=o.y;x2=o.x+o.w;y2=o.y}
+  else if(side==='right'){x1=o.x+o.w;y1=o.y;x2=o.x+o.w;y2=o.y+o.h}
+  else if(side==='bottom'){x1=o.x+o.w;y1=o.y+o.h;x2=o.x;y2=o.y+o.h}
+  else{x1=o.x;y1=o.y+o.h;x2=o.x;y2=o.y}
+  if(b.paint==='radial'){const mx=(x1+x2)/2,my=(y1+y2)/2;g=ctx.createRadialGradient(mx,my,0,mx,my,r)}
+  else g=ctx.createLinearGradient(x1,y1,x2,y2);
+  g.addColorStop(0,c1);g.addColorStop(1,c2);return g
+}
+function drawBorders(ctx,o){
+  if(!o.borderOn||!isFillShape(o))return;const borders=ensureBorders(o);
+  for(const side of BORDER_SIDE_KEYS){const b=borders[side];if(!b.on||b.width<=0||b.opacity<=0)continue;ctx.save();ctx.beginPath();isEllipse(o)?appendEllipseBorderSidePath(ctx,o,side):appendRectBorderSidePath(ctx,o,side);ctx.strokeStyle=borderStrokeStyle(ctx,o,side,b);ctx.lineWidth=b.width;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();ctx.restore()}
+}
 function drawObjectOuterShadow(ctx,o){
   if(!o.shadowOn)return;
   const spread=finiteNumber(o.shadowSpread,0),opacity=clamp(finiteNumber(o.shadowOpacity,.25),0,1);
@@ -1644,7 +1855,7 @@ async function drawBox(ctx,o){
   if(o.bgOpacity>0){ctx.save();ctx.globalAlpha=o.bgOpacity;ctx.fillStyle=createGradient(ctx,visual.x,visual.y,visual.w,visual.h,o.colors,o.angle,o.gradientType);ctx.fillRect(visual.x,visual.y,visual.w,visual.h);ctx.restore()}
   ctx.restore();
   drawObjectInnerShadow(ctx,o);
-  if(o.borderOn&&o.borderWidth>0){ctx.strokeStyle=rgba(o.borderColor,o.borderOpacity);ctx.lineWidth=o.borderWidth;beginShapePath(ctx,o,o.borderWidth/2);ctx.stroke()}
+  drawBorders(ctx,o);
   ctx.restore()
 }
 function drawText(ctx,o){ctx.save();const s=getObjectSize(o);if(o.rotation){const cx=o.x+s.w/2,cy=o.y+s.h/2;ctx.translate(cx,cy);ctx.rotate((o.rotation||0)*Math.PI/180);ctx.translate(-cx,-cy)}ctx.globalAlpha=o.opacity;ctx.fillStyle=o.color;ctx.font=`${o.fontWeight} ${o.fontSize}px ${o.fontFamily}`;ctx.textBaseline='top';const lh=o.fontSize*1.2;o.content.split('\n').forEach((line,i)=>ctx.fillText(line,o.x,o.y+i*lh));ctx.restore()}

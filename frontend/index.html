@@ -69,7 +69,16 @@
 
       <section class="section object-card" id="boxPanel">
         <div class="section-title" id="shapePanelTitle">方框外观</div>
-        <div class="row" id="radiusRow"><label>圆角 <span id="radiusVal"></span></label><input id="radius" type="range" min="0" max="240"></div>
+        <div id="radiusRow">
+          <div class="section-title sub-title">四角圆角</div>
+          <div class="corner-grid">
+            <label>左上 <input id="radiusTL" type="number" min="0" max="2000" step="1"></label>
+            <label>右上 <input id="radiusTR" type="number" min="0" max="2000" step="1"></label>
+            <label>左下 <input id="radiusBL" type="number" min="0" max="2000" step="1"></label>
+            <label>右下 <input id="radiusBR" type="number" min="0" max="2000" step="1"></label>
+          </div>
+          <button class="smallbtn full mt6" id="syncCorners">用左上值同步四角</button>
+        </div>
         <div class="row"><label>渐变类型</label><select id="gradientType"><option value="linear">线性渐变</option><option value="radial">中心渐变</option></select></div>
         <div class="row"><label>渐变蒙层透明度 <span id="bgOpacityVal"></span></label><input id="bgOpacity" type="range" min="0" max="100"></div>
         <div class="row" id="angleRow"><label>渐变角度 <span id="angleVal"></span></label><input id="angle" type="range" min="0" max="360"></div>
@@ -90,11 +99,17 @@
         </div>
 
         <div class="subsection">
-          <div class="section-title">边框</div>
+          <div class="section-title">四边边框</div>
           <label class="toggle"><input id="borderOn" type="checkbox"> 显示边框</label>
-          <div class="row"><label>边框宽度</label><input id="borderWidth" type="number" min="0" max="30"></div>
-          <div class="row color-value-row"><label>边框颜色</label><div class="color-editor"><input id="borderColorPicker" type="color"><input id="borderColor" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
-          <div class="row"><label>边框透明度 <span id="borderOpacityVal"></span></label><input id="borderOpacity" type="range" min="0" max="100"></div>
+          <div class="row"><label>当前编辑边</label><select id="borderSide"><option value="top">上边</option><option value="right">右边</option><option value="bottom">下边</option><option value="left">左边</option></select></div>
+          <label class="toggle"><input id="borderSideOn" type="checkbox"> 启用当前边</label>
+          <div class="row"><label>粗细</label><input id="borderWidth" type="number" min="0" max="200" step="1"></div>
+          <div class="row"><label>颜色模式</label><select id="borderPaint"><option value="solid">纯色</option><option value="linear">线性渐变</option><option value="radial">中心渐变</option></select></div>
+          <div class="row color-value-row"><label>颜色 1</label><div class="color-editor"><input id="borderColorPicker" type="color"><input id="borderColor" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+          <div class="row color-value-row" id="borderColor2Row"><label>颜色 2</label><div class="color-editor"><input id="borderColor2Picker" type="color"><input id="borderColor2" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+          <div class="row"><label>透明度 <span id="borderOpacityVal"></span></label><input id="borderOpacity" type="range" min="0" max="100"></div>
+          <button class="smallbtn full mt6" id="copyBorderToAll">复制当前边参数到四边</button>
+          <div class="hint mt8">四边可分别设置开关、粗细、透明度与颜色。渐变支持“线性渐变”和“中心渐变”。</div>
         </div>
       </section>
 
@@ -102,8 +117,12 @@
         <div class="section-title">局部弧度形变</div>
         <label class="toggle"><input id="deformEnabled" type="checkbox"> 启用形变点</label>
         <div class="row"><label>平滑范围 <span id="deformSmoothnessVal"></span></label><input id="deformSmoothness" type="range" min="20" max="90" value="58"></div>
-        <button class="smallbtn full" id="resetDeform">重置形变</button>
-        <div class="hint mt8">启用后对象四边出现紫色形变点。向外拖形成鼓包，向内拖形成凹弧；旁边轮廓会按平滑范围自动过渡。</div>
+        <div class="inline2">
+          <button class="smallbtn" id="addDeformPoint">＋ 增加形变点</button>
+          <button class="smallbtn" id="deleteDeformPoint">－ 删除选中点</button>
+        </div>
+        <button class="smallbtn full mt6" id="resetDeform">重置形变</button>
+        <div class="hint mt8">可直接双击边缘增加点；单击紫色点选中后按 Delete 删除。也可点“增加形变点”后再点击轮廓。拖动点会按平滑范围自动影响附近轮廓。</div>
       </section>
 
       <section class="section object-card" id="shadowPanel" hidden>
