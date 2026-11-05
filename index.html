@@ -10,12 +10,14 @@
 <div class="app">
   <aside class="sidebar">
     <header class="head">
-      <div><h1>透明画布编辑器</h1><p>方框、文字、图片背景、渐变蒙层、多选对齐、刻度与辅助线。</p></div>
+      <div><h1>透明画布编辑器</h1><p>方框、圆形、直线、文字、图片背景、线性/中心渐变、多选对齐、刻度与辅助线。</p></div>
     </header>
 
     <div class="toolbar">
       <button class="btn primary" id="addBox">＋ 添加方框</button>
       <button class="btn secondary" id="addText">＋ 添加文字</button>
+      <button class="btn secondary" id="addCircle">◯ 添加圆形</button>
+      <button class="btn secondary" id="addLine">／ 添加直线</button>
     </div>
 
     <div class="settings-tabs main-tabs">
@@ -56,8 +58,8 @@
           <div class="row"><label>Y</label><input id="objY" type="number"></div>
         </div>
         <div class="inline2" id="sizeFields">
-          <div class="row"><label>宽</label><input id="objW" type="number" min="10"></div>
-          <div class="row"><label>高</label><input id="objH" type="number" min="10"></div>
+          <div class="row" id="objWField"><label id="objWLabel">宽</label><input id="objW" type="number" min="10"></div>
+          <div class="row" id="objHField"><label id="objHLabel">高</label><input id="objH" type="number" min="10"></div>
         </div>
         <div class="inline2">
           <div class="row"><label>旋转</label><input id="objRotation" type="number" min="-360" max="360" step="1"></div>
@@ -66,15 +68,16 @@
       </section>
 
       <section class="section object-card" id="boxPanel">
-        <div class="section-title">方框外观</div>
-        <div class="row"><label>圆角 <span id="radiusVal"></span></label><input id="radius" type="range" min="0" max="240"></div>
+        <div class="section-title" id="shapePanelTitle">方框外观</div>
+        <div class="row" id="radiusRow"><label>圆角 <span id="radiusVal"></span></label><input id="radius" type="range" min="0" max="240"></div>
+        <div class="row"><label>渐变类型</label><select id="gradientType"><option value="linear">线性渐变</option><option value="radial">中心渐变</option></select></div>
         <div class="row"><label>渐变蒙层透明度 <span id="bgOpacityVal"></span></label><input id="bgOpacity" type="range" min="0" max="100"></div>
-        <div class="row"><label>渐变角度 <span id="angleVal"></span></label><input id="angle" type="range" min="0" max="360"></div>
+        <div class="row" id="angleRow"><label>渐变角度 <span id="angleVal"></span></label><input id="angle" type="range" min="0" max="360"></div>
         <div id="colors"></div>
         <button class="add-stop" id="addColor">＋ 添加渐变颜色</button>
 
         <div class="subsection">
-          <div class="section-title">方框背景图片</div>
+          <div class="section-title">图形背景图片</div>
           <div class="image-actions">
             <button class="smallbtn" id="boxImageUpload">上传图片</button>
             <button class="smallbtn" id="boxImageRemove">移除图片</button>
@@ -86,13 +89,56 @@
         </div>
 
         <div class="subsection">
-          <div class="section-title">边框与阴影</div>
+          <div class="section-title">边框</div>
           <label class="toggle"><input id="borderOn" type="checkbox"> 显示边框</label>
           <div class="row"><label>边框宽度</label><input id="borderWidth" type="number" min="0" max="30"></div>
           <div class="row"><label>边框颜色</label><input id="borderColor" type="color"></div>
           <div class="row"><label>边框透明度 <span id="borderOpacityVal"></span></label><input id="borderOpacity" type="range" min="0" max="100"></div>
-          <label class="toggle"><input id="shadowOn" type="checkbox"> 阴影</label>
         </div>
+      </section>
+
+      <section class="section object-card" id="shadowPanel" hidden>
+        <div class="section-title">阴影</div>
+
+        <div class="subsection">
+          <div class="section-title">外阴影</div>
+          <label class="toggle"><input id="shadowOn" type="checkbox"> 启用外阴影</label>
+          <div class="inline2">
+            <div class="row"><label>X 偏移</label><input id="shadowX" type="number" min="-200" max="200" step="1"></div>
+            <div class="row"><label>Y 偏移</label><input id="shadowY" type="number" min="-200" max="200" step="1"></div>
+          </div>
+          <div class="inline2">
+            <div class="row"><label>模糊</label><input id="shadowBlur" type="number" min="0" max="200" step="1"></div>
+            <div class="row"><label>扩散</label><input id="shadowSpread" type="number" min="-100" max="200" step="1"></div>
+          </div>
+          <div class="row"><label>颜色</label><input id="shadowColor" type="color"></div>
+          <div class="row"><label>透明度 <span id="shadowOpacityVal"></span></label><input id="shadowOpacity" type="range" min="0" max="100"></div>
+        </div>
+
+        <div class="subsection" id="innerShadowSection">
+          <div class="section-title">内阴影</div>
+          <label class="toggle"><input id="innerShadowOn" type="checkbox"> 启用内阴影</label>
+          <div class="inline2">
+            <div class="row"><label>X 偏移</label><input id="innerShadowX" type="number" min="-200" max="200" step="1"></div>
+            <div class="row"><label>Y 偏移</label><input id="innerShadowY" type="number" min="-200" max="200" step="1"></div>
+          </div>
+          <div class="inline2">
+            <div class="row"><label>模糊</label><input id="innerShadowBlur" type="number" min="0" max="200" step="1"></div>
+            <div class="row"><label>扩散</label><input id="innerShadowSpread" type="number" min="-100" max="200" step="1"></div>
+          </div>
+          <div class="row"><label>颜色</label><input id="innerShadowColor" type="color"></div>
+          <div class="row"><label>透明度 <span id="innerShadowOpacityVal"></span></label><input id="innerShadowOpacity" type="range" min="0" max="100"></div>
+        </div>
+
+        <div class="hint" id="shadowHint">外阴影与内阴影可以同时启用，参数互不影响。</div>
+      </section>
+
+      <section class="section object-card" id="linePanel" hidden>
+        <div class="section-title">直线属性</div>
+        <div class="row"><label>线条颜色</label><input id="lineColor" type="color"></div>
+        <div class="row"><label>线宽</label><input id="lineWidth" type="number" min="1" max="100"></div>
+        <div class="row"><label>透明度 <span id="lineOpacityVal"></span></label><input id="lineOpacity" type="range" min="0" max="100"></div>
+        <div class="hint">直线长度使用上方“长度”参数；拖动两端缩放手柄可调整长度，旋转手柄可改变方向。</div>
       </section>
 
       <section class="section object-card" id="textPanel" hidden>
@@ -143,8 +189,9 @@
 
       <section class="section canvas-card">
         <div class="section-title">画布渐变蒙层</div>
+        <div class="row"><label>渐变类型</label><select id="canvasGradientType"><option value="linear">线性渐变</option><option value="radial">中心渐变</option></select></div>
         <div class="row"><label>透明度 <span id="canvasBgOpacityVal"></span></label><input id="canvasBgOpacity" type="range" min="0" max="100"></div>
-        <div class="row"><label>渐变角度 <span id="canvasAngleVal"></span></label><input id="canvasAngle" type="range" min="0" max="360"></div>
+        <div class="row" id="canvasAngleRow"><label>渐变角度 <span id="canvasAngleVal"></span></label><input id="canvasAngle" type="range" min="0" max="360"></div>
         <div id="canvasColors"></div>
         <button class="add-stop" id="canvasAddColor">＋ 添加渐变颜色</button>
       </section>

@@ -5,7 +5,7 @@ const state={
   objects:[],selectedId:null,selectedBoxIds:[],nextId:1,
   zoom:1,panX:80,panY:70,
   canvasW:1600,canvasH:1000,
-  canvasBgOpacity:0,canvasAngle:135,canvasColors:[{c:'#ffffff',p:0},{c:'#dfe7f2',p:100}],
+  canvasBgOpacity:0,canvasGradientType:'linear',canvasAngle:135,canvasColors:[{c:'#ffffff',p:0},{c:'#dfe7f2',p:100}],
   canvasImageRef:null,canvasImageOpacity:1,canvasImageFit:'cover',
   guides:{vertical:[],horizontal:[]},guidesVisible:true,snapEnabled:true,
   customFonts:[]
@@ -143,15 +143,32 @@ function cleanupUnusedResources(){
   return{imagesRemoved,fontsRemoved}
 }
 
-function defaultBox(){return{id:uid(),type:'box',name:'方框',visible:true,locked:false,rotation:0,lockAspect:false,x:180,y:150,w:420,h:300,radius:28,bgOpacity:.88,angle:135,colors:[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:true,borderWidth:2,borderColor:'#ffffff',borderOpacity:.9,shadowOn:true}}
+function defaultBox(){return{id:uid(),type:'box',shape:'rect',name:'方框',visible:true,locked:false,rotation:0,lockAspect:false,x:180,y:150,w:420,h:300,radius:28,bgOpacity:.88,gradientType:'linear',angle:135,colors:[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:true,borderWidth:2,borderColor:'#ffffff',borderOpacity:.9,shadowOn:true,shadowX:0,shadowY:16,shadowBlur:34,shadowSpread:0,shadowColor:'#232e3f',shadowOpacity:.22,innerShadowOn:false,innerShadowX:0,innerShadowY:4,innerShadowBlur:12,innerShadowSpread:0,innerShadowColor:'#000000',innerShadowOpacity:.18}}
+function defaultCircle(){return{id:uid(),type:'box',shape:'ellipse',name:'圆形',visible:true,locked:false,rotation:0,lockAspect:true,x:250,y:180,w:240,h:240,radius:120,bgOpacity:.9,gradientType:'radial',angle:135,colors:[{c:'#ffffff',p:0},{c:'#dce8ff',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:true,borderWidth:2,borderColor:'#8fb6ff',borderOpacity:.9,shadowOn:false,shadowX:0,shadowY:12,shadowBlur:28,shadowSpread:0,shadowColor:'#315887',shadowOpacity:.22,innerShadowOn:false,innerShadowX:0,innerShadowY:4,innerShadowBlur:12,innerShadowSpread:0,innerShadowColor:'#315887',innerShadowOpacity:.16}}
+function defaultLine(){return{id:uid(),type:'box',shape:'line',name:'直线',visible:true,locked:false,rotation:0,lockAspect:false,x:280,y:260,w:300,h:20,radius:0,bgOpacity:0,gradientType:'linear',angle:0,colors:[{c:'#2563eb',p:0},{c:'#2563eb',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:false,borderWidth:0,borderColor:'#2563eb',borderOpacity:1,shadowOn:false,shadowX:0,shadowY:6,shadowBlur:12,shadowSpread:0,shadowColor:'#111827',shadowOpacity:.3,innerShadowOn:false,lineColor:'#2563eb',lineWidth:4,lineOpacity:1}}
 function defaultText(){return{id:uid(),type:'text',name:'文字',visible:true,locked:false,rotation:0,x:260,y:230,content:'文字',fontSize:48,color:'#111827',opacity:1,fontWeight:'400',fontFamily:'"Microsoft YaHei",sans-serif'}}
+function boxShape(o){return o?.type==='box'?(o.shape||'rect'):null}
+function objectKindName(o){if(o?.type==='text')return'文字';const s=boxShape(o);return s==='ellipse'?'圆形':s==='line'?'直线':'方框'}
+function objectKindIcon(o){if(o?.type==='text')return'T';const s=boxShape(o);return s==='ellipse'?'○':s==='line'?'╱':'□'}
+function isLine(o){return boxShape(o)==='line'}
+function isEllipse(o){return boxShape(o)==='ellipse'}
+function isFillShape(o){return o?.type==='box'&&!isLine(o)}
+function outerShadowCSS(o){
+  if(!o?.shadowOn)return'none';
+  return `${finiteNumber(o.shadowX,0)}px ${finiteNumber(o.shadowY,0)}px ${Math.max(0,finiteNumber(o.shadowBlur,0))}px ${finiteNumber(o.shadowSpread,0)}px ${rgba(o.shadowColor||'#000000',clamp(finiteNumber(o.shadowOpacity,.25),0,1))}`
+}
+function innerShadowCSS(o){
+  if(!o?.innerShadowOn||isLine(o))return'none';
+  return `inset ${finiteNumber(o.innerShadowX,0)}px ${finiteNumber(o.innerShadowY,0)}px ${Math.max(0,finiteNumber(o.innerShadowBlur,0))}px ${finiteNumber(o.innerShadowSpread,0)}px ${rgba(o.innerShadowColor||'#000000',clamp(finiteNumber(o.innerShadowOpacity,.18),0,1))}`
+}
+function shadowCSS(o){const parts=[];const outer=outerShadowCSS(o),inner=innerShadowCSS(o);if(outer!=='none')parts.push(outer);if(inner!=='none')parts.push(inner);return parts.join(', ')||'none'}
 function selected(){return state.objects.find(o=>o.id===state.selectedId)||null}
 function selectedObjects(){const ids=new Set(state.selectedBoxIds);return state.objects.filter(o=>ids.has(o.id))}
 function editableSelectedObjects(){return selectedObjects().filter(o=>!o.locked)}
 function selectedBoxes(){return selectedObjects().filter(o=>o.type==='box')}
 function editableSelectedBoxes(){return editableSelectedObjects().filter(o=>o.type==='box')}
 function hasMultiBoxes(){return selectedObjects().length>1}
-function gradientCSS(colors,angle){const ss=[...colors].sort((a,b)=>a.p-b.p);if(ss.length===1)return ss[0].c;return`linear-gradient(${angle}deg,${ss.map(s=>`${s.c} ${s.p}%`).join(',')})`}
+function gradientCSS(colors,angle,type='linear'){const ss=[...colors].sort((a,b)=>a.p-b.p);if(ss.length===1)return ss[0].c;const stops=ss.map(s=>`${s.c} ${s.p}%`).join(',');return type==='radial'?`radial-gradient(circle at center,${stops})`:`linear-gradient(${angle}deg,${stops})`}
 function clearSelection(){state.selectedId=null;state.selectedBoxIds=[]}
 function selectObject(o,additive=false){
   if(additive){
@@ -172,24 +189,32 @@ function beginInlineLayerRename(row,o){
   if(o.locked){setDataStatus('锁定对象不能重命名','err');return}
   const nameEl=row.querySelector('.layer-name');if(!nameEl||row.querySelector('.layer-name-input'))return;
   row.draggable=false;const input=document.createElement('input');input.className='layer-name-input';input.type='text';input.value=o.name||'';input.maxLength=200;nameEl.replaceWith(input);input.focus();input.select();
-  let done=false;const finish=save=>{if(done)return;done=true;const old=o.name||'';if(save)o.name=input.value;row.draggable=!o.locked;const span=document.createElement('span');span.className='layer-name';span.title='双击重命名';span.textContent=o.name||((o.type==='box'?'方框':'文字')+' '+o.id);input.replaceWith(span);renderLayers();if(save&&o.name!==old){$('#layerName').value=o.name;commitHistory('重命名图层')}};
+  let done=false;const finish=save=>{if(done)return;done=true;const old=o.name||'';if(save)o.name=input.value;row.draggable=!o.locked;const span=document.createElement('span');span.className='layer-name';span.title='双击重命名';span.textContent=o.name||(objectKindName(o)+' '+o.id);input.replaceWith(span);renderLayers();if(save&&o.name!==old){$('#layerName').value=o.name;commitHistory('重命名图层')}};
   input.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();finish(true)}else if(e.key==='Escape'){e.preventDefault();finish(false)}});
   input.addEventListener('blur',()=>finish(true))
 }
 function handleHTML(){return'<i class="handle nw" data-dir="nw"></i><i class="handle n" data-dir="n"></i><i class="handle ne" data-dir="ne"></i><i class="handle e" data-dir="e"></i><i class="handle se" data-dir="se"></i><i class="handle s" data-dir="s"></i><i class="handle sw" data-dir="sw"></i><i class="handle w" data-dir="w"></i><i class="rotate-handle" data-dir="rotate" title="拖动旋转；Shift 按 15° 吸附"></i>'}
+function lineHandleHTML(){return'<i class="handle e" data-dir="e"></i><i class="handle w" data-dir="w"></i><i class="rotate-handle" data-dir="rotate" title="拖动旋转；Shift 按 15° 吸附"></i>'}
 function updateWorldDom(){
   const cimg=world.querySelector('.canvas-image-layer'),cbg=world.querySelector('.canvas-bg-layer');
   if(cimg){const p=previewImageUrl(state.canvasImageRef);cimg.style.backgroundImage=p?`url("${p}")`:'none';cimg.style.backgroundSize=fitCSS(state.canvasImageFit);cimg.style.opacity=state.canvasImageOpacity}
-  if(cbg){cbg.style.background=gradientCSS(state.canvasColors,state.canvasAngle);cbg.style.opacity=state.canvasBgOpacity}
+  if(cbg){cbg.style.background=gradientCSS(state.canvasColors,state.canvasAngle,state.canvasGradientType);cbg.style.opacity=state.canvasBgOpacity}
   state.objects.forEach((o,i)=>{
     const el=objectNodeCache.get(o.id);if(!el)return;
     el.style.left=o.x+'px';el.style.top=o.y+'px';el.style.zIndex=i+3;el.style.transform=`rotate(${o.rotation||0}deg)`;el.style.transformOrigin='50% 50%';
     if(o.type==='box'){
-      el.style.width=o.w+'px';el.style.height=o.h+'px';el.style.borderRadius=o.radius+'px';
-      el.style.border=o.borderOn?`${o.borderWidth}px solid ${rgba(o.borderColor,o.borderOpacity)}`:'none';el.style.boxShadow=o.shadowOn?'0 16px 34px rgba(35,46,63,.22)':'none';
-      const img=el.querySelector('.box-image'),fill=el.querySelector('.box-fill'),p=previewImageUrl(o.imageRef);
-      if(img){img.style.backgroundImage=p?`url("${p}")`:'none';img.style.backgroundSize=fitCSS(o.imageFit);img.style.opacity=o.imageOpacity}
-      if(fill){fill.style.background=gradientCSS(o.colors,o.angle);fill.style.opacity=o.bgOpacity}
+      el.style.width=o.w+'px';el.style.height=o.h+'px';
+      if(isLine(o)){
+        el.style.border='none';el.style.boxShadow='none';el.style.borderRadius='0';
+        const stroke=el.querySelector('.line-stroke');if(stroke){stroke.style.height=Math.max(1,o.lineWidth)+'px';stroke.style.background=rgba(o.lineColor,o.lineOpacity);stroke.style.opacity=1;stroke.style.boxShadow=shadowCSS(o)}
+      }else{
+        el.style.borderRadius=isEllipse(o)?'50%':o.radius+'px';
+        el.style.border=o.borderOn?`${o.borderWidth}px solid ${rgba(o.borderColor,o.borderOpacity)}`:'none';el.style.boxShadow=outerShadowCSS(o);
+        const img=el.querySelector('.box-image'),fill=el.querySelector('.box-fill'),inner=el.querySelector('.inner-shadow-layer'),p=previewImageUrl(o.imageRef);
+        if(img){img.style.backgroundImage=p?`url("${p}")`:'none';img.style.backgroundSize=fitCSS(o.imageFit);img.style.opacity=o.imageOpacity}
+        if(fill){fill.style.background=gradientCSS(o.colors,o.angle,o.gradientType);fill.style.opacity=o.bgOpacity}
+        if(inner)inner.style.boxShadow=innerShadowCSS(o)
+      }
     }else{
       const content=el.querySelector('.text-content');if(content&&content.textContent!==o.content)content.textContent=o.content;el.style.fontSize=o.fontSize+'px';el.style.color=o.color;el.style.opacity=o.opacity;el.style.fontWeight=o.fontWeight;el.style.fontFamily=o.fontFamily
     }
@@ -205,29 +230,36 @@ function renderObjects(syncUI=true){
   const cimg=document.createElement('div');cimg.className='canvas-image-layer';
   const canvasPreview=previewImageUrl(state.canvasImageRef);if(canvasPreview){cimg.style.backgroundImage=`url("${canvasPreview}")`;cimg.style.backgroundSize=fitCSS(state.canvasImageFit);cimg.style.opacity=state.canvasImageOpacity}
   world.appendChild(cimg);
-  const cbg=document.createElement('div');cbg.className='canvas-bg-layer';cbg.style.background=gradientCSS(state.canvasColors,state.canvasAngle);cbg.style.opacity=state.canvasBgOpacity;world.appendChild(cbg);
+  const cbg=document.createElement('div');cbg.className='canvas-bg-layer';cbg.style.background=gradientCSS(state.canvasColors,state.canvasAngle,state.canvasGradientType);cbg.style.opacity=state.canvasBgOpacity;world.appendChild(cbg);
 
   const boxIds=new Set(state.selectedBoxIds),singleBox=state.selectedBoxIds.length===1;
   state.objects.forEach((o,i)=>{
     if(o.visible===false)return;
     const el=document.createElement('div');
-    const primary=o.id===state.selectedId,multi=boxIds.has(o.id);
-    el.className='object '+(o.type==='box'?'box-object':'text-object')+(o.locked?' locked':'')+(primary?' selected':'')+(multi?' multi-selected':'')+(primary&&singleBox&&!o.locked?' single-selection':'');
+    const primary=o.id===state.selectedId,multi=boxIds.has(o.id),shapeClass=o.type==='box'?(isLine(o)?' line-object':isEllipse(o)?' ellipse-object':' box-object'):' text-object';
+    el.className='object'+shapeClass+(o.locked?' locked':'')+(primary?' selected':'')+(multi?' multi-selected':'')+(primary&&singleBox&&!o.locked?' single-selection':'');
     el.dataset.id=o.id;el.style.left=o.x+'px';el.style.top=o.y+'px';el.style.zIndex=i+3;el.style.transform=`rotate(${o.rotation||0}deg)`;el.style.transformOrigin='50% 50%';
     if(o.type==='box'){
-      el.style.width=o.w+'px';el.style.height=o.h+'px';el.style.borderRadius=o.radius+'px';
-      el.style.border=o.borderOn?`${o.borderWidth}px solid ${rgba(o.borderColor,o.borderOpacity)}`:'none';
-      el.style.boxShadow=o.shadowOn?'0 16px 34px rgba(35,46,63,.22)':'none';
-      const img=document.createElement('div');img.className='box-image';
-      const preview=previewImageUrl(o.imageRef);if(preview){img.style.backgroundImage=`url("${preview}")`;img.style.backgroundSize=fitCSS(o.imageFit);img.style.opacity=o.imageOpacity}
-      el.appendChild(img);
-      const fill=document.createElement('div');fill.className='box-fill';fill.style.background=gradientCSS(o.colors,o.angle);fill.style.opacity=o.bgOpacity;el.appendChild(fill);
-      el.insertAdjacentHTML('beforeend',handleHTML());
+      el.style.width=o.w+'px';el.style.height=o.h+'px';
+      if(isLine(o)){
+        const stroke=document.createElement('div');stroke.className='line-stroke';stroke.style.height=Math.max(1,o.lineWidth)+'px';stroke.style.background=rgba(o.lineColor,o.lineOpacity);stroke.style.opacity=1;stroke.style.boxShadow=shadowCSS(o);el.appendChild(stroke);
+        el.insertAdjacentHTML('beforeend',lineHandleHTML())
+      }else{
+        el.style.borderRadius=isEllipse(o)?'50%':o.radius+'px';
+        el.style.border=o.borderOn?`${o.borderWidth}px solid ${rgba(o.borderColor,o.borderOpacity)}`:'none';
+        el.style.boxShadow=outerShadowCSS(o);
+        const img=document.createElement('div');img.className='box-image';
+        const preview=previewImageUrl(o.imageRef);if(preview){img.style.backgroundImage=`url("${preview}")`;img.style.backgroundSize=fitCSS(o.imageFit);img.style.opacity=o.imageOpacity}
+        el.appendChild(img);
+        const fill=document.createElement('div');fill.className='box-fill';fill.style.background=gradientCSS(o.colors,o.angle,o.gradientType);fill.style.opacity=o.bgOpacity;el.appendChild(fill);
+        const inner=document.createElement('div');inner.className='inner-shadow-layer';inner.style.boxShadow=innerShadowCSS(o);el.appendChild(inner);
+        el.insertAdjacentHTML('beforeend',handleHTML())
+      }
     }else{
       const content=document.createElement('span');content.className='text-content';content.textContent=o.content;el.appendChild(content);el.style.fontSize=o.fontSize+'px';el.style.color=o.color;el.style.opacity=o.opacity;el.style.fontWeight=o.fontWeight;el.style.fontFamily=o.fontFamily;
-      el.insertAdjacentHTML('beforeend','<i class="rotate-handle" data-dir="rotate" title="拖动旋转；Shift 按 15° 吸附"></i>');
+      el.insertAdjacentHTML('beforeend','<i class="rotate-handle" data-dir="rotate" title="拖动旋转；Shift 按 15° 吸附"></i>')
     }
-    bindObjectEvents(el,o);objectNodeCache.set(o.id,el);world.appendChild(el);
+    bindObjectEvents(el,o);objectNodeCache.set(o.id,el);world.appendChild(el)
   });
   if(syncUI){renderLayers();refreshPanels();refreshAlignPanel();refreshRightbar();updateSmartHint()}
 }
@@ -236,7 +268,7 @@ function createLayerNode(id){
   d.innerHTML='<button class="layer-control" data-layer-action="visibility"></button><button class="layer-control" data-layer-action="lock"></button><span class="layer-icon"></span><span class="layer-name" title="双击重命名"></span><span class="layer-z"></span>';
   d.addEventListener('click',e=>{
     const o=state.objects.find(x=>x.id===Number(d.dataset.id));if(!o)return;const action=e.target.closest('[data-layer-action]')?.dataset.layerAction;
-    if(action){e.stopPropagation();if(action==='visibility'){o.visible=o.visible===false;renderObjects();commitHistory((o.visible?'显示':'隐藏')+(o.type==='box'?'方框':'文字'))}else{o.locked=!o.locked;renderObjects();commitHistory((o.locked?'锁定':'解锁')+(o.type==='box'?'方框':'文字'))}return}
+    if(action){e.stopPropagation();const kind=objectKindName(o);if(action==='visibility'){o.visible=o.visible===false;renderObjects();commitHistory((o.visible?'显示':'隐藏')+kind)}else{o.locked=!o.locked;renderObjects();commitHistory((o.locked?'锁定':'解锁')+kind)}return}
     selectObject(o,e.shiftKey);renderObjects()
   });
   d.addEventListener('dblclick',e=>{const name=e.target.closest('.layer-name');if(!name)return;const o=state.objects.find(x=>x.id===Number(d.dataset.id));if(o){e.preventDefault();e.stopPropagation();beginInlineLayerRename(d,o)}});
@@ -259,8 +291,8 @@ function renderLayers(){
     const vis=d.querySelector('[data-layer-action="visibility"]'),lock=d.querySelector('[data-layer-action="lock"]');
     vis.className='layer-control '+(o.visible===false?'':'on');vis.title=o.visible===false?'显示':'隐藏';vis.textContent=o.visible===false?'◌':'◉';
     lock.className='layer-control '+(o.locked?'locked':'');lock.title=o.locked?'解锁':'锁定';lock.textContent=o.locked?'🔒':'🔓';
-    d.querySelector('.layer-icon').textContent=o.type==='box'?'□':'T';
-    const name=d.querySelector('.layer-name');if(name)name.textContent=o.name||((o.type==='box'?'方框':'文字')+' '+o.id);
+    d.querySelector('.layer-icon').textContent=objectKindIcon(o);
+    const name=d.querySelector('.layer-name');if(name)name.textContent=o.name||(objectKindName(o)+' '+o.id);
     d.querySelector('.layer-z').textContent=i+1;frag.appendChild(d)
   }
   wrap.appendChild(frag)
@@ -306,7 +338,7 @@ function updateSmartHint(){
   const el=$('#smartHint');if(!el)return;const n=selectedObjects().length;let msg='';
   if(spacePanHeld)msg='平移模式：按住 Space + 左键拖动 · 松开 Space 恢复编辑';
   else if(!n)msg='空白拖动框选 · Ctrl+A 全选 · Space / 中键平移 · 滚轮缩放 · ? 全部快捷键';
-  else if(n===1){const o=selected();msg=o?.type==='box'?'方框已选中 · 上方圆点旋转 · Shift 缩放锁比例 · Home 居中 · F 缩放到选中 · ? 全部快捷键':'文字已选中 · 上方圆点旋转 · Shift+点击追加多选 · Home 居中 · F 缩放到选中 · ? 全部快捷键'}
+  else if(n===1){const o=selected(),kind=objectKindName(o);msg=isLine(o)?'直线已选中 · 两端手柄调整长度 · 上方圆点旋转 · Home 居中 · F 缩放到选中 · ? 全部快捷键':o?.type==='box'?kind+'已选中 · 上方圆点旋转 · Shift 缩放锁比例 · Home 居中 · F 缩放到选中 · ? 全部快捷键':'文字已选中 · 上方圆点旋转 · Shift+点击追加多选 · Home 居中 · F 缩放到选中 · ? 全部快捷键'}
   else msg=n+' 个对象已选中 · Shift+点击增减选择 · F 缩放到选中 · 方向键移动 · Delete 删除 · ? 全部快捷键';
   el.textContent=msg;el.title=msg+' · 点击查看完整快捷键'
 }
@@ -355,29 +387,43 @@ $('#fontFile').onchange=async e=>{
 };
 
 function refreshPanels(){
-  const o=selected(),has=!!o,multi=hasMultiBoxes(),locked=!!o?.locked;
+  const o=selected(),has=!!o,multi=hasMultiBoxes(),locked=!!o?.locked,line=isLine(o),fillShape=isFillShape(o);
   $('#commonPanel').style.opacity=has?(locked?'.58':'1'):'.45';
   $('#layerName').disabled=!has||multi||locked;
   ['objX','objY','objW','objH','objRotation'].forEach(id=>$('#'+id).disabled=!has||multi||locked);
-  $('#lockAspect').disabled=!has||multi||locked||o?.type!=='box';
-  $('#aspectLockRow').style.display=o?.type==='box'?'flex':'none';
-  $('#boxPanel').hidden=o?.type!=='box';$('#textPanel').hidden=o?.type!=='text';
+  $('#lockAspect').disabled=!has||multi||locked||!fillShape;
+  $('#aspectLockRow').style.display=fillShape?'flex':'none';
+  $('#boxPanel').hidden=!fillShape;$('#linePanel').hidden=!line;$('#shadowPanel').hidden=o?.type!=='box';$('#textPanel').hidden=o?.type!=='text';
   $('#deleteObj').disabled=multi?editableSelectedObjects().length===0:(!has||locked);
   if(!o){$('#layerName').value='';return}
   $('#layerName').value=o.name||'';$('#objX').value=Math.round(o.x);$('#objY').value=Math.round(o.y);$('#objRotation').value=Math.round(o.rotation||0);$('#lockAspect').checked=!!o.lockAspect;
   if(o.type==='box'){
     $('#sizeFields').style.display='grid';$('#objW').value=Math.round(o.w);$('#objH').value=Math.round(o.h);
-    $('#radius').value=o.radius;$('#radiusVal').textContent=Math.round(o.radius)+'px';
-    $('#bgOpacity').value=Math.round(o.bgOpacity*100);$('#bgOpacityVal').textContent=Math.round(o.bgOpacity*100)+'%';
-    $('#angle').value=o.angle;$('#angleVal').textContent=Math.round(o.angle)+'°';
-    $('#boxImageOpacity').value=Math.round(o.imageOpacity*100);$('#boxImageOpacityVal').textContent=Math.round(o.imageOpacity*100)+'%';$('#boxImageFit').value=o.imageFit;
-    $('#borderOn').checked=o.borderOn;$('#borderWidth').value=o.borderWidth;$('#borderColor').value=o.borderColor;
-    $('#borderOpacity').value=Math.round(o.borderOpacity*100);$('#borderOpacityVal').textContent=Math.round(o.borderOpacity*100)+'%';$('#shadowOn').checked=o.shadowOn;
-    renderColorControls(o);
-    $('#boxPanel').querySelectorAll('input,select,button,textarea').forEach(el=>el.disabled=locked||multi);
-    $('#boxImageRemove').disabled=locked||multi||!o.imageRef
+    $('#objWLabel').textContent=line?'长度':'宽';$('#objHField').style.display=line?'none':'';$('#objWField').style.display='';$('#objWField').style.gridColumn=line?'1 / -1':'';
+    if(line){
+      $('#lineColor').value=o.lineColor;$('#lineWidth').value=o.lineWidth;$('#lineOpacity').value=Math.round(o.lineOpacity*100);$('#lineOpacityVal').textContent=Math.round(o.lineOpacity*100)+'%';
+      $('#linePanel').querySelectorAll('input,select,button,textarea').forEach(el=>el.disabled=locked||multi)
+    }else{
+      $('#shapePanelTitle').textContent=isEllipse(o)?'圆形外观':'方框外观';$('#radiusRow').style.display=isEllipse(o)?'none':'';
+      $('#gradientType').value=o.gradientType||'linear';$('#angleRow').style.display=(o.gradientType||'linear')==='radial'?'none':'';
+      $('#radius').value=o.radius;$('#radiusVal').textContent=Math.round(o.radius)+'px';
+      $('#bgOpacity').value=Math.round(o.bgOpacity*100);$('#bgOpacityVal').textContent=Math.round(o.bgOpacity*100)+'%';
+      $('#angle').value=o.angle;$('#angleVal').textContent=Math.round(o.angle)+'°';
+      $('#boxImageOpacity').value=Math.round(o.imageOpacity*100);$('#boxImageOpacityVal').textContent=Math.round(o.imageOpacity*100)+'%';$('#boxImageFit').value=o.imageFit;
+      $('#borderOn').checked=o.borderOn;$('#borderWidth').value=o.borderWidth;$('#borderColor').value=o.borderColor;
+      $('#borderOpacity').value=Math.round(o.borderOpacity*100);$('#borderOpacityVal').textContent=Math.round(o.borderOpacity*100)+'%';
+      renderColorControls(o);
+      $('#boxPanel').querySelectorAll('input,select,button,textarea').forEach(el=>el.disabled=locked||multi);
+      $('#boxImageRemove').disabled=locked||multi||!o.imageRef
+    }
+    $('#shadowOn').checked=!!o.shadowOn;$('#shadowX').value=finiteNumber(o.shadowX,0);$('#shadowY').value=finiteNumber(o.shadowY,0);$('#shadowBlur').value=Math.max(0,finiteNumber(o.shadowBlur,0));$('#shadowSpread').value=finiteNumber(o.shadowSpread,0);$('#shadowColor').value=o.shadowColor||'#000000';$('#shadowOpacity').value=Math.round(clamp(finiteNumber(o.shadowOpacity,.25),0,1)*100);$('#shadowOpacityVal').textContent=Math.round(clamp(finiteNumber(o.shadowOpacity,.25),0,1)*100)+'%';
+    $('#innerShadowSection').hidden=line;
+    if(!line){$('#innerShadowOn').checked=!!o.innerShadowOn;$('#innerShadowX').value=finiteNumber(o.innerShadowX,0);$('#innerShadowY').value=finiteNumber(o.innerShadowY,0);$('#innerShadowBlur').value=Math.max(0,finiteNumber(o.innerShadowBlur,0));$('#innerShadowSpread').value=finiteNumber(o.innerShadowSpread,0);$('#innerShadowColor').value=o.innerShadowColor||'#000000';$('#innerShadowOpacity').value=Math.round(clamp(finiteNumber(o.innerShadowOpacity,.18),0,1)*100);$('#innerShadowOpacityVal').textContent=Math.round(clamp(finiteNumber(o.innerShadowOpacity,.18),0,1)*100)+'%'}
+    $('#shadowHint').textContent=line?'直线没有内部区域，因此只支持外阴影。':'外阴影与内阴影可以同时启用，参数互不影响。';
+    $('#shadowPanel').querySelectorAll('input,select,button,textarea').forEach(el=>el.disabled=locked||multi)
   }else{
-    $('#sizeFields').style.display='none';$('#textContent').value=o.content;$('#fontSize').value=o.fontSize;$('#textColor').value=o.color;
+    $('#sizeFields').style.display='none';$('#objHField').style.display='';$('#objWField').style.gridColumn='';$('#objWLabel').textContent='宽';
+    $('#textContent').value=o.content;$('#fontSize').value=o.fontSize;$('#textColor').value=o.color;
     $('#textOpacity').value=Math.round(o.opacity*100);$('#textOpacityVal').textContent=Math.round(o.opacity*100)+'%';$('#fontWeight').value=o.fontWeight;ensureFontOption(o.fontFamily,o.fontFamily);$('#fontFamily').value=o.fontFamily;
     $('#textPanel').querySelectorAll('input,select,button,textarea').forEach(el=>el.disabled=locked)
   }
@@ -444,9 +490,9 @@ function bindObjectEvents(el,o){
 }
 function getObjectSize(o){if(o.type==='box')return{w:o.w,h:o.h};const m=textMetrics(measureCtx,o);return{w:m.w,h:m.h}}
 function getObjectBounds(o){
-  const s=getObjectSize(o),angle=((o.rotation||0)%360)*Math.PI/180;
-  if(Math.abs(angle)<1e-8)return{x:o.x,y:o.y,w:s.w,h:s.h};
-  const c=Math.abs(Math.cos(angle)),sn=Math.abs(Math.sin(angle)),w=s.w*c+s.h*sn,h=s.w*sn+s.h*c,cx=o.x+s.w/2,cy=o.y+s.h/2;
+  const base=getObjectSize(o),s=isLine(o)?{w:o.w,h:Math.max(1,o.lineWidth)}:base,angle=((o.rotation||0)%360)*Math.PI/180,cx=o.x+base.w/2,cy=o.y+base.h/2;
+  if(Math.abs(angle)<1e-8)return{x:cx-s.w/2,y:cy-s.h/2,w:s.w,h:s.h};
+  const c=Math.abs(Math.cos(angle)),sn=Math.abs(Math.sin(angle)),w=s.w*c+s.h*sn,h=s.w*sn+s.h*c;
   return{x:cx-w/2,y:cy-h/2,w,h}
 }
 function selectionBounds(items=selectedObjects()){
@@ -569,11 +615,11 @@ viewport.addEventListener('pointerup',e=>{
     renderObjects();updateSmartHint();return
   }
   clearSnapFeedback();
-  if(type==='move'||type==='moveGroup')commitHistory('移动对象');else if(type==='resize')commitHistory('调整方框尺寸');else if(type==='rotate')commitHistory('旋转对象')
+  if(type==='move'||type==='moveGroup')commitHistory('移动对象');else if(type==='resize')commitHistory('调整对象尺寸');else if(type==='rotate')commitHistory('旋转对象')
 });
 viewport.addEventListener('pointercancel',()=>{
   if(!gesture||gesture.type==='guide')return;const type=gesture.type;gesture=null;viewport.classList.remove('panning');selectionMarquee.classList.remove('show');world.querySelectorAll('.rotating').forEach(el=>el.classList.remove('rotating'));clearSnapFeedback();
-  if(type==='move'||type==='moveGroup'||type==='resize'||type==='rotate')commitHistory(type==='resize'?'调整方框尺寸':type==='rotate'?'旋转对象':'移动对象')
+  if(type==='move'||type==='moveGroup'||type==='resize'||type==='rotate')commitHistory(type==='resize'?'调整对象尺寸':type==='rotate'?'旋转对象':'移动对象')
 });
 
 const RULER_SIZE=28;
@@ -634,22 +680,40 @@ function mutateSelected(fn,syncUI=false){const o=selected();if(!o||hasMultiBoxes
 $('#layerName').oninput=e=>{const o=selected();if(!o||hasMultiBoxes()||o.locked)return;o.name=e.target.value;renderLayers()};
 $('#objX').oninput=e=>mutateSelected(o=>o.x=+e.target.value||0);$('#objY').oninput=e=>mutateSelected(o=>o.y=+e.target.value||0);
 $('#objRotation').oninput=e=>mutateSelected(o=>o.rotation=finiteNumber(e.target.value,0));
-$('#lockAspect').onchange=e=>mutateSelected(o=>{if(o.type==='box')o.lockAspect=e.target.checked});
-$('#objW').oninput=e=>mutateSelected(o=>{if(o.type!=='box')return;const ratio=o.w/Math.max(1,o.h),w=Math.max(20,+e.target.value||20);o.w=w;if(o.lockAspect)o.h=Math.max(20,w/ratio)},true);
-$('#objH').oninput=e=>mutateSelected(o=>{if(o.type!=='box')return;const ratio=o.w/Math.max(1,o.h),h=Math.max(20,+e.target.value||20);o.h=h;if(o.lockAspect)o.w=Math.max(20,h*ratio)},true);
-$('#radius').oninput=e=>{mutateSelected(o=>o.radius=+e.target.value);$('#radiusVal').textContent=e.target.value+'px'};
-$('#bgOpacity').oninput=e=>{mutateSelected(o=>o.bgOpacity=+e.target.value/100);$('#bgOpacityVal').textContent=e.target.value+'%'};
-$('#angle').oninput=e=>{mutateSelected(o=>o.angle=+e.target.value);$('#angleVal').textContent=e.target.value+'°'};
-$('#addColor').onclick=()=>{mutateSelected(o=>o.colors.push({c:'#ffffff',p:100}),true);commitHistory('添加对象渐变颜色')};
+$('#lockAspect').onchange=e=>mutateSelected(o=>{if(isFillShape(o))o.lockAspect=e.target.checked});
+$('#objW').oninput=e=>mutateSelected(o=>{if(o.type!=='box')return;const ratio=o.w/Math.max(1,o.h),w=Math.max(20,+e.target.value||20);o.w=w;if(o.lockAspect&&!isLine(o))o.h=Math.max(20,w/ratio)},true);
+$('#objH').oninput=e=>mutateSelected(o=>{if(o.type!=='box'||isLine(o))return;const ratio=o.w/Math.max(1,o.h),h=Math.max(20,+e.target.value||20);o.h=h;if(o.lockAspect)o.w=Math.max(20,h*ratio)},true);
+$('#radius').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.radius=+e.target.value});$('#radiusVal').textContent=e.target.value+'px'};
+$('#gradientType').onchange=e=>mutateSelected(o=>{if(isFillShape(o)){o.gradientType=e.target.value;$('#angleRow').style.display=o.gradientType==='radial'?'none':''}},true);
+$('#bgOpacity').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.bgOpacity=+e.target.value/100});$('#bgOpacityVal').textContent=e.target.value+'%'};
+$('#angle').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.angle=+e.target.value});$('#angleVal').textContent=e.target.value+'°'};
+$('#addColor').onclick=()=>{mutateSelected(o=>{if(isFillShape(o))o.colors.push({c:'#ffffff',p:100})},true);commitHistory('添加对象渐变颜色')};
 $('#borderOn').oninput=e=>mutateSelected(o=>o.borderOn=e.target.checked);$('#borderWidth').oninput=e=>mutateSelected(o=>o.borderWidth=Math.max(0,+e.target.value||0));
-$('#borderColor').oninput=e=>mutateSelected(o=>o.borderColor=e.target.value);$('#borderOpacity').oninput=e=>{mutateSelected(o=>o.borderOpacity=+e.target.value/100);$('#borderOpacityVal').textContent=e.target.value+'%'};$('#shadowOn').oninput=e=>mutateSelected(o=>o.shadowOn=e.target.checked);
-$('#boxImageOpacity').oninput=e=>{mutateSelected(o=>o.imageOpacity=+e.target.value/100);$('#boxImageOpacityVal').textContent=e.target.value+'%'};$('#boxImageFit').onchange=e=>mutateSelected(o=>o.imageFit=e.target.value);
+$('#borderColor').oninput=e=>mutateSelected(o=>o.borderColor=e.target.value);$('#borderOpacity').oninput=e=>{mutateSelected(o=>o.borderOpacity=+e.target.value/100);$('#borderOpacityVal').textContent=e.target.value+'%'};
+$('#boxImageOpacity').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.imageOpacity=+e.target.value/100});$('#boxImageOpacityVal').textContent=e.target.value+'%'};$('#boxImageFit').onchange=e=>mutateSelected(o=>{if(isFillShape(o))o.imageFit=e.target.value});
+$('#lineColor').oninput=e=>mutateSelected(o=>{if(isLine(o))o.lineColor=e.target.value});
+$('#lineWidth').oninput=e=>mutateSelected(o=>{if(isLine(o))o.lineWidth=clamp(+e.target.value||1,1,100)},true);
+$('#lineOpacity').oninput=e=>{mutateSelected(o=>{if(isLine(o))o.lineOpacity=+e.target.value/100});$('#lineOpacityVal').textContent=e.target.value+'%'};
+$('#shadowOn').oninput=e=>mutateSelected(o=>{if(o.type==='box')o.shadowOn=e.target.checked});
+$('#shadowX').oninput=e=>mutateSelected(o=>{if(o.type==='box')o.shadowX=clamp(finiteNumber(e.target.value,0),-200,200)});
+$('#shadowY').oninput=e=>mutateSelected(o=>{if(o.type==='box')o.shadowY=clamp(finiteNumber(e.target.value,0),-200,200)});
+$('#shadowBlur').oninput=e=>mutateSelected(o=>{if(o.type==='box')o.shadowBlur=clamp(finiteNumber(e.target.value,0),0,200)});
+$('#shadowSpread').oninput=e=>mutateSelected(o=>{if(o.type==='box')o.shadowSpread=clamp(finiteNumber(e.target.value,0),-100,200)});
+$('#shadowColor').oninput=e=>mutateSelected(o=>{if(o.type==='box')o.shadowColor=e.target.value});
+$('#shadowOpacity').oninput=e=>{mutateSelected(o=>{if(o.type==='box')o.shadowOpacity=+e.target.value/100});$('#shadowOpacityVal').textContent=e.target.value+'%'};
+$('#innerShadowOn').oninput=e=>mutateSelected(o=>{if(isFillShape(o))o.innerShadowOn=e.target.checked});
+$('#innerShadowX').oninput=e=>mutateSelected(o=>{if(isFillShape(o))o.innerShadowX=clamp(finiteNumber(e.target.value,0),-200,200)});
+$('#innerShadowY').oninput=e=>mutateSelected(o=>{if(isFillShape(o))o.innerShadowY=clamp(finiteNumber(e.target.value,0),-200,200)});
+$('#innerShadowBlur').oninput=e=>mutateSelected(o=>{if(isFillShape(o))o.innerShadowBlur=clamp(finiteNumber(e.target.value,0),0,200)});
+$('#innerShadowSpread').oninput=e=>mutateSelected(o=>{if(isFillShape(o))o.innerShadowSpread=clamp(finiteNumber(e.target.value,0),-100,200)});
+$('#innerShadowColor').oninput=e=>mutateSelected(o=>{if(isFillShape(o))o.innerShadowColor=e.target.value});
+$('#innerShadowOpacity').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.innerShadowOpacity=+e.target.value/100});$('#innerShadowOpacityVal').textContent=e.target.value+'%'};
 $('#textContent').oninput=e=>mutateSelected(o=>o.content=e.target.value);$('#fontSize').oninput=e=>mutateSelected(o=>o.fontSize=clamp(+e.target.value||6,6,400));$('#textColor').oninput=e=>mutateSelected(o=>o.color=e.target.value);$('#textOpacity').oninput=e=>{mutateSelected(o=>o.opacity=+e.target.value/100);$('#textOpacityVal').textContent=e.target.value+'%'};$('#fontWeight').oninput=e=>mutateSelected(o=>o.fontWeight=e.target.value);$('#fontFamily').oninput=e=>mutateSelected(o=>o.fontFamily=e.target.value);
 
 function readFileAsDataURL(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error||new Error('读取文件失败'));r.readAsDataURL(file)})}
-$('#boxImageUpload').onclick=()=>{const o=selected();if(o?.type==='box'&&!o.locked&&!hasMultiBoxes())$('#boxImageFile').click()};
-$('#boxImageFile').onchange=async e=>{const file=e.target.files?.[0],o=selected();if(file&&o?.type==='box'&&!o.locked&&!hasMultiBoxes()){const data=await readFileAsDataURL(file),ref=registerImageAsset(data);await ensureImagePreview(ref);o.imageRef=ref;renderObjects();commitHistory('设置方框背景图片')}e.target.value=''};
-$('#boxImageRemove').onclick=()=>{mutateSelected(o=>{if(o.type==='box')o.imageRef=null},true);commitHistory('移除方框背景图片')};
+$('#boxImageUpload').onclick=()=>{const o=selected();if(isFillShape(o)&&!o.locked&&!hasMultiBoxes())$('#boxImageFile').click()};
+$('#boxImageFile').onchange=async e=>{const file=e.target.files?.[0],o=selected();if(file&&isFillShape(o)&&!o.locked&&!hasMultiBoxes()){const data=await readFileAsDataURL(file),ref=registerImageAsset(data);await ensureImagePreview(ref);o.imageRef=ref;renderObjects();commitHistory('设置图形背景图片')}e.target.value=''};
+$('#boxImageRemove').onclick=()=>{mutateSelected(o=>{if(isFillShape(o))o.imageRef=null},true);commitHistory('移除图形背景图片')};
 $('#canvasImageUpload').onclick=()=>$('#canvasImageFile').click();
 $('#canvasImageFile').onchange=async e=>{const file=e.target.files?.[0];if(file){const data=await readFileAsDataURL(file),ref=registerImageAsset(data);await ensureImagePreview(ref);state.canvasImageRef=ref;renderObjects(false);commitHistory('设置画布背景图片')}e.target.value=''};
 $('#canvasImageRemove').onclick=()=>{state.canvasImageRef=null;renderObjects(false);refreshCanvasControls();commitHistory('移除画布背景图片')};
@@ -657,7 +721,7 @@ $('#canvasImageOpacity').oninput=e=>{state.canvasImageOpacity=+e.target.value/10
 $('#canvasImageFit').onchange=e=>{state.canvasImageFit=e.target.value;renderObjects(false)};
 
 function addObject(o,label='添加对象'){state.objects.push(o);selectObject(o,false);renderObjects();commitHistory(label)}
-$('#addBox').onclick=()=>addObject(defaultBox(),'添加方框');$('#addText').onclick=()=>addObject(defaultText(),'添加文字');
+$('#addBox').onclick=()=>addObject(defaultBox(),'添加方框');$('#addText').onclick=()=>addObject(defaultText(),'添加文字');$('#addCircle').onclick=()=>addObject(defaultCircle(),'添加圆形');$('#addLine').onclick=()=>addObject(defaultLine(),'添加直线');
 function deleteSelected(){
   let removed=0;
   if(state.selectedBoxIds.length){
@@ -729,7 +793,7 @@ function selectedProjectSnapshot(){
   return{
     format:PROJECT_FORMAT,version:PROJECT_VERSION,savedAt:new Date().toISOString(),
     assets:{images:exportImageAssets(refs),fonts:structuredClone(state.customFonts)},
-    canvas:{width:Math.ceil(maxX-minX+pad*2),height:Math.ceil(maxY-minY+pad*2),backgroundOpacity:0,gradientAngle:135,colors:[{c:'#ffffff',p:0},{c:'#ffffff',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover'},
+    canvas:{width:Math.ceil(maxX-minX+pad*2),height:Math.ceil(maxY-minY+pad*2),backgroundOpacity:0,gradientType:'linear',gradientAngle:135,colors:[{c:'#ffffff',p:0},{c:'#ffffff',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover'},
     objects,
     assists:{snapEnabled:true,guidesVisible:true,guides:{vertical:[],horizontal:[]}},
     view:{zoom:1,panX:70,panY:70},
@@ -787,13 +851,13 @@ function showContextMenu(clientX,clientY,target=null){
       contextItem('删除未锁定对象',deleteSelected,{disabled:editable.length<1,danger:true,shortcut:'Delete'})
     )
   }else if(target?.type==='box'){
-    const locked=!!target.locked;
+    const locked=!!target.locked,kind=objectKindName(target);
     menu.append(
-      contextItem(target.visible===false?'显示方框':'隐藏方框',()=>{target.visible=target.visible===false;renderObjects();commitHistory(target.visible?'显示方框':'隐藏方框')}),
-      contextItem(locked?'解锁方框':'锁定方框',()=>{target.locked=!target.locked;renderObjects();commitHistory(target.locked?'锁定方框':'解锁方框')}),
+      contextItem(target.visible===false?'显示'+kind:'隐藏'+kind,()=>{target.visible=target.visible===false;renderObjects();commitHistory((target.visible?'显示':'隐藏')+kind)}),
+      contextItem(locked?'解锁'+kind:'锁定'+kind,()=>{target.locked=!target.locked;renderObjects();commitHistory((target.locked?'锁定':'解锁')+kind)}),
       contextSep(),
-      contextItem('复制方框',copySelectedBoxes,{shortcut:'Ctrl+C'}),
-      contextItem('粘贴方框',pasteSelectedBoxes,{disabled:!boxClipboard,shortcut:'Ctrl+V'}),
+      contextItem('复制'+kind,copySelectedBoxes,{shortcut:'Ctrl+C'}),
+      contextItem('粘贴对象',pasteSelectedBoxes,{disabled:!boxClipboard,shortcut:'Ctrl+V'}),
       contextItem('复制一份',duplicateSelection,{shortcut:'Ctrl+D'}),
       contextSep(),
       contextItem('置于最上层',()=>moveObjectLayer(target.id,'front'),{disabled:locked}),
@@ -816,8 +880,10 @@ function showContextMenu(clientX,clientY,target=null){
   }else{
     menu.append(
       contextItem('添加方框',()=>$('#addBox').click()),
+      contextItem('添加圆形',()=>$('#addCircle').click()),
+      contextItem('添加直线',()=>$('#addLine').click()),
       contextItem('添加文字',()=>$('#addText').click()),
-      contextItem('粘贴方框',pasteSelectedBoxes,{disabled:!boxClipboard,shortcut:'Ctrl+V'}),
+      contextItem('粘贴对象',pasteSelectedBoxes,{disabled:!boxClipboard,shortcut:'Ctrl+V'}),
       contextSep(),
       contextItem('撤回',undoHistory,{disabled:$('#undoBtn').disabled,shortcut:'Ctrl+Z'}),
       contextItem('反撤回',redoHistory,{disabled:$('#redoBtn').disabled,shortcut:'Ctrl+Y'}),
@@ -865,6 +931,7 @@ document.querySelector('.sidebar').addEventListener('change',e=>{
 
 function refreshCanvasControls(){
   $('#canvasW').value=state.canvasW;$('#canvasH').value=state.canvasH;
+  $('#canvasGradientType').value=state.canvasGradientType||'linear';$('#canvasAngleRow').style.display=(state.canvasGradientType||'linear')==='radial'?'none':'';
   $('#canvasBgOpacity').value=Math.round(state.canvasBgOpacity*100);$('#canvasBgOpacityVal').textContent=Math.round(state.canvasBgOpacity*100)+'%';
   $('#canvasAngle').value=state.canvasAngle;$('#canvasAngleVal').textContent=Math.round(state.canvasAngle)+'°';
   $('#canvasImageOpacity').value=Math.round(state.canvasImageOpacity*100);$('#canvasImageOpacityVal').textContent=Math.round(state.canvasImageOpacity*100)+'%';$('#canvasImageFit').value=state.canvasImageFit;$('#canvasImageRemove').disabled=!state.canvasImageRef;
@@ -872,6 +939,7 @@ function refreshCanvasControls(){
 }
 $('#canvasW').onchange=e=>{state.canvasW=clamp(+e.target.value||100,100,10000);updateWorldTransform();renderObjects(false);refreshCanvasControls()};
 $('#canvasH').onchange=e=>{state.canvasH=clamp(+e.target.value||100,100,10000);updateWorldTransform();renderObjects(false);refreshCanvasControls()};
+$('#canvasGradientType').onchange=e=>{state.canvasGradientType=e.target.value;$('#canvasAngleRow').style.display=state.canvasGradientType==='radial'?'none':'';renderObjects(false)};
 $('#canvasBgOpacity').oninput=e=>{state.canvasBgOpacity=+e.target.value/100;$('#canvasBgOpacityVal').textContent=e.target.value+'%';renderObjects(false)};
 $('#canvasAngle').oninput=e=>{state.canvasAngle=+e.target.value;$('#canvasAngleVal').textContent=e.target.value+'°';renderObjects(false)};
 $('#canvasAddColor').onclick=()=>{state.canvasColors.push({c:'#ffffff',p:100});renderCanvasColorControls();renderObjects(false);commitHistory('添加画布渐变颜色')};
@@ -881,7 +949,7 @@ $('#clearGuides').onclick=()=>{state.guides={vertical:[],horizontal:[]};renderGu
 
 function editableSnapshot(){
   return{
-    canvas:{width:state.canvasW,height:state.canvasH,backgroundOpacity:state.canvasBgOpacity,gradientAngle:state.canvasAngle,colors:structuredClone(state.canvasColors),imageRef:state.canvasImageRef,imageOpacity:state.canvasImageOpacity,imageFit:state.canvasImageFit},
+    canvas:{width:state.canvasW,height:state.canvasH,backgroundOpacity:state.canvasBgOpacity,gradientType:state.canvasGradientType,gradientAngle:state.canvasAngle,colors:structuredClone(state.canvasColors),imageRef:state.canvasImageRef,imageOpacity:state.canvasImageOpacity,imageFit:state.canvasImageFit},
     objects:structuredClone(state.objects),
     assists:{snapEnabled:state.snapEnabled,guidesVisible:state.guidesVisible,guides:structuredClone(state.guides)},
     selection:{selectedId:state.selectedId,selectedBoxIds:[...state.selectedBoxIds]}
@@ -889,7 +957,7 @@ function editableSnapshot(){
 }
 function applyEditableSnapshot(s){
   historyState.restoring=true;
-  state.canvasW=s.canvas.width;state.canvasH=s.canvas.height;state.canvasBgOpacity=s.canvas.backgroundOpacity;state.canvasAngle=s.canvas.gradientAngle;state.canvasColors=structuredClone(s.canvas.colors);state.canvasImageRef=s.canvas.imageRef||null;state.canvasImageOpacity=s.canvas.imageOpacity;state.canvasImageFit=s.canvas.imageFit||'cover';
+  state.canvasW=s.canvas.width;state.canvasH=s.canvas.height;state.canvasBgOpacity=s.canvas.backgroundOpacity;state.canvasGradientType=s.canvas.gradientType||'linear';state.canvasAngle=s.canvas.gradientAngle;state.canvasColors=structuredClone(s.canvas.colors);state.canvasImageRef=s.canvas.imageRef||null;state.canvasImageOpacity=s.canvas.imageOpacity;state.canvasImageFit=s.canvas.imageFit||'cover';
   state.objects=structuredClone(s.objects);state.nextId=state.objects.reduce((m,o)=>Math.max(m,o.id||0),0)+1;
   state.snapEnabled=s.assists.snapEnabled!==false;state.guidesVisible=s.assists.guidesVisible!==false;state.guides=structuredClone(s.assists.guides||{vertical:[],horizontal:[]});
   state.selectedId=s.selection?.selectedId??null;state.selectedBoxIds=[...(s.selection?.selectedBoxIds||[])];syncSelectionValidity();
@@ -941,8 +1009,8 @@ function jumpHistory(id){
   $('#rightbarShell').classList.add('history-open');$('.history-group').classList.add('open')
 }
 
-const PROJECT_FORMAT='transparent-canvas-editor',PROJECT_VERSION=6;
-function projectSnapshot(){return{format:PROJECT_FORMAT,version:PROJECT_VERSION,savedAt:new Date().toISOString(),assets:{images:exportImageAssets(),fonts:structuredClone(state.customFonts)},canvas:{width:state.canvasW,height:state.canvasH,backgroundOpacity:state.canvasBgOpacity,gradientAngle:state.canvasAngle,colors:structuredClone(state.canvasColors),imageRef:state.canvasImageRef,imageOpacity:state.canvasImageOpacity,imageFit:state.canvasImageFit},objects:structuredClone(state.objects),assists:{snapEnabled:state.snapEnabled,guidesVisible:state.guidesVisible,guides:structuredClone(state.guides)},view:{zoom:state.zoom,panX:state.panX,panY:state.panY},selectedId:state.selectedId,selectedBoxIds:[...state.selectedBoxIds]}}
+const PROJECT_FORMAT='transparent-canvas-editor',PROJECT_VERSION=9;
+function projectSnapshot(){return{format:PROJECT_FORMAT,version:PROJECT_VERSION,savedAt:new Date().toISOString(),assets:{images:exportImageAssets(),fonts:structuredClone(state.customFonts)},canvas:{width:state.canvasW,height:state.canvasH,backgroundOpacity:state.canvasBgOpacity,gradientType:state.canvasGradientType,gradientAngle:state.canvasAngle,colors:structuredClone(state.canvasColors),imageRef:state.canvasImageRef,imageOpacity:state.canvasImageOpacity,imageFit:state.canvasImageFit},objects:structuredClone(state.objects),assists:{snapEnabled:state.snapEnabled,guidesVisible:state.guidesVisible,guides:structuredClone(state.guides)},view:{zoom:state.zoom,panX:state.panX,panY:state.panY},selectedId:state.selectedId,selectedBoxIds:[...state.selectedBoxIds]}}
 function setDataStatus(msg,type='',duration=1800){
   const el=$('#dataStatus');clearTimeout(statusTimer);el.textContent=msg;el.className='right-status show'+(type?' '+type:'');
   statusTimer=setTimeout(()=>{el.className='right-status'},duration)
@@ -976,12 +1044,37 @@ function finiteNumber(v,f){v=Number(v);return Number.isFinite(v)?v:f}
 function cleanColor(v,f='#ffffff'){return typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v)?v:f}
 function cleanStops(list,fallback){if(!Array.isArray(list)||!list.length)return structuredClone(fallback);return list.slice(0,32).map((s,i)=>({c:cleanColor(s?.c,i?'#dfe7f2':'#ffffff'),p:clamp(finiteNumber(s?.p,i?100:0),0,100)}))}
 function cleanFit(v){return['cover','contain','stretch'].includes(v)?v:'cover'}
+function cleanGradientType(v){return v==='radial'?'radial':'linear'}
+function cleanShape(v){return['rect','ellipse','line'].includes(v)?v:'rect'}
 function normalizeObject(raw,idFallback,assetAliases=new Map()){
   if(!raw||!['box','text'].includes(raw.type))return null;const id=Math.max(1,Math.floor(finiteNumber(raw.id,idFallback)));
   if(raw.type==='box'){
-    const legacyRef=typeof raw.image==='string'?registerImageAsset(raw.image):null;
-    const imageRef=assetAliases.get(raw.imageRef)||raw.imageRef||legacyRef||null;
-    return{id,type:'box',name:typeof raw.name==='string'?raw.name:'方框',visible:raw.visible!==false,locked:raw.locked===true,rotation:finiteNumber(raw.rotation,0),lockAspect:raw.lockAspect===true,x:finiteNumber(raw.x,180),y:finiteNumber(raw.y,150),w:Math.max(20,finiteNumber(raw.w,420)),h:Math.max(20,finiteNumber(raw.h,300)),radius:Math.max(0,finiteNumber(raw.radius,28)),bgOpacity:clamp(finiteNumber(raw.bgOpacity,.88),0,1),angle:finiteNumber(raw.angle,135),colors:cleanStops(raw.colors,[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}]),imageRef,imageOpacity:clamp(finiteNumber(raw.imageOpacity,1),0,1),imageFit:cleanFit(raw.imageFit),borderOn:raw.borderOn!==false,borderWidth:Math.max(0,finiteNumber(raw.borderWidth,2)),borderColor:cleanColor(raw.borderColor,'#ffffff'),borderOpacity:clamp(finiteNumber(raw.borderOpacity,.9),0,1),shadowOn:raw.shadowOn!==false}
+    const shape=cleanShape(raw.shape),legacyRef=typeof raw.image==='string'?registerImageAsset(raw.image):null;
+    const imageRef=shape==='line'?null:(assetAliases.get(raw.imageRef)||raw.imageRef||legacyRef||null),defaultName=shape==='ellipse'?'圆形':shape==='line'?'直线':'方框';
+    const legacyInner=shape!=='line'&&raw.shadowType==='inner'&&raw.shadowOn===true;
+    const outerDefaultY=shape==='line'?6:(shape==='ellipse'?12:16),outerDefaultBlur=shape==='line'?12:(shape==='ellipse'?28:34),outerDefaultColor=shape==='ellipse'?'#315887':shape==='line'?'#111827':'#232e3f';
+    const innerDefaultColor=shape==='ellipse'?'#315887':'#000000';
+    return{
+      id,type:'box',shape,name:typeof raw.name==='string'?raw.name:defaultName,visible:raw.visible!==false,locked:raw.locked===true,rotation:finiteNumber(raw.rotation,0),lockAspect:shape!=='line'&&raw.lockAspect===true,
+      x:finiteNumber(raw.x,180),y:finiteNumber(raw.y,150),w:Math.max(20,finiteNumber(raw.w,shape==='line'?300:420)),h:shape==='line'?20:Math.max(20,finiteNumber(raw.h,shape==='ellipse'?240:300)),
+      radius:Math.max(0,finiteNumber(raw.radius,28)),bgOpacity:clamp(finiteNumber(raw.bgOpacity,.88),0,1),gradientType:cleanGradientType(raw.gradientType),angle:finiteNumber(raw.angle,135),colors:cleanStops(raw.colors,[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}]),
+      imageRef,imageOpacity:clamp(finiteNumber(raw.imageOpacity,1),0,1),imageFit:cleanFit(raw.imageFit),borderOn:shape==='line'?false:raw.borderOn!==false,borderWidth:Math.max(0,finiteNumber(raw.borderWidth,2)),borderColor:cleanColor(raw.borderColor,'#ffffff'),borderOpacity:clamp(finiteNumber(raw.borderOpacity,.9),0,1),
+      shadowOn:legacyInner?false:(shape==='line'?raw.shadowOn===true:raw.shadowOn!==false),
+      shadowX:legacyInner?0:clamp(finiteNumber(raw.shadowX,0),-200,200),
+      shadowY:legacyInner?outerDefaultY:clamp(finiteNumber(raw.shadowY,outerDefaultY),-200,200),
+      shadowBlur:legacyInner?outerDefaultBlur:clamp(finiteNumber(raw.shadowBlur,outerDefaultBlur),0,200),
+      shadowSpread:legacyInner?0:clamp(finiteNumber(raw.shadowSpread,0),-100,200),
+      shadowColor:legacyInner?outerDefaultColor:cleanColor(raw.shadowColor,outerDefaultColor),
+      shadowOpacity:legacyInner?(shape==='line'?.3:.22):clamp(finiteNumber(raw.shadowOpacity,shape==='line'?.3:.22),0,1),
+      innerShadowOn:shape!=='line'&&(raw.innerShadowOn===true||legacyInner),
+      innerShadowX:clamp(finiteNumber(raw.innerShadowX,legacyInner?raw.shadowX:0),-200,200),
+      innerShadowY:clamp(finiteNumber(raw.innerShadowY,legacyInner?raw.shadowY:4),-200,200),
+      innerShadowBlur:clamp(finiteNumber(raw.innerShadowBlur,legacyInner?raw.shadowBlur:12),0,200),
+      innerShadowSpread:clamp(finiteNumber(raw.innerShadowSpread,legacyInner?raw.shadowSpread:0),-100,200),
+      innerShadowColor:cleanColor(raw.innerShadowColor,legacyInner?cleanColor(raw.shadowColor,innerDefaultColor):innerDefaultColor),
+      innerShadowOpacity:clamp(finiteNumber(raw.innerShadowOpacity,legacyInner?raw.shadowOpacity:(shape==='ellipse'?.16:.18)),0,1),
+      lineColor:cleanColor(raw.lineColor,'#2563eb'),lineWidth:clamp(finiteNumber(raw.lineWidth,4),1,100),lineOpacity:clamp(finiteNumber(raw.lineOpacity,1),0,1)
+    }
   }
   return{id,type:'text',name:typeof raw.name==='string'?raw.name:'文字',visible:raw.visible!==false,locked:raw.locked===true,rotation:finiteNumber(raw.rotation,0),x:finiteNumber(raw.x,260),y:finiteNumber(raw.y,230),content:typeof raw.content==='string'?raw.content:'文字',fontSize:clamp(finiteNumber(raw.fontSize,48),6,400),color:cleanColor(raw.color,'#111827'),opacity:clamp(finiteNumber(raw.opacity,1),0,1),fontWeight:['400','500','600','700'].includes(String(raw.fontWeight))?String(raw.fontWeight):'400',fontFamily:typeof raw.fontFamily==='string'?raw.fontFamily:'"Microsoft YaHei",sans-serif'}
 }
@@ -989,7 +1082,7 @@ async function loadProjectData(data){
   if(!data||typeof data!=='object')throw new Error('JSON 根节点不是对象');const canvas=data.canvas&&typeof data.canvas==='object'?data.canvas:data,rawObjects=Array.isArray(data.objects)?data.objects:[];
   const aliases=importImageAssets(data.assets?.images);
   const legacyCanvasRef=typeof canvas.image==='string'?registerImageAsset(canvas.image):null;
-  state.canvasW=clamp(finiteNumber(canvas.width??data.canvasW,1600),100,10000);state.canvasH=clamp(finiteNumber(canvas.height??data.canvasH,1000),100,10000);state.canvasBgOpacity=clamp(finiteNumber(canvas.backgroundOpacity??data.canvasBgOpacity,0),0,1);state.canvasAngle=finiteNumber(canvas.gradientAngle??data.canvasAngle,135);state.canvasColors=cleanStops(canvas.colors??data.canvasColors,[{c:'#ffffff',p:0},{c:'#dfe7f2',p:100}]);state.canvasImageRef=aliases.get(canvas.imageRef)||canvas.imageRef||legacyCanvasRef||null;state.canvasImageOpacity=clamp(finiteNumber(canvas.imageOpacity,1),0,1);state.canvasImageFit=cleanFit(canvas.imageFit);
+  state.canvasW=clamp(finiteNumber(canvas.width??data.canvasW,1600),100,10000);state.canvasH=clamp(finiteNumber(canvas.height??data.canvasH,1000),100,10000);state.canvasBgOpacity=clamp(finiteNumber(canvas.backgroundOpacity??data.canvasBgOpacity,0),0,1);state.canvasGradientType=cleanGradientType(canvas.gradientType??data.canvasGradientType);state.canvasAngle=finiteNumber(canvas.gradientAngle??data.canvasAngle,135);state.canvasColors=cleanStops(canvas.colors??data.canvasColors,[{c:'#ffffff',p:0},{c:'#dfe7f2',p:100}]);state.canvasImageRef=aliases.get(canvas.imageRef)||canvas.imageRef||legacyCanvasRef||null;state.canvasImageOpacity=clamp(finiteNumber(canvas.imageOpacity,1),0,1);state.canvasImageFit=cleanFit(canvas.imageFit);
   const used=new Set();let seed=1;state.objects=rawObjects.map(raw=>{let o=normalizeObject(raw,seed++,aliases);if(!o)return null;while(used.has(o.id))o.id=seed++;used.add(o.id);return o}).filter(Boolean);state.nextId=state.objects.reduce((m,o)=>Math.max(m,o.id),0)+1;
   state.customFonts=Array.isArray(data.assets?.fonts)?structuredClone(data.assets.fonts):[];await restoreCustomFonts();
   const assists=data.assists||{};state.snapEnabled=assists.snapEnabled!==false;state.guidesVisible=assists.guidesVisible!==false;const gs=assists.guides||{};state.guides={vertical:Array.isArray(gs.vertical)?gs.vertical.map(v=>finiteNumber(v,NaN)).filter(Number.isFinite):[],horizontal:Array.isArray(gs.horizontal)?gs.horizontal.map(v=>finiteNumber(v,NaN)).filter(Number.isFinite):[]};
@@ -1000,9 +1093,37 @@ async function loadProjectData(data){
 $('#importDataFile').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{await loadProjectData(JSON.parse(await file.text()));commitHistory('加载项目数据');setDataStatus('已导入：'+state.objects.length+' 个图层','ok')}catch(err){setDataStatus('导入失败：'+(err?.message||'JSON 无效'),'err')}finally{e.target.value=''}};
 
 function textMetrics(ctx,o){ctx.save();ctx.font=`${o.fontWeight} ${o.fontSize}px ${o.fontFamily}`;let w=0;const lines=o.content.split('\n');lines.forEach(l=>w=Math.max(w,ctx.measureText(l||' ').width));ctx.restore();return{w,h:Math.max(o.fontSize*1.2,lines.length*o.fontSize*1.2)}}
-function contentBounds(){const visible=state.objects.filter(o=>o.visible!==false);if(!visible.length)return{x:0,y:0,w:state.canvasW,h:state.canvasH};let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;visible.forEach(o=>{let b=getObjectBounds(o);if(o.type==='box'&&o.shadowOn){const m=40;b={x:b.x-m,y:b.y-m,w:b.w+2*m,h:b.h+2*m}}minX=Math.min(minX,b.x);minY=Math.min(minY,b.y);maxX=Math.max(maxX,b.x+b.w);maxY=Math.max(maxY,b.y+b.h)});const p=10;return{x:Math.floor(minX-p),y:Math.floor(minY-p),w:Math.ceil(maxX-minX+2*p),h:Math.ceil(maxY-minY+2*p)}}
-function roundRect(ctx,x,y,w,h,r){r=Math.max(0,Math.min(r,w/2,h/2));ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
-function createGradient(ctx,x,y,w,h,colors,angle){const ss=[...colors].sort((a,b)=>a.p-b.p);if(ss.length===1)return ss[0].c;const rad=(angle-90)*Math.PI/180,cx=x+w/2,cy=y+h/2,len=Math.abs(w*Math.cos(rad))+Math.abs(h*Math.sin(rad)),g=ctx.createLinearGradient(cx-Math.cos(rad)*len/2,cy-Math.sin(rad)*len/2,cx+Math.cos(rad)*len/2,cy+Math.sin(rad)*len/2);ss.forEach(s=>g.addColorStop(clamp(s.p/100,0,1),s.c));return g}
+function contentBounds(){const visible=state.objects.filter(o=>o.visible!==false);if(!visible.length)return{x:0,y:0,w:state.canvasW,h:state.canvasH};let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;visible.forEach(o=>{let b=getObjectBounds(o);if(o.type==='box'&&o.shadowOn){const reach=Math.max(0,finiteNumber(o.shadowBlur,0)*2+finiteNumber(o.shadowSpread,0))+Math.hypot(finiteNumber(o.shadowX,0),finiteNumber(o.shadowY,0));b={x:b.x-reach,y:b.y-reach,w:b.w+reach*2,h:b.h+reach*2}}minX=Math.min(minX,b.x);minY=Math.min(minY,b.y);maxX=Math.max(maxX,b.x+b.w);maxY=Math.max(maxY,b.y+b.h)});const p=10;return{x:Math.floor(minX-p),y:Math.floor(minY-p),w:Math.ceil(maxX-minX+2*p),h:Math.ceil(maxY-minY+2*p)}}
+function appendRoundedRectPath(ctx,x,y,w,h,r){
+  w=Math.max(.01,w);h=Math.max(.01,h);r=Math.max(0,Math.min(r,w/2,h/2));
+  ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()
+}
+function appendShapeSubpath(ctx,o,inset=0){
+  const x=o.x+inset,y=o.y+inset,w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2);
+  if(isEllipse(o)){ctx.moveTo(x+w,y+h/2);ctx.ellipse(x+w/2,y+h/2,w/2,h/2,0,0,Math.PI*2);ctx.closePath()}
+  else appendRoundedRectPath(ctx,x,y,w,h,Math.max(0,o.radius-inset))
+}
+function beginShapePath(ctx,o,inset=0){ctx.beginPath();appendShapeSubpath(ctx,o,inset)}
+function drawObjectOuterShadow(ctx,o){
+  if(!o.shadowOn)return;
+  const spread=finiteNumber(o.shadowSpread,0),opacity=clamp(finiteNumber(o.shadowOpacity,.25),0,1);
+  if(opacity<=0)return;
+  ctx.save();ctx.shadowColor=rgba(o.shadowColor||'#000000',1);ctx.shadowBlur=Math.max(0,finiteNumber(o.shadowBlur,0));ctx.shadowOffsetX=finiteNumber(o.shadowX,0);ctx.shadowOffsetY=finiteNumber(o.shadowY,0);
+  if(isLine(o)){
+    ctx.strokeStyle=rgba(o.shadowColor||'#000000',opacity);ctx.lineWidth=Math.max(.1,o.lineWidth+spread*2);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(o.x,o.y+o.h/2);ctx.lineTo(o.x+o.w,o.y+o.h/2);ctx.stroke()
+  }else{
+    ctx.fillStyle=rgba(o.shadowColor||'#000000',opacity);beginShapePath(ctx,o,-spread);ctx.fill()
+  }
+  ctx.restore()
+}
+function drawObjectInnerShadow(ctx,o){
+  if(!o.innerShadowOn||isLine(o))return;
+  const opacity=clamp(finiteNumber(o.innerShadowOpacity,.18),0,1);if(opacity<=0)return;
+  const blur=Math.max(0,finiteNumber(o.innerShadowBlur,0)),spread=finiteNumber(o.innerShadowSpread,0),sx=finiteNumber(o.innerShadowX,0),sy=finiteNumber(o.innerShadowY,0),pad=Math.max(16,blur*3+Math.abs(sx)+Math.abs(sy)+Math.abs(spread)+8);
+  ctx.save();beginShapePath(ctx,o,0);ctx.clip();ctx.shadowColor=rgba(o.innerShadowColor||'#000000',1);ctx.shadowBlur=blur;ctx.shadowOffsetX=sx;ctx.shadowOffsetY=sy;ctx.fillStyle=rgba(o.innerShadowColor||'#000000',opacity);
+  ctx.beginPath();ctx.rect(o.x-pad,o.y-pad,o.w+pad*2,o.h+pad*2);appendShapeSubpath(ctx,o,spread);ctx.fill('evenodd');ctx.restore()
+}
+function createGradient(ctx,x,y,w,h,colors,angle,type='linear'){const ss=[...colors].sort((a,b)=>a.p-b.p);if(ss.length===1)return ss[0].c;const cx=x+w/2,cy=y+h/2;let g;if(type==='radial'){g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(1,Math.hypot(w,h)/2))}else{const rad=(angle-90)*Math.PI/180,len=Math.abs(w*Math.cos(rad))+Math.abs(h*Math.sin(rad));g=ctx.createLinearGradient(cx-Math.cos(rad)*len/2,cy-Math.sin(rad)*len/2,cx+Math.cos(rad)*len/2,cy+Math.sin(rad)*len/2)}ss.forEach(s=>g.addColorStop(clamp(s.p/100,0,1),s.c));return g}
 function loadImage(src){if(!src)return Promise.resolve(null);if(imageCache.has(src))return imageCache.get(src);const p=new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error('图片加载失败'));im.src=src});imageCache.set(src,p);return p}
 function drawImageFit(ctx,img,x,y,w,h,fit){
   if(fit==='stretch'){ctx.drawImage(img,x,y,w,h);return}
@@ -1011,18 +1132,22 @@ function drawImageFit(ctx,img,x,y,w,h,fit){
 async function drawCanvasBackground(ctx){
   ctx.save();ctx.beginPath();ctx.rect(0,0,state.canvasW,state.canvasH);ctx.clip();
   const canvasSrc=imageAssetValue(state.canvasImageRef);if(canvasSrc){const img=await loadImage(canvasSrc);ctx.save();ctx.globalAlpha=state.canvasImageOpacity;drawImageFit(ctx,img,0,0,state.canvasW,state.canvasH,state.canvasImageFit);ctx.restore()}
-  if(state.canvasBgOpacity>0){ctx.save();ctx.globalAlpha=state.canvasBgOpacity;ctx.fillStyle=createGradient(ctx,0,0,state.canvasW,state.canvasH,state.canvasColors,state.canvasAngle);ctx.fillRect(0,0,state.canvasW,state.canvasH);ctx.restore()}
+  if(state.canvasBgOpacity>0){ctx.save();ctx.globalAlpha=state.canvasBgOpacity;ctx.fillStyle=createGradient(ctx,0,0,state.canvasW,state.canvasH,state.canvasColors,state.canvasAngle,state.canvasGradientType);ctx.fillRect(0,0,state.canvasW,state.canvasH);ctx.restore()}
   ctx.restore()
 }
 async function drawBox(ctx,o){
   ctx.save();
   if(o.rotation){const cx=o.x+o.w/2,cy=o.y+o.h/2;ctx.translate(cx,cy);ctx.rotate((o.rotation||0)*Math.PI/180);ctx.translate(-cx,-cy)}
-  if(o.shadowOn){ctx.shadowColor='rgba(35,46,63,.22)';ctx.shadowBlur=30;ctx.shadowOffsetY=16;ctx.fillStyle='rgba(255,255,255,.01)';roundRect(ctx,o.x,o.y,o.w,o.h,o.radius);ctx.fill();ctx.shadowColor='transparent'}
-  ctx.save();roundRect(ctx,o.x,o.y,o.w,o.h,o.radius);ctx.clip();
+  drawObjectOuterShadow(ctx,o);
+  if(isLine(o)){
+    ctx.globalAlpha=o.lineOpacity;ctx.strokeStyle=o.lineColor;ctx.lineWidth=o.lineWidth;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(o.x,o.y+o.h/2);ctx.lineTo(o.x+o.w,o.y+o.h/2);ctx.stroke();ctx.restore();return
+  }
+  ctx.save();beginShapePath(ctx,o,0);ctx.clip();
   const boxSrc=imageAssetValue(o.imageRef);if(boxSrc){const img=await loadImage(boxSrc);ctx.save();ctx.globalAlpha=o.imageOpacity;drawImageFit(ctx,img,o.x,o.y,o.w,o.h,o.imageFit);ctx.restore()}
-  if(o.bgOpacity>0){ctx.save();ctx.globalAlpha=o.bgOpacity;ctx.fillStyle=createGradient(ctx,o.x,o.y,o.w,o.h,o.colors,o.angle);ctx.fillRect(o.x,o.y,o.w,o.h);ctx.restore()}
+  if(o.bgOpacity>0){ctx.save();ctx.globalAlpha=o.bgOpacity;ctx.fillStyle=createGradient(ctx,o.x,o.y,o.w,o.h,o.colors,o.angle,o.gradientType);ctx.fillRect(o.x,o.y,o.w,o.h);ctx.restore()}
   ctx.restore();
-  if(o.borderOn&&o.borderWidth>0){ctx.strokeStyle=rgba(o.borderColor,o.borderOpacity);ctx.lineWidth=o.borderWidth;roundRect(ctx,o.x+o.borderWidth/2,o.y+o.borderWidth/2,o.w-o.borderWidth,o.h-o.borderWidth,Math.max(0,o.radius-o.borderWidth/2));ctx.stroke()}
+  drawObjectInnerShadow(ctx,o);
+  if(o.borderOn&&o.borderWidth>0){ctx.strokeStyle=rgba(o.borderColor,o.borderOpacity);ctx.lineWidth=o.borderWidth;beginShapePath(ctx,o,o.borderWidth/2);ctx.stroke()}
   ctx.restore()
 }
 function drawText(ctx,o){ctx.save();const s=getObjectSize(o);if(o.rotation){const cx=o.x+s.w/2,cy=o.y+s.h/2;ctx.translate(cx,cy);ctx.rotate((o.rotation||0)*Math.PI/180);ctx.translate(-cx,-cy)}ctx.globalAlpha=o.opacity;ctx.fillStyle=o.color;ctx.font=`${o.fontWeight} ${o.fontSize}px ${o.fontFamily}`;ctx.textBaseline='top';const lh=o.fontSize*1.2;o.content.split('\n').forEach((line,i)=>ctx.fillText(line,o.x,o.y+i*lh));ctx.restore()}
