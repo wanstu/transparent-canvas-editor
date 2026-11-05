@@ -14,6 +14,9 @@ let boxClipboard=null;
 let statusTimer=null;
 let alignCloseTimer=null;
 let rightbarCloseTimer=null;
+let desktopSaveTimer=null;
+let desktopCleanupTimer=null;
+const desktopPersistedImages=new Set();
 const historyState={entries:[],currentId:null,redoStack:[],nextId:1,max:100,restoring:false,ready:false};
 const assetStore={nextImageId:1,images:new Map(),imageByValue:new Map()};
 const imageCache=new Map();
@@ -26,6 +29,57 @@ const hexToRgb=h=>{h=(h||'#ffffff').replace('#','');return[parseInt(h.slice(0,2)
 const rgba=(hex,a)=>{const[r,g,b]=hexToRgb(hex);return `rgba(${r},${g},${b},${a})`};
 const fitCSS=fit=>fit==='stretch'?'100% 100%':fit;
 
+function desktopApp(){
+  return window.go?.main?.App||null
+}
+async function persistDesktopImageAsset(ref,dataUrl){
+  const api=desktopApp();if(!api?.SaveImageAsset||!ref||!dataUrl||desktopPersistedImages.has(ref))return;
+  try{await api.SaveImageAsset(ref,dataUrl);desktopPersistedImages.add(ref)}
+  catch(err){console.warn('desktop image persist failed',err)}
+}
+function desktopWorkspaceSnapshot(){
+  const data=projectSnapshot();
+  if(data.assets)data.assets.images={};
+  return data
+}
+function scheduleDesktopWorkspaceSave(){
+  const api=desktopApp();if(!api?.SaveWorkspace||historyState.restoring)return;
+  clearTimeout(desktopSaveTimer);
+  desktopSaveTimer=setTimeout(async()=>{
+    try{await api.SaveWorkspace(JSON.stringify(desktopWorkspaceSnapshot()))}
+    catch(err){console.warn('desktop workspace save failed',err);setDataStatus('桌面自动保存失败','err')}
+  },700)
+}
+function scheduleDesktopAssetCleanup(refs){
+  const api=desktopApp();if(!api?.CleanupImageAssets)return;
+  const list=[...refs];
+  clearTimeout(desktopCleanupTimer);
+  desktopCleanupTimer=setTimeout(async()=>{
+    try{
+      await api.CleanupImageAssets(list);
+      const keep=new Set(list);[...desktopPersistedImages].forEach(ref=>{if(!keep.has(ref))desktopPersistedImages.delete(ref)})
+    }catch(err){console.warn('desktop asset cleanup failed',err)}
+  },1800)
+}
+function imageRefsFromProjectData(data){
+  const refs=new Set(),canvas=data?.canvas;
+  if(canvas?.imageRef)refs.add(canvas.imageRef);
+  (Array.isArray(data?.objects)?data.objects:[]).forEach(o=>{if(o?.type==='box'&&o.imageRef)refs.add(o.imageRef)});
+  return refs
+}
+async function restoreDesktopWorkspace(){
+  const api=desktopApp();if(!api?.LoadWorkspace)return false;
+  const raw=await api.LoadWorkspace();if(!raw)return false;
+  const data=JSON.parse(raw),refs=imageRefsFromProjectData(data);
+  if(refs.size&&api.LoadImageAssets){
+    const images=await api.LoadImageAssets([...refs]);
+    Object.keys(images||{}).forEach(ref=>desktopPersistedImages.add(ref));
+    data.assets=data.assets||{};data.assets.images=images||{}
+  }
+  await loadProjectData(data);
+  return true
+}
+
 function registerImageAsset(dataUrl,preferredId=null){
   if(!dataUrl)return null;
   const existing=assetStore.imageByValue.get(dataUrl);if(existing)return existing;
@@ -33,6 +87,7 @@ function registerImageAsset(dataUrl,preferredId=null){
   while(assetStore.images.has(id))id='img-'+assetStore.nextImageId++;
   assetStore.images.set(id,dataUrl);assetStore.imageByValue.set(dataUrl,id);
   const n=Number(String(id).replace(/^img-/,''));if(Number.isFinite(n))assetStore.nextImageId=Math.max(assetStore.nextImageId,n+1);
+  persistDesktopImageAsset(id,dataUrl);
   return id
 }
 function imageAssetValue(ref){return ref?assetStore.images.get(ref)||null:null}
@@ -66,6 +121,21 @@ async function ensureImagePreview(ref,maxSide=2048){
 function previewImageUrl(ref){
   if(!ref)return null;const cached=previewImageCache.get(ref);if(cached)return cached;
   ensureImagePreview(ref).then(url=>{if(url&&document.body)renderObjects(false)});return null
+}
+function collectResourceUsage(){
+  const imageRefs=new Set(),fontValues=new Set();
+  const scanObjects=objects=>(objects||[]).forEach(o=>{if(o.type==='box'&&o.imageRef)imageRefs.add(o.imageRef);if(o.type==='text'&&o.fontFamily)fontValues.add(o.fontFamily)});
+  if(state.canvasImageRef)imageRefs.add(state.canvasImageRef);scanObjects(state.objects);
+  historyState.entries.forEach(entry=>{const s=entry.snapshot;if(s?.canvas?.imageRef)imageRefs.add(s.canvas.imageRef);scanObjects(s?.objects)});
+  scanObjects(boxClipboard?.boxes);
+  return{imageRefs,fontValues}
+}
+function cleanupUnusedResources(){
+  const{imageRefs,fontValues}=collectResourceUsage();let imagesRemoved=0,fontsRemoved=0;
+  [...assetStore.images.entries()].forEach(([ref,value])=>{if(imageRefs.has(ref))return;assetStore.images.delete(ref);assetStore.imageByValue.delete(value);imageCache.delete(value);const url=previewImageCache.get(ref);if(url)URL.revokeObjectURL(url);previewImageCache.delete(ref);previewBuilds.delete(ref);imagesRemoved++});
+  state.customFonts=state.customFonts.filter(f=>{const value=cssFontFamilyValue(f.family);if(fontValues.has(value))return true;try{for(const face of document.fonts){if(face.family===f.family)document.fonts.delete(face)}}catch{}loadedCustomFontFamilies.delete(f.family);const opt=[...$('#fontFamily').options].find(o=>o.value===value);if(opt)opt.remove();fontsRemoved++;return false});
+  scheduleDesktopAssetCleanup(imageRefs);
+  return{imagesRemoved,fontsRemoved}
 }
 
 function defaultBox(){return{id:uid(),type:'box',name:'方框',visible:true,locked:false,x:180,y:150,w:420,h:300,radius:28,bgOpacity:.88,angle:135,colors:[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}],imageRef:null,imageOpacity:1,imageFit:'cover',borderOn:true,borderWidth:2,borderColor:'#ffffff',borderOpacity:.9,shadowOn:true}}
@@ -221,6 +291,10 @@ document.querySelectorAll('.tool-group>.group-trigger').forEach(trigger=>{
   })
 });
 $('#historyToggle').onclick=e=>{e.stopPropagation();const shell=$('#rightbarShell');shell.classList.toggle('history-open');$('.history-group').classList.add('open')};
+const shortcutPanel=$('#shortcutPanel');
+shortcutPanel.innerHTML='<div class="shortcut-head"><strong>快捷键</strong><button id="shortcutClose">×</button></div><div class="shortcut-list"><div><span>撤回</span><span><kbd>Ctrl</kbd> + <kbd>Z</kbd></span></div><div><span>反撤回</span><span><kbd>Ctrl</kbd> + <kbd>Y</kbd></span></div><div><span>复制 / 粘贴</span><span><kbd>Ctrl</kbd> + <kbd>C</kbd> / <kbd>V</kbd></span></div><div><span>复制一份</span><span><kbd>Ctrl</kbd> + <kbd>D</kbd></span></div><div><span>删除</span><kbd>Delete</kbd></div><div><span>移动 1px</span><kbd>方向键</kbd></div><div><span>移动 10px</span><span><kbd>Shift</kbd> + <kbd>方向键</kbd></span></div><div><span>混合多选</span><span><kbd>Shift</kbd> + 点击</span></div><div><span>移动画布</span><span>鼠标中键拖动</span></div><div><span>缩放画布</span><span>鼠标滚轮</span></div><div><span>显示 / 隐藏本面板</span><kbd>?</kbd></div></div>';
+$('#shortcutToggle').onclick=e=>{e.stopPropagation();$('#rightbarShell').classList.toggle('shortcuts-open')};
+$('#shortcutClose').onclick=e=>{e.stopPropagation();$('#rightbarShell').classList.remove('shortcuts-open')};
 $('#undoBtn').onclick=undoHistory;$('#redoBtn').onclick=redoHistory;
 document.addEventListener('click',e=>{
   const shell=$('#rightbarShell');
@@ -337,34 +411,38 @@ function bindObjectEvents(el,o){
     showContextMenu(e.clientX,e.clientY,o)
   })
 }
-function snapTargets(axis){return(axis==='x'?[0,state.canvasW/2,state.canvasW,...state.guides.vertical]:[0,state.canvasH/2,state.canvasH,...state.guides.horizontal]).filter(Number.isFinite)}
+function getObjectSize(o){if(o.type==='box')return{w:o.w,h:o.h};const m=textMetrics(measureCtx,o);return{w:m.w,h:m.h}}
+function snapTargets(axis,excludeIds=new Set()){
+  const base=axis==='x'?[0,state.canvasW/2,state.canvasW,...state.guides.vertical]:[0,state.canvasH/2,state.canvasH,...state.guides.horizontal];
+  state.objects.forEach(o=>{if(o.visible===false||excludeIds.has(o.id))return;const s=getObjectSize(o);if(axis==='x')base.push(o.x,o.x+s.w/2,o.x+s.w);else base.push(o.y,o.y+s.h/2,o.y+s.h)});
+  return[...new Set(base.filter(Number.isFinite).map(v=>Math.round(v*1000)/1000))]
+}
 function snapValue(v,targets){if(!state.snapEnabled)return v;const th=8/Math.max(.1,state.zoom);let best=v,dist=Infinity;for(const t of targets){const d=Math.abs(v-t);if(d<=th&&d<dist){best=t;dist=d}}return Math.round(best*1000)/1000}
-function snapRectMove(rect,x,y){
-  if(!state.snapEnabled)return{x,y};const tx=snapTargets('x'),ty=snapTargets('y'),th=8/state.zoom;let dx=0,dy=0,bx=Infinity,by=Infinity;
+function snapRectMove(rect,x,y,excludeIds=new Set()){
+  if(!state.snapEnabled)return{x,y};const tx=snapTargets('x',excludeIds),ty=snapTargets('y',excludeIds),th=8/state.zoom;let dx=0,dy=0,bx=Infinity,by=Infinity;
   for(const c of[x,x+rect.w/2,x+rect.w])for(const t of tx){const d=Math.abs(c-t);if(d<=th&&d<bx){bx=d;dx=t-c}}
   for(const c of[y,y+rect.h/2,y+rect.h])for(const t of ty){const d=Math.abs(c-t);if(d<=th&&d<by){by=d;dy=t-c}}
   const clean=v=>Math.round(v*1000)/1000;
   return{x:clean(x+dx),y:clean(y+dy)}
 }
-function getObjectSize(o){if(o.type==='box')return{w:o.w,h:o.h};const m=textMetrics(measureCtx,o);return{w:m.w,h:m.h}}
-function snapMove(o,x,y){const s=getObjectSize(o);return snapRectMove({w:s.w,h:s.h},x,y)}
+function snapMove(o,x,y){const s=getObjectSize(o);return snapRectMove({w:s.w,h:s.h},x,y,new Set([o.id]))}
 function syncPositionFields(o){if(!o||o.id!==state.selectedId||hasMultiBoxes())return;$('#objX').value=Math.round(o.x);$('#objY').value=Math.round(o.y);if(o.type==='box'){$('#objW').value=Math.round(o.w);$('#objH').value=Math.round(o.h)}}
 viewport.addEventListener('pointermove',e=>{
   if(!gesture)return;
   if(gesture.type==='pan'){state.panX=gesture.orig.x+(e.clientX-gesture.sx);state.panY=gesture.orig.y+(e.clientY-gesture.sy);updateWorldTransform();return}
   const dx=(e.clientX-gesture.sx)/state.zoom,dy=(e.clientY-gesture.sy)/state.zoom;
   if(gesture.type==='moveGroup'){
-    const p=snapRectMove(gesture.bounds,gesture.bounds.x+dx,gesture.bounds.y+dy),adx=p.x-gesture.bounds.x,ady=p.y-gesture.bounds.y;
+    const excluded=new Set(gesture.origins.map(or=>or.id)),p=snapRectMove(gesture.bounds,gesture.bounds.x+dx,gesture.bounds.y+dy,excluded),adx=p.x-gesture.bounds.x,ady=p.y-gesture.bounds.y;
     gesture.origins.forEach(or=>{const o=state.objects.find(x=>x.id===or.id);if(o){o.x=or.x+adx;o.y=or.y+ady}});
     renderObjects(false);return
   }
   const o=state.objects.find(x=>x.id===gesture.id);if(!o)return;
   if(gesture.type==='move'){const p=snapMove(o,gesture.orig.x+dx,gesture.orig.y+dy);o.x=p.x;o.y=p.y;renderObjects(false);syncPositionFields(o);return}
-  let{x,y,w,h}=gesture.orig;const d=gesture.dir;
-  if(d.includes('e')){let right=snapValue(gesture.orig.x+gesture.orig.w+dx,snapTargets('x'));w=right-x}
-  if(d.includes('s')){let bottom=snapValue(gesture.orig.y+gesture.orig.h+dy,snapTargets('y'));h=bottom-y}
-  if(d.includes('w')){let left=snapValue(gesture.orig.x+dx,snapTargets('x'));w=gesture.orig.x+gesture.orig.w-left;x=left}
-  if(d.includes('n')){let top=snapValue(gesture.orig.y+dy,snapTargets('y'));h=gesture.orig.y+gesture.orig.h-top;y=top}
+  let{x,y,w,h}=gesture.orig;const d=gesture.dir,excluded=new Set([o.id]);
+  if(d.includes('e')){let right=snapValue(gesture.orig.x+gesture.orig.w+dx,snapTargets('x',excluded));w=right-x}
+  if(d.includes('s')){let bottom=snapValue(gesture.orig.y+gesture.orig.h+dy,snapTargets('y',excluded));h=bottom-y}
+  if(d.includes('w')){let left=snapValue(gesture.orig.x+dx,snapTargets('x',excluded));w=gesture.orig.x+gesture.orig.w-left;x=left}
+  if(d.includes('n')){let top=snapValue(gesture.orig.y+dy,snapTargets('y',excluded));h=gesture.orig.y+gesture.orig.h-top;y=top}
   if(w<20){if(d.includes('w'))x=gesture.orig.x+gesture.orig.w-20;w=20}if(h<20){if(d.includes('n'))y=gesture.orig.y+gesture.orig.h-20;h=20}
   o.x=x;o.y=y;o.w=w;o.h=h;renderObjects(false);syncPositionFields(o)
 });
@@ -641,6 +719,7 @@ document.addEventListener('keydown',e=>{
   const key=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey;
   if(mod&&key==='z'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){e.preventDefault();e.shiftKey?redoHistory():undoHistory();return}
   if(mod&&key==='y'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){e.preventDefault();redoHistory();return}
+  if(e.key==='?'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();$('#rightbarShell').classList.toggle('shortcuts-open');return}
   if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;
   if((e.key==='Delete'||e.key==='Backspace')&&(state.selectedId!=null||state.selectedBoxIds.length)){e.preventDefault();deleteSelected();return}
   if(mod&&key==='d'){e.preventDefault();duplicateSelection();return}
@@ -711,7 +790,7 @@ function commitHistory(label,force=false){
     historyState.entries.forEach(e=>{if(e.parentId===removed.id)e.parentId=null});
     historyState.redoStack=historyState.redoStack.filter(id=>id!==removed.id)
   }
-  renderHistory()
+  cleanupUnusedResources();renderHistory();scheduleDesktopWorkspaceSave()
 }
 function initHistory(){
   historyState.ready=true;historyState.entries=[];historyState.currentId=null;historyState.redoStack=[];historyState.nextId=1;commitHistory('初始状态',true)
@@ -803,4 +882,12 @@ async function exportPNG(crop){
 }
 $('#exportCrop').onclick=()=>exportPNG(true);$('#exportFull').onclick=()=>exportPNG(false);
 
-refreshCanvasControls();addObject(defaultBox());updateWorldTransform();initHistory();renderHistory();window.addEventListener('resize',()=>{renderRulers();renderGuides()});setTimeout(()=>$('#fitView').click(),0);
+async function bootstrapEditor(){
+  let restored=false;
+  try{restored=await restoreDesktopWorkspace()}catch(err){console.warn('desktop workspace restore failed',err);setDataStatus('桌面工作区恢复失败','err')}
+  if(!restored){refreshCanvasControls();addObject(defaultBox());updateWorldTransform()}
+  initHistory();renderHistory();
+  window.addEventListener('resize',()=>{renderRulers();renderGuides()});
+  if(!restored)setTimeout(()=>$('#fitView').click(),0)
+}
+bootstrapEditor();

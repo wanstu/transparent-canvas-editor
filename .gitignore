@@ -1,0 +1,6 @@
+/build/bin/
+/frontend/wailsjs/
+/.gocache/
+/.gomodcache/
+/.gotmp/
+.single-check.js

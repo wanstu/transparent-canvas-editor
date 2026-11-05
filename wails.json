@@ -1,0 +1,10 @@
+{
+  "name": "transparent-canvas-editor",
+  "outputfilename": "transparent-canvas-editor",
+  "frontend:dir": "frontend",
+  "frontend:build": "node ../sync-frontend.js",
+  "wailsjsdir": "frontend",
+  "author": {
+    "name": "wanstu"
+  }
+}
