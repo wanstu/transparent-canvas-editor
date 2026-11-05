@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>弧线背景 · 临时素材工具</title>
+<style>
+:root{color-scheme:dark;--page:#10141c;--panel:#171d28;--border:#2a3343;--text:#e5ebf5;--muted:#94a2b8;--accent:#9fc5ff;--input:#101620;--font:Inter,"Segoe UI","Microsoft YaHei",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:13px/1.5 var(--font)}button,input,select{font:inherit}button,select{cursor:pointer}button{color:var(--text);background:#222c3b;border:1px solid #354259;border-radius:7px;padding:8px 12px;white-space:nowrap;transition:background .15s}button:hover{background:#2b3b50}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.primary{background:#c4d9ff;color:#12223a;border-color:#c4d9ff;font-weight:650}.primary:hover{background:#deebff}.quiet{background:transparent;border-color:var(--border)}
+header{height:70px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;gap:16px}.brand{display:flex;align-items:center;gap:13px}.brand-mark{width:35px;height:35px;border:1px solid #485c79;border-radius:10px;display:grid;place-items:center;color:#dbe8ff;background:#1e2b40}.brand-title{font-size:16px;font-weight:650;letter-spacing:.04em}.brand-sub{font-size:11px;color:var(--muted);margin-top:2px}.actions{display:flex;align-items:center;gap:8px}.tag{font-size:10px;letter-spacing:.12em;color:#adbacf;border:1px solid var(--border);border-radius:4px;padding:4px 7px;margin-right:8px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 316px;height:calc(100dvh - 70px);min-height:650px}.workspace{display:flex;flex-direction:column;min-width:0;min-height:0}.toolbar{height:62px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 23px;gap:12px;border-bottom:1px solid #222b39}.tabs{display:flex;background:#0b1018;border:1px solid var(--border);border-radius:7px;padding:3px;gap:2px}.tabs button{background:transparent;border:0;border-radius:4px;color:var(--muted);padding:5px 13px}.tabs button.selected{color:#e5edff;background:#2b374c}.zoom-tools{display:flex;align-items:center;gap:7px}.zoom-tools button{padding:5px 9px}.zoom-tools select{max-width:84px}.viewport{flex:1;min-height:0;overflow:auto;padding:30px;background:radial-gradient(ellipse at 50% 35%,#1d2533,#111721);display:grid;align-items:center}.surface{margin:auto;flex-shrink:0;box-shadow:0 14px 55px #0007;outline:1px solid #53627b3b;position:relative;background-color:#1c2330;background-image:linear-gradient(45deg,#283142 25%,transparent 25%),linear-gradient(-45deg,#283142 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#283142 75%),linear-gradient(-45deg,transparent 75%,#283142 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}.surface svg{display:block;width:100%;height:100%}.stage-info{height:40px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding:0 23px;color:var(--muted);font-size:11px;gap:10px}.stage-info b{color:#b6c3d7;font-weight:450}.dot{display:inline-block;width:5px;height:5px;background:#99d6bb;border-radius:100%;margin-right:6px}
+aside{border-left:1px solid var(--border);overflow:auto;background:var(--panel);padding:0 20px 22px}section{padding:20px 0;border-bottom:1px solid var(--border)}section:last-child{border-bottom:0}h2{font-size:12px;letter-spacing:.08em;margin:0 0 16px;font-weight:650;display:flex;align-items:center;justify-content:space-between}h2 span{font-size:10px;color:var(--muted);font-weight:400;letter-spacing:0}.row{display:flex;align-items:center;justify-content:space-between;margin:11px 0;gap:12px}.row label{color:#bdc8da;flex:1}.row small{font-size:11px;color:var(--muted)}input[type=number],input[type=text],select{color:#dfe9fa;background:var(--input);border:1px solid #334056;border-radius:5px;padding:7px 8px;min-width:0}input[type=number]{width:72px;text-align:right;font-variant-numeric:tabular-nums}input[type=range]{accent-color:#aecfff;cursor:pointer;width:100%;margin:2px 0 9px;height:16px}input[type=checkbox]{accent-color:#aecfff;width:15px;height:15px;margin:0}.dimensions{display:grid;grid-template-columns:1fr 15px 1fr;align-items:center;gap:9px}.dimensions input{width:100%}.dimensions span{text-align:center;color:var(--muted)}.preset{width:100%;margin-bottom:10px}.range-row{margin-bottom:7px}.range-row .row{margin:7px 0}.range-row input[type=number]{width:69px;padding:4px 7px}.color-input{display:flex;align-items:center;gap:7px;min-width:0}.color-input input[type=color]{padding:0;width:24px;height:25px;border:1px solid #53627a;background:transparent;border-radius:4px;cursor:pointer;flex-shrink:0}.color-input input[type=text]{width:112px;font:11px/1.5 Consolas,monospace;padding:5px 7px}.color-input input.invalid{border-color:#ee8e90}.note{font-size:11px;color:var(--muted);line-height:1.8;margin:9px 0 0}.peak-note{border:1px solid #3a4c67;border-radius:7px;padding:10px 11px;background:#1e2a3d;color:#bacce8;font-size:11px;line-height:1.8}.peak-note strong{color:#e0edff;font-weight:500}.bottom-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}.bottom-actions button{font-size:11px;padding:6px 9px}.save-label{font-size:10px;color:#8ca98f}.toast{position:fixed;bottom:23px;left:50%;transform:translateX(-50%);background:#d8e6fb;color:#152238;padding:11px 18px;border:1px solid #f5f8ff;box-shadow:0 6px 30px #0006;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .18s;z-index:10;max-width:90vw}.toast.show{opacity:1}.export-progress{opacity:.55;pointer-events:none}.screen-button{display:none}.solo header,.solo aside,.solo .toolbar,.solo .stage-info{display:none}.solo .layout{display:block;height:100dvh;min-height:0}.solo .workspace,.solo .viewport{height:100dvh}.solo .viewport{padding:0;background:#000}.solo .screen-button{display:block;position:fixed;right:18px;bottom:18px;z-index:5;opacity:.6}.solo .screen-button:hover{opacity:1}.solo .surface{box-shadow:none;outline:none}
+@media(max-width:950px){header{padding:0 16px}.tag{display:none}.layout{grid-template-columns:minmax(0,1fr) 286px}aside{padding:0 15px 20px}.toolbar{padding:0 15px}.tabs button{padding:5px 9px}.brand-sub{display:none}.viewport{padding:20px}.stage-info{padding:0 15px}}@media(max-width:720px){header{height:auto;min-height:100px;align-items:flex-start;flex-direction:column;padding:14px 16px;gap:10px}.actions{width:100%}.actions .primary{margin-left:auto}.layout{height:auto;min-height:0;display:flex;flex-direction:column}.workspace{height:61dvh;min-height:400px}.toolbar{height:57px;flex-wrap:wrap;gap:7px}.zoom-tools{gap:4px}.zoom-tools button{padding:5px 7px}.zoom-tools select{width:64px;padding:5px}.toolbar .preview-only{display:none}aside{border-left:0;border-top:1px solid var(--border);padding:0 22px}section{padding:17px 0}.stage-info span:last-child{display:none}.solo .layout,.solo .workspace{height:100dvh}.solo .workspace{min-height:0}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="brand-mark"><svg width="23" height="22" viewBox="0 0 23 22" fill="none" aria-hidden="true"><path d="M2 8Q11.5 15 21 8" stroke="currentColor" stroke-width="1.2"/><circle cx="11.5" cy="11.5" r="1.3" fill="white"/></svg></div><div><div class="brand-title">弧线背景</div><div class="brand-sub">深蓝背景 · 单点高光 · 精确渐变</div></div></div>
+  <div class="actions"><span class="tag">临时素材工具</span><button class="quiet" id="exportSvg">导出 SVG</button><button class="primary" id="exportPng">导出 PNG</button></div>
+</header>
+<div class="layout">
+<main class="workspace">
+  <div class="toolbar"><div class="tabs" role="group" aria-label="导出内容"><button class="selected" data-mode="full" aria-pressed="true">完整背景</button><button data-mode="line" aria-pressed="false">仅弧线 · 透明</button></div><div class="zoom-tools"><button class="quiet" id="fit">适应</button><select id="zoom" aria-label="预览缩放"><option value="fit">适应</option><option value="0.5">50%</option><option value="1">100%</option><option value="2">200%</option><option value="4">400%</option></select><button class="quiet preview-only" id="previewOnly">纯预览</button></div></div>
+  <div class="viewport" id="viewport"><div class="surface" id="surface" role="img" aria-label="深蓝背景与中央白点渐变弧线预览"></div></div>
+  <div class="stage-info"><span><b id="sizeInfo"></b> <span id="scaleInfo"></span></span><span id="modeInfo">1× 原尺寸导出，无编辑界面</span></div>
+</main>
+<aside>
+  <section><h2>画布 <span>CANVAS</span></h2><select class="preset" id="preset" aria-label="画布分辨率"><option value="1600,960">1600 × 960 · 当前参考图</option><option value="800,480">800 × 480</option><option value="1024,600">1024 × 600</option><option value="1280,800">1280 × 800</option><option value="1920,1080">1920 × 1080</option><option value="custom">自定义尺寸</option></select><div class="dimensions"><input type="number" data-key="width" aria-label="画布宽度" min="64" max="4096" step="1"><span>×</span><input type="number" data-key="height" aria-label="画布高度" min="64" max="4096" step="1"></div></section>
+  <section><h2>弧线形状 <span>CURVE</span></h2>
+    <div class="range-row"><div class="row"><label for="edgeY">两端高度 <small>px</small></label><input id="edgeY" data-key="edgeY" type="number" min="0" max="960" step="0.5"></div><input data-range="edgeY" aria-label="两端高度滑块" type="range" min="0" max="240" step="0.5"></div>
+    <div class="range-row"><div class="row"><label for="sag">中央下弯 <small>px</small></label><input id="sag" data-key="sag" type="number" min="-240" max="600" step="1"></div><input data-range="sag" aria-label="中央下弯滑块" type="range" min="-120" max="180" step="1"></div>
+    <div class="range-row"><div class="row"><label for="lineWidth">线宽 <small>px</small></label><input id="lineWidth" data-key="lineWidth" type="number" min="0.2" max="8" step="0.1"></div><input data-range="lineWidth" aria-label="线宽滑块" type="range" min="0.2" max="5" step="0.1"></div>
+  </section>
+  <section><h2>中央亮点 <span>HIGHLIGHT</span></h2><div class="peak-note"><strong>只有一个位置达到亮白。</strong><br>从峰值向左右连续变暗，线宽保持一致。</div>
+    <div class="range-row"><div class="row"><label for="peak">亮点位置 <small>%</small></label><input id="peak" data-key="peak" type="number" min="0" max="100" step="0.1"></div><input data-range="peak" aria-label="亮点位置滑块" type="range" min="0" max="100" step="0.1"></div>
+    <div class="range-row"><div class="row"><label for="radius">渐变半径 <small>px</small></label><input id="radius" data-key="radius" type="number" min="4" max="4096" step="1"></div><input data-range="radius" aria-label="渐变半径滑块" type="range" min="8" max="800" step="1"></div>
+    <div class="range-row"><div class="row"><label for="falloff">衰减强度</label><input id="falloff" data-key="falloff" type="number" min="0.5" max="5" step="0.1"></div><input data-range="falloff" aria-label="衰减强度滑块" type="range" min="0.5" max="5" step="0.1"></div>
+    <div class="row"><label for="peakColor">中央颜色</label><div class="color-input"><input type="color" data-picker="peakColor" aria-label="选择中央颜色"><input id="peakColor" data-color="peakColor" type="text" spellcheck="false" aria-label="中央颜色色值"></div></div>
+    <div class="row"><label for="endColor">两端颜色</label><div class="color-input"><input type="color" data-picker="endColor" aria-label="选择两端颜色"><input id="endColor" data-color="endColor" type="text" spellcheck="false" aria-label="两端颜色色值"></div></div>
+    <p class="note">半径决定渐变延伸距离；衰减越大，白点越集中。透明弧线导出保留完整画布尺寸，便于原位叠加。</p>
+  </section>
+  <section><h2>背景颜色 <span>BACKGROUND</span></h2><div class="row"><label for="showHeader">显示顶部蓝色区域</label><input id="showHeader" data-key="showHeader" type="checkbox"></div>
+    <div class="row"><label for="bgCenter">背景中央</label><div class="color-input"><input type="color" data-picker="bgCenter" aria-label="选择背景中央颜色"><input id="bgCenter" data-color="bgCenter" type="text" spellcheck="false" aria-label="背景中央色值"></div></div>
+    <div class="row"><label for="bgEdge">背景两侧</label><div class="color-input"><input type="color" data-picker="bgEdge" aria-label="选择背景两侧颜色"><input id="bgEdge" data-color="bgEdge" type="text" spellcheck="false" aria-label="背景两侧色值"></div></div>
+    <div class="row"><label for="headerTop">顶部蓝色</label><div class="color-input"><input type="color" data-picker="headerTop" aria-label="选择顶部蓝色"><input id="headerTop" data-color="headerTop" type="text" spellcheck="false" aria-label="顶部蓝色色值"></div></div>
+    <div class="row"><label for="headerBottom">顶部下沿</label><div class="color-input"><input type="color" data-picker="headerBottom" aria-label="选择顶部下沿颜色"><input id="headerBottom" data-color="headerBottom" type="text" spellcheck="false" aria-label="顶部下沿色值"></div></div>
+    <p class="note">色值支持 HEX、RGB 和 RGBA。背景和弧线分开绘制，调整线条不会改变背景。</p>
+  </section>
+  <section><h2>参数 <span class="save-label" id="saveInfo">本机自动保存</span></h2><div class="bottom-actions"><button class="quiet" id="exportSettings">保存参数</button><button class="quiet" id="importSettings">载入参数</button><button class="quiet" id="reset">恢复默认</button></div><p class="note">双击本文件即可离线使用。导出 PNG / SVG 的内容与当前预览一致，均为画布原尺寸。</p></section>
+</aside>
+</div>
+<button class="screen-button quiet" id="exitPreview">退出预览 · Esc</button>
+<input type="file" id="settingsFile" accept="application/json,.json" hidden>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(() => {
+'use strict';
+const STORAGE = 'transparent-canvas-editor.temp-arc-background.v1';
+const DEFAULTS = Object.freeze({width:1600,height:960,edgeY:45.5,sag:45,lineWidth:1.2,peak:50,radius:300,falloff:1.8,peakColor:'#ffffff',endColor:'#000000',bgCenter:'#000a29',bgEdge:'#01040f',headerTop:'#07346f',headerBottom:'#001334',showHeader:true});
+const BOUNDS = {width:[64,4096],height:[64,4096],edgeY:[0,4096],sag:[-4096,4096],lineWidth:[0.2,8],peak:[0,100],radius:[4,4096],falloff:[0.5,5]};
+const COLORS = ['peakColor','endColor','bgCenter','bgEdge','headerTop','headerBottom'];
+const $ = id => document.getElementById(id);
+const probe = document.createElement('canvas').getContext('2d', {willReadFrequently:true});
+let state = {...DEFAULTS}, mode = 'full', zoom = 'fit', frame = 0, saveTimer = 0, toastTimer = 0, storageOK = true;
+function colorRGBA(value) {
+  if (typeof value !== 'string' || value.length > 100 || !CSS.supports('color',value.trim()) || /^(?:currentcolor|inherit|initial|unset|revert|var\(|light-dark\()/i.test(value.trim())) return null;
+  probe.clearRect(0,0,1,1); probe.fillStyle = value.trim(); probe.fillRect(0,0,1,1);
+  const p = probe.getImageData(0,0,1,1).data;
+  return [p[0],p[1],p[2],p[3]/255];
+}
+function toHex(c) {return '#'+c.slice(0,3).map(x=>Math.round(x).toString(16).padStart(2,'0')).join('');}
+function normalize(raw) {
+  const clean = {...DEFAULTS};
+  for (const key of Object.keys(BOUNDS)) {
+    const value = raw?.[key];
+    if (typeof value === 'number' && Number.isFinite(value)) clean[key] = Math.min(BOUNDS[key][1],Math.max(BOUNDS[key][0],value));
+  }
+  clean.width = Math.round(clean.width); clean.height = Math.round(clean.height);
+  for (const key of COLORS) if (colorRGBA(raw?.[key])) clean[key] = raw[key].trim();
+  if (typeof raw?.showHeader === 'boolean') clean.showHeader = raw.showHeader;
+  clean.edgeY = Math.min(clean.height,clean.edgeY);
+  clean.sag = Math.max(-clean.edgeY,Math.min(clean.height-clean.edgeY,clean.sag));
+  return clean;
+}
+try {const saved=localStorage.getItem(STORAGE); if(saved) state=normalize(JSON.parse(saved));} catch {storageOK=false;}
+function f(n){return Number(n.toFixed(5));}
+function colorAttribute(value){const c=colorRGBA(value);return `rgb(${c[0]},${c[1]},${c[2]})`;}
+function opacityAttribute(value){return colorRGBA(value)[3];}
+function peakX(s){return Math.min(s.width-0.5,Math.max(0.5,Math.floor(s.width*s.peak/100)+0.5));}
+function peakWeight(distance,s=state) {
+  if(distance>=s.radius) return 0;
+  // A single peak, with no white plateau. The square-root shoulder narrows the white point.
+  return Math.pow(1-Math.sqrt(distance/s.radius),s.falloff);
+}
+function gradientStops(s) {
+  const center=peakX(s);
+  const positions = new Set([0,s.width,center]);
+  // Dense sampling near the peak preserves its shape even on small exports.
+  for (const direction of [-1,1]) {
+    for (const d of [0.125,0.25,0.5,1,2,3,4,6,8,12,16,24,32,48,64,96,128,192,256,384,512,768,1024,2048,4096,s.radius]) {
+      const x=center+direction*d;if(x>0&&x<s.width) positions.add(x);
+    }
+    for(let i=1;i<=48;i++){const x=center+direction*s.radius*i/48;if(x>0&&x<s.width)positions.add(x);}
+  }
+  const a=colorRGBA(s.endColor),b=colorRGBA(s.peakColor);
+  return [...positions].sort((x,y)=>x-y).map(x=>{
+    const t=peakWeight(Math.abs(x-center),s);
+    const rgba=a.map((v,i)=>v+(b[i]-v)*t);
+    // Do not round channel values: only the exact peak reaches the endpoint color.
+    return `<stop offset="${f(x/s.width*100)}%" stop-color="rgb(${rgba.slice(0,3).map(f).join(',')})" stop-opacity="${f(rgba[3])}"/>`;
+  }).join('');
+}
+function makeSVG(s=state,exportMode=mode) {
+  const w=s.width,h=s.height,y=s.edgeY,control=y+2*s.sag;
+  const curve=`M 0 ${f(y)} Q ${w/2} ${f(control)} ${w} ${f(y)}`;
+  const bg=exportMode==='line'?'':`<rect width="${w}" height="${h}" fill="url(#arc-bg)"/>${s.showHeader?`<path d="M 0 0 H ${w} V ${f(y)} Q ${w/2} ${f(control)} 0 ${f(y)} Z" fill="url(#arc-header)"/>`:''}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" color-interpolation="sRGB"><defs><radialGradient id="arc-bg" cx="50%" cy="46%" r="70%" gradientTransform="translate(0 -.13) scale(1 1.28)"><stop offset="0" stop-color="${colorAttribute(s.bgCenter)}" stop-opacity="${opacityAttribute(s.bgCenter)}"/><stop offset="1" stop-color="${colorAttribute(s.bgEdge)}" stop-opacity="${opacityAttribute(s.bgEdge)}"/></radialGradient><linearGradient id="arc-header" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${colorAttribute(s.headerTop)}" stop-opacity="${opacityAttribute(s.headerTop)}"/><stop offset="1" stop-color="${colorAttribute(s.headerBottom)}" stop-opacity="${opacityAttribute(s.headerBottom)}"/></linearGradient><linearGradient id="arc-line" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${w}" y2="0">${gradientStops(s)}</linearGradient></defs>${bg}<path id="curve-line" d="${curve}" fill="none" stroke="url(#arc-line)" stroke-width="${f(s.lineWidth)}" stroke-linecap="butt"/></svg>`;
+}
+function notify(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2600);}
+function syncControls() {
+  document.querySelectorAll('[data-key]').forEach(el=>{const key=el.dataset.key;if(el.type==='checkbox')el.checked=state[key];else el.value=state[key];});
+  document.querySelectorAll('[data-range]').forEach(el=>el.value=state[el.dataset.range]);
+  for(const key of COLORS){document.querySelector(`[data-color="${key}"]`).value=state[key];document.querySelector(`[data-picker="${key}"]`).value=toHex(colorRGBA(state[key]));}
+  const match=[...$('preset').options].find(x=>x.value===`${state.width},${state.height}`);$('preset').value=match?match.value:'custom';
+  $('edgeY').max=state.height;$('sag').min=-state.edgeY;$('sag').max=state.height-state.edgeY;
+  const edgeRange=document.querySelector('[data-range="edgeY"]');edgeRange.max=Math.max(240,state.height*.4,state.edgeY);
+  const sagRange=document.querySelector('[data-range="sag"]');sagRange.min=-state.edgeY;sagRange.max=Math.max(state.sag,Math.min(state.height-state.edgeY,state.height*.35));
+  const radiusRange=document.querySelector('[data-range="radius"]');radiusRange.max=Math.max(800,state.radius,state.width/2);
+  $('saveInfo').textContent=storageOK?'本机自动保存':'请手动保存参数';
+}
+function resizePreview() {
+  const viewport=$('viewport');
+  const pad=document.body.classList.contains('solo')?0:(innerWidth<=950?40:60);
+  const fit=Math.max(.01,Math.min((viewport.clientWidth-pad)/state.width,(viewport.clientHeight-pad)/state.height));
+  const scale=zoom==='fit'?fit:Number(zoom);
+  $('surface').style.width=`${state.width*scale}px`;$('surface').style.height=`${state.height*scale}px`;
+  $('scaleInfo').textContent=` · 预览 ${Math.round(scale*100)}%`;
+}
+function render(){frame=0;$('surface').innerHTML=makeSVG();$('sizeInfo').textContent=`${state.width} × ${state.height} px`;$('modeInfo').textContent=mode==='line'?'透明 PNG / SVG · 保留原位坐标':'1× 原尺寸导出，无编辑界面';resizePreview();}
+function schedule(){if(!frame)frame=requestAnimationFrame(render);clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(STORAGE,JSON.stringify(state));storageOK=true;}catch{storageOK=false;}$('saveInfo').textContent=storageOK?'已自动保存':'请手动保存参数';},250);}
+function setState(key,value){state=normalize({...state,[key]:value});syncControls();schedule();}
+document.querySelectorAll('[data-key]').forEach(el=>el.addEventListener('change',()=>{let value;if(el.type==='checkbox')value=el.checked;else{if(el.value.trim()===''){syncControls();return;}value=Number(el.value);if(!Number.isFinite(value)){syncControls();return;}}setState(el.dataset.key,value);}));
+document.querySelectorAll('[data-range]').forEach(el=>el.addEventListener('input',()=>setState(el.dataset.range,Number(el.value))));
+document.querySelectorAll('[data-color]').forEach(el=>{
+  el.addEventListener('input',()=>{const valid=colorRGBA(el.value);el.classList.toggle('invalid',!valid);el.setAttribute('aria-invalid',String(!valid));if(valid){state={...state,[el.dataset.color]:el.value.trim()};document.querySelector(`[data-picker="${el.dataset.color}"]`).value=toHex(valid);schedule();}});
+  el.addEventListener('change',()=>{if(!colorRGBA(el.value)){el.value=state[el.dataset.color];el.classList.remove('invalid');el.setAttribute('aria-invalid','false');notify('色值无效，已恢复上一次颜色');}});
+});
+document.querySelectorAll('[data-picker]').forEach(el=>el.addEventListener('input',()=>setState(el.dataset.picker,el.value)));
+$('preset').addEventListener('change',()=>{if($('preset').value==='custom')return;const [w,h]=$('preset').value.split(',').map(Number);const scale=h/state.height;state=normalize({...state,width:w,height:h,edgeY:state.edgeY*scale,sag:state.sag*scale});syncControls();schedule();});
+document.querySelectorAll('[data-mode]').forEach(el=>el.addEventListener('click',()=>{mode=el.dataset.mode;document.querySelectorAll('[data-mode]').forEach(b=>{b.classList.toggle('selected',b===el);b.setAttribute('aria-pressed',String(b===el));});schedule();}));
+$('zoom').addEventListener('change',()=>{zoom=$('zoom').value;resizePreview();});$('fit').addEventListener('click',()=>{zoom='fit';$('zoom').value='fit';resizePreview();});
+function solo(on){document.body.classList.toggle('solo',on);resizePreview();}
+$('previewOnly').addEventListener('click',()=>solo(true));$('exitPreview').addEventListener('click',()=>solo(false));document.addEventListener('keydown',e=>{if(e.key==='Escape')solo(false);});
+const observer=new ResizeObserver(resizePreview);observer.observe($('viewport'));
+function download(blob,name){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+function filename(extension,s=state,m=mode){return `arc-${m==='line'?'line-transparent':'background'}-${s.width}x${s.height}.${extension}`;}
+$('exportSvg').addEventListener('click',()=>{download(new Blob([makeSVG()],{type:'image/svg+xml;charset=utf-8'}),filename('svg'));notify('已导出 SVG');});
+async function rasterize(svg,w,h){
+  const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob);
+  try{const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('图形加载失败'));img.src=url;});const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('无法创建画布');ctx.drawImage(img,0,0,w,h);return await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('PNG 编码失败')),'image/png'));}finally{URL.revokeObjectURL(url);}
+}
+$('exportPng').addEventListener('click',async()=>{
+  const button=$('exportPng'),snapshot={...state},exportMode=mode;button.disabled=true;button.textContent='正在导出…';
+  try{const blob=await rasterize(makeSVG(snapshot,exportMode),snapshot.width,snapshot.height);download(blob,filename('png',snapshot,exportMode));notify(`已导出 ${snapshot.width} × ${snapshot.height} PNG`);}catch(error){notify('导出失败：'+error.message);}finally{button.disabled=false;button.textContent='导出 PNG';}
+});
+$('exportSettings').addEventListener('click',()=>{download(new Blob([JSON.stringify({format:'arc-background-v1',settings:state},null,2)],{type:'application/json'}),'arc-background-settings.json');notify('已保存参数');});
+$('importSettings').addEventListener('click',()=>$('settingsFile').click());
+$('settingsFile').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>100000)throw new Error('参数文件过大');const json=JSON.parse(await file.text());if(json.format!=='arc-background-v1'||!json.settings||typeof json.settings!=='object'||Array.isArray(json.settings))throw new Error('不是本工具的参数文件');state=normalize(json.settings);syncControls();schedule();notify('已载入参数');}catch(error){notify('载入失败：'+error.message);}finally{e.target.value='';}});
+$('reset').addEventListener('click',()=>{state={...DEFAULTS};syncControls();schedule();notify('已恢复默认参数');});
+// Read-only helpers for inspecting or reusing this standalone drawing.
+window.ArcBackground=Object.freeze({getSettings:()=>({...state}),getSVG:()=>makeSVG(),weightAt:x=>peakWeight(Math.abs(x-peakX(state)))});
+syncControls();render();
+})();
+</script>
+</body>
+</html>
