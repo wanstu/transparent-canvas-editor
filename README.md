@@ -41,6 +41,18 @@
 - 工作区自动保存与启动恢复
 - 图片资产独立持久化与引用
 - Kit 统一配置目录与原子写入
+- 原生“保存项目”文件选择器：可选择目录并修改文件名
+- “数据 → 工作区”可查看并打开自动工作区所在位置
+
+自动恢复使用的是应用内部工作区，不等同于用户手动保存的项目文件：
+
+```text
+~/.config/com.wanstu.transparent-canvas-editor/workspace.json
+```
+
+Windows 上即 `C:\Users\<用户名>\.config\com.wanstu.transparent-canvas-editor\workspace.json`。
+
+手动点击“保存”时，桌面版会打开系统保存文件选择器；单 HTML 便携版则继续使用浏览器下载 JSON 文件。
 
 ### 构建
 

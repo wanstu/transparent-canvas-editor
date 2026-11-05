@@ -1,28 +1,37 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
+	goruntime "runtime"
 	"strings"
 	"sync"
 
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/wanstu/wails-desktop-kit/atomicfile"
 	kitpaths "github.com/wanstu/wails-desktop-kit/paths"
 )
 
-const maxWorkspaceBytes = 64 << 20
+const (
+	maxWorkspaceBytes = 64 << 20
+	maxProjectBytes   = 512 << 20
+)
 
 var imageRefPattern = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
 
 type App struct {
-	mu            sync.Mutex
-	configDir     string
-	workspacePath string
-	imageDir      string
+	mu              sync.Mutex
+	ctx             context.Context
+	configDir       string
+	workspacePath   string
+	imageDir        string
+	lastProjectPath string
 }
 
 type imageAssetFile struct {
@@ -45,22 +54,26 @@ func NewApp() (*App, error) {
 	}, nil
 }
 
+func (a *App) startup(ctx context.Context) {
+	a.mu.Lock()
+	a.ctx = ctx
+	a.mu.Unlock()
+}
+
 func (a *App) ConfigDir() string {
 	return a.configDir
+}
+
+func (a *App) WorkspacePath() string {
+	return a.workspacePath
 }
 
 func (a *App) SaveWorkspace(raw string) error {
 	if len(raw) > maxWorkspaceBytes {
 		return fmt.Errorf("workspace is too large: %d bytes", len(raw))
 	}
-	var probe struct {
-		Format string `json:"format"`
-	}
-	if err := json.Unmarshal([]byte(raw), &probe); err != nil {
-		return fmt.Errorf("invalid workspace JSON: %w", err)
-	}
-	if probe.Format != "" && probe.Format != "transparent-canvas-editor" {
-		return fmt.Errorf("unsupported workspace format %q", probe.Format)
+	if err := validateProjectJSON(raw); err != nil {
+		return err
 	}
 
 	a.mu.Lock()
@@ -91,6 +104,77 @@ func (a *App) ClearWorkspace() error {
 		return nil
 	}
 	return err
+}
+
+func (a *App) SaveProjectAs(raw, suggestedName string) (string, error) {
+	if len(raw) > maxProjectBytes {
+		return "", fmt.Errorf("project is too large: %d bytes", len(raw))
+	}
+	if err := validateProjectJSON(raw); err != nil {
+		return "", err
+	}
+
+	a.mu.Lock()
+	ctx := a.ctx
+	lastPath := a.lastProjectPath
+	a.mu.Unlock()
+	if ctx == nil {
+		return "", errors.New("desktop runtime is not ready")
+	}
+
+	defaultName := sanitizeProjectFilename(suggestedName)
+	defaultDir := ""
+	if lastPath != "" {
+		defaultDir = filepath.Dir(lastPath)
+		defaultName = filepath.Base(lastPath)
+	}
+
+	selected, err := wailsruntime.SaveFileDialog(ctx, wailsruntime.SaveDialogOptions{
+		Title:            "保存 Transparent Canvas Editor 项目",
+		DefaultDirectory: defaultDir,
+		DefaultFilename:  defaultName,
+		Filters: []wailsruntime.FileFilter{
+			{DisplayName: "Transparent Canvas Editor 项目 (*.json)", Pattern: "*.json"},
+			{DisplayName: "所有文件 (*.*)", Pattern: "*.*"},
+		},
+		CanCreateDirectories: true,
+	})
+	if err != nil {
+		return "", fmt.Errorf("open save dialog: %w", err)
+	}
+	if selected == "" {
+		return "", nil
+	}
+	if filepath.Ext(selected) == "" {
+		selected += ".json"
+	}
+	if err := atomicfile.Write(selected, []byte(raw), 0o600); err != nil {
+		return "", fmt.Errorf("save project: %w", err)
+	}
+
+	a.mu.Lock()
+	a.lastProjectPath = selected
+	a.mu.Unlock()
+	return selected, nil
+}
+
+func (a *App) RevealWorkspace() error {
+	path := a.workspacePath
+	switch goruntime.GOOS {
+	case "windows":
+		arg := "/select," + path
+		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+			arg = a.configDir
+		}
+		return exec.Command("explorer.exe", arg).Start()
+	case "darwin":
+		if _, err := os.Stat(path); err == nil {
+			return exec.Command("open", "-R", path).Start()
+		}
+		return exec.Command("open", a.configDir).Start()
+	default:
+		return exec.Command("xdg-open", a.configDir).Start()
+	}
 }
 
 func (a *App) SaveImageAsset(ref, dataURL string) error {
@@ -177,6 +261,30 @@ func (a *App) CleanupImageAssets(usedRefs []string) (int, error) {
 
 func (a *App) imagePath(ref string) string {
 	return filepath.Join(a.imageDir, ref+".json")
+}
+
+func validateProjectJSON(raw string) error {
+	var probe struct {
+		Format string `json:"format"`
+	}
+	if err := json.Unmarshal([]byte(raw), &probe); err != nil {
+		return fmt.Errorf("invalid project JSON: %w", err)
+	}
+	if probe.Format != "" && probe.Format != "transparent-canvas-editor" {
+		return fmt.Errorf("unsupported project format %q", probe.Format)
+	}
+	return nil
+}
+
+func sanitizeProjectFilename(name string) string {
+	name = strings.TrimSpace(filepath.Base(name))
+	if name == "" || name == "." {
+		name = "canvas-project.json"
+	}
+	if filepath.Ext(name) == "" {
+		name += ".json"
+	}
+	return name
 }
 
 func validateImageRef(ref string) error {

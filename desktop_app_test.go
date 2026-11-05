@@ -64,3 +64,23 @@ func TestImageAssetRoundTripAndCleanup(t *testing.T) {
 		t.Fatalf("removed=%d, want 1", removed)
 	}
 }
+
+func TestSanitizeProjectFilename(t *testing.T) {
+	tests := map[string]string{
+		"":          "canvas-project.json",
+		"demo":      "demo.json",
+		"demo.json": "demo.json",
+	}
+	for in, want := range tests {
+		if got := sanitizeProjectFilename(in); got != want {
+			t.Fatalf("sanitizeProjectFilename(%q)=%q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestWorkspacePath(t *testing.T) {
+	app := newTestApp(t)
+	if got, want := app.WorkspacePath(), filepath.Join(app.configDir, "workspace.json"); got != want {
+		t.Fatalf("WorkspacePath()=%q, want %q", got, want)
+	}
+}

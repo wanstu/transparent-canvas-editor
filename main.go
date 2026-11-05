@@ -52,12 +52,15 @@ func run() error {
 	window.StartHiddenOnAutoStart = false
 
 	return desktopkit.Run(desktopkit.Config{
-		ID:                   appID,
-		Title:                appTitle,
-		Assets:               kitui.Mount(assets),
-		Bind:                 []interface{}{app},
-		Launch:               launch,
-		Window:               window,
+		ID:     appID,
+		Title:  appTitle,
+		Assets: kitui.Mount(assets),
+		Bind:   []interface{}{app},
+		Launch: launch,
+		Window: window,
+		Hooks: desktopkit.Hooks{
+			Startup: app.startup,
+		},
 		SingleInstance:       true,
 		SecondInstancePolicy: desktopkit.SecondInstanceWakeAlways,
 	})

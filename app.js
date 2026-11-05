@@ -16,6 +16,7 @@ let alignCloseTimer=null;
 let rightbarCloseTimer=null;
 let desktopSaveTimer=null;
 let desktopCleanupTimer=null;
+let desktopWorkspacePath='';
 const desktopPersistedImages=new Set();
 const historyState={entries:[],currentId:null,redoStack:[],nextId:1,max:100,restoring:false,ready:false};
 const assetStore={nextImageId:1,images:new Map(),imageByValue:new Map()};
@@ -72,6 +73,7 @@ function imageRefsFromProjectData(data){
 }
 async function restoreDesktopWorkspace(){
   const api=desktopApp();if(!api?.LoadWorkspace)return false;
+  if(api.WorkspacePath){try{desktopWorkspacePath=await api.WorkspacePath()}catch(err){console.warn('workspace path unavailable',err)}}
   const raw=await api.LoadWorkspace();if(!raw)return false;
   const data=JSON.parse(raw),refs=imageRefsFromProjectData(data);
   if(refs.size&&api.LoadImageAssets){
@@ -941,12 +943,34 @@ function jumpHistory(id){
 
 const PROJECT_FORMAT='transparent-canvas-editor',PROJECT_VERSION=6;
 function projectSnapshot(){return{format:PROJECT_FORMAT,version:PROJECT_VERSION,savedAt:new Date().toISOString(),assets:{images:exportImageAssets(),fonts:structuredClone(state.customFonts)},canvas:{width:state.canvasW,height:state.canvasH,backgroundOpacity:state.canvasBgOpacity,gradientAngle:state.canvasAngle,colors:structuredClone(state.canvasColors),imageRef:state.canvasImageRef,imageOpacity:state.canvasImageOpacity,imageFit:state.canvasImageFit},objects:structuredClone(state.objects),assists:{snapEnabled:state.snapEnabled,guidesVisible:state.guidesVisible,guides:structuredClone(state.guides)},view:{zoom:state.zoom,panX:state.panX,panY:state.panY},selectedId:state.selectedId,selectedBoxIds:[...state.selectedBoxIds]}}
-function setDataStatus(msg,type=''){
+function setDataStatus(msg,type='',duration=1800){
   const el=$('#dataStatus');clearTimeout(statusTimer);el.textContent=msg;el.className='right-status show'+(type?' '+type:'');
-  statusTimer=setTimeout(()=>{el.className='right-status'},1800)
+  statusTimer=setTimeout(()=>{el.className='right-status'},duration)
 }
 function downloadText(filename,text,mime='application/json'){const blob=new Blob([text],{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500)}
-$('#exportData').onclick=()=>{const data=projectSnapshot();downloadText('canvas-project-'+Date.now()+'.json',JSON.stringify(data,null,2));setDataStatus('已导出：'+data.objects.length+' 个图层','ok')};
+function defaultProjectFilename(){
+  const d=new Date(),p=n=>String(n).padStart(2,'0');
+  return `canvas-project-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.json`
+}
+$('#exportData').onclick=async()=>{
+  const data=projectSnapshot(),raw=JSON.stringify(data,null,2),api=desktopApp();
+  if(api?.SaveProjectAs){
+    try{
+      const path=await api.SaveProjectAs(raw,defaultProjectFilename());
+      if(!path){setDataStatus('已取消保存');return}
+      setDataStatus('已保存：'+path,'ok',5000);return
+    }catch(err){setDataStatus('保存失败：'+(err?.message||err),'err',5000);return}
+  }
+  downloadText(defaultProjectFilename(),raw);setDataStatus('已导出：'+data.objects.length+' 个图层','ok')
+};
+$('#workspaceLocation').onclick=async()=>{
+  const api=desktopApp();if(!api?.WorkspacePath)return;
+  try{
+    desktopWorkspacePath=await api.WorkspacePath();
+    setDataStatus('自动工作区：'+desktopWorkspacePath,'ok',6500);
+    if(api.RevealWorkspace)await api.RevealWorkspace()
+  }catch(err){setDataStatus('打开工作区位置失败：'+(err?.message||err),'err',5000)}
+};
 $('#importData').onclick=()=>$('#importDataFile').click();
 function finiteNumber(v,f){v=Number(v);return Number.isFinite(v)?v:f}
 function cleanColor(v,f='#ffffff'){return typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v)?v:f}
@@ -1010,6 +1034,14 @@ async function exportPNG(crop){
 $('#exportCrop').onclick=()=>exportPNG(true);$('#exportFull').onclick=()=>exportPNG(false);
 
 async function bootstrapEditor(){
+  const api=desktopApp(),workspaceBtn=$('#workspaceLocation');
+  if(api?.WorkspacePath){
+    try{
+      desktopWorkspacePath=await api.WorkspacePath();
+      workspaceBtn.hidden=false;
+      workspaceBtn.title='自动工作区：'+desktopWorkspacePath+'\n点击打开所在位置'
+    }catch(err){console.warn('workspace path unavailable',err)}
+  }else workspaceBtn.hidden=true;
   let restored=false;
   try{restored=await restoreDesktopWorkspace()}catch(err){console.warn('desktop workspace restore failed',err);setDataStatus('桌面工作区恢复失败','err')}
   if(!restored){refreshCanvasControls();addObject(defaultBox());updateWorldTransform()}
