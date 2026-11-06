@@ -256,9 +256,17 @@ function ensureBorders(o){
 }
 function activeBorderSpec(o){const borders=ensureBorders(o);return borders?.[$('#borderSide')?.value||'top']||null}
 function syncLegacyBorderFromTop(o){const b=ensureBorders(o)?.top;if(!b)return;o.borderWidth=b.width;o.borderColor=b.color1;o.borderOpacity=b.opacity}
+function borderSpecsEqual(a,b){
+  return !!a&&!!b&&a.on===b.on&&Math.abs(a.width-b.width)<.001&&Math.abs(a.opacity-b.opacity)<.001&&a.paint===b.paint&&a.color1===b.color1&&a.color2===b.color2
+}
 function refreshBorderControls(o){
-  if(!isFillShape(o))return;const b=activeBorderSpec(o);if(!b)return;
-  $('#borderOn').checked=o.borderOn!==false;$('#borderSideOn').checked=b.on!==false;$('#borderWidth').value=b.width;$('#borderPaint').value=b.paint;$('#borderOpacity').value=Math.round(b.opacity*100);$('#borderOpacityVal').textContent=Math.round(b.opacity*100)+'%';
+  if(!isFillShape(o))return;const borders=ensureBorders(o),b=activeBorderSpec(o);if(!b)return;
+  const ref=borders.top,uniform=BORDER_SIDE_KEYS.every(k=>borderSpecsEqual(ref,borders[k]));
+  $('#borderOn').checked=o.borderOn!==false;
+  $('#borderAllWidth').value=ref.width;$('#borderAllPaint').value=ref.paint;$('#borderAllOpacity').value=Math.round(ref.opacity*100);$('#borderAllOpacityVal').textContent=Math.round(ref.opacity*100)+'%';
+  $('#borderAllColor2Row').style.display=ref.paint==='solid'?'none':'';staticColorEditors.borderAllColor1.set(ref.color1);staticColorEditors.borderAllColor2.set(ref.color2);
+  $('#borderUnifiedHint').textContent=uniform?'当前四边参数一致；修改上方参数会统一修改四边。':'当前四边参数不一致；上方显示上边参数，修改任一统一参数会立即应用到四边。';
+  $('#borderSideOn').checked=b.on!==false;$('#borderWidth').value=b.width;$('#borderPaint').value=b.paint;$('#borderOpacity').value=Math.round(b.opacity*100);$('#borderOpacityVal').textContent=Math.round(b.opacity*100)+'%';
   $('#borderColor2Row').style.display=b.paint==='solid'?'none':'';staticColorEditors.borderColor.set(b.color1);staticColorEditors.borderColor2.set(b.color2)
 }
 function maxBorderWidth(o){const b=ensureBorders(o);return b?Math.max(...BORDER_SIDE_KEYS.map(k=>b[k].on?b[k].width:0)):0}
@@ -562,7 +570,7 @@ function refreshPanels(){
     }else{
       $('#shapePanelTitle').textContent=isEllipse(o)?'圆形外观':'方框外观';$('#radiusRow').style.display=isEllipse(o)?'none':'';
       $('#gradientType').value=o.gradientType||'linear';$('#angleRow').style.display=(o.gradientType||'linear')==='radial'?'none':'';
-      if(!isEllipse(o)){const cr=cornerRadii(o);$('#radiusTL').value=Math.round(cr.tl);$('#radiusTR').value=Math.round(cr.tr);$('#radiusBR').value=Math.round(cr.br);$('#radiusBL').value=Math.round(cr.bl)}
+      if(!isEllipse(o)){const cr=cornerRadii(o),same=Math.abs(cr.tl-cr.tr)<.001&&Math.abs(cr.tl-cr.br)<.001&&Math.abs(cr.tl-cr.bl)<.001;$('#radiusAll').value=same?Math.round(cr.tl):'';$('#radiusTL').value=Math.round(cr.tl);$('#radiusTR').value=Math.round(cr.tr);$('#radiusBR').value=Math.round(cr.br);$('#radiusBL').value=Math.round(cr.bl)}
       $('#bgOpacity').value=Math.round(o.bgOpacity*100);$('#bgOpacityVal').textContent=Math.round(o.bgOpacity*100)+'%';
       $('#angle').value=o.angle;$('#angleVal').textContent=Math.round(o.angle)+'°';
       $('#boxImageOpacity').value=Math.round(o.imageOpacity*100);$('#boxImageOpacityVal').textContent=Math.round(o.imageOpacity*100)+'%';$('#boxImageFit').value=o.imageFit;
@@ -639,6 +647,8 @@ function renderCanvasColorControls(){
   })
 }
 const staticColorEditors={
+  borderAllColor1:bindColorEditor($('#borderAllColor1'),$('#borderAllColor1Picker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o)){const bs=ensureBorders(o);BORDER_SIDE_KEYS.forEach(k=>bs[k].color1=value);syncLegacyBorderFromTop(o)}});if(commit)commitHistory('统一修改四边颜色 1')}),
+  borderAllColor2:bindColorEditor($('#borderAllColor2'),$('#borderAllColor2Picker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o)){const bs=ensureBorders(o);BORDER_SIDE_KEYS.forEach(k=>bs[k].color2=value)}});if(commit)commitHistory('统一修改四边颜色 2')}),
   borderColor:bindColorEditor($('#borderColor'),$('#borderColorPicker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.color1=value;syncLegacyBorderFromTop(o)}});if(commit)commitHistory('修改边框颜色 1')}),
   borderColor2:bindColorEditor($('#borderColor2'),$('#borderColor2Picker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.color2=value}});if(commit)commitHistory('修改边框颜色 2')}),
   shadowColor:bindColorEditor($('#shadowColor'),$('#shadowColorPicker'),(value,commit)=>{mutateSelected(o=>{if(o.type==='box')o.shadowColor=value});if(commit)commitHistory('修改外阴影颜色')}),
@@ -670,7 +680,7 @@ function bindObjectEvents(el,o){
     if(o.locked){gesture=null;return}
     if(deformAddMode&&isFillShape(o)&&o.deformEnabled&&!deformPointId&&!dir){
       const local=worldPointToObjectLocal(o,clientToWorld(e.clientX,e.clientY));
-      if(addDeformPointAt(o,local)){deformAddMode=false;$('#addDeformPoint').classList.remove('active');renderObjects();commitHistory('增加形变点')}else setDataStatus('请点击更靠近轮廓的位置','err');
+      if(addDeformPointAt(o,local,true)){deformAddMode=false;$('#addDeformPoint').classList.remove('active');renderObjects();commitHistory('增加形变点')}else setDataStatus('当前对象无法增加形变点','err');
       return
     }
     if(deformPointId&&isFillShape(o)&&o.deformEnabled&&state.selectedBoxIds.length===1){
@@ -693,7 +703,7 @@ function bindObjectEvents(el,o){
   el.addEventListener('dblclick',e=>{
     if(!isFillShape(o)||!o.deformEnabled||o.locked||e.target.closest('.deform-handle,.handle,.rotate-handle'))return;
     e.preventDefault();e.stopPropagation();const local=worldPointToObjectLocal(o,clientToWorld(e.clientX,e.clientY));
-    if(addDeformPointAt(o,local)){renderObjects();commitHistory('增加形变点')}else setDataStatus('双击更靠近轮廓的位置可增加形变点','err')
+    if(addDeformPointAt(o,local,true)){renderObjects();commitHistory('增加形变点')}else setDataStatus('当前对象无法增加形变点','err')
   });
   el.addEventListener('contextmenu',e=>{
     e.preventDefault();e.stopPropagation();const pointId=Number(e.target.dataset.deformPoint)||null;
@@ -724,6 +734,10 @@ function clientToWorld(clientX,clientY){const r=viewport.getBoundingClientRect()
 function worldPointToObjectLocal(o,p){
   const cx=o.x+o.w/2,cy=o.y+o.h/2,rad=-(o.rotation||0)*Math.PI/180,c=Math.cos(rad),s=Math.sin(rad),dx=p.x-cx,dy=p.y-cy;
   return{x:dx*c-dy*s+o.w/2,y:dx*s+dy*c+o.h/2}
+}
+function objectLocalToWorld(o,p){
+  const cx=o.x+o.w/2,cy=o.y+o.h/2,rad=(o.rotation||0)*Math.PI/180,c=Math.cos(rad),s=Math.sin(rad),dx=p.x-o.w/2,dy=p.y-o.h/2;
+  return{x:cx+dx*c-dy*s,y:cy+dx*s+dy*c}
 }
 function rectsIntersect(a,b){return a.x<=b.x+b.w&&a.x+a.w>=b.x&&a.y<=b.y+b.h&&a.y+a.h>=b.y}
 function focusBounds(bounds,fit=false){
@@ -760,6 +774,17 @@ function equalSpacingCandidate(axis,rect,x,y,excludeIds,threshold){
   return axis==='x'?{pos:best.pos,d:best.d,feedback:{axis:'x',gap:best.gap,x:best.pos+rect.w/2,y:y-24/state.zoom}}:{pos:best.pos,d:best.d,feedback:{axis:'y',gap:best.gap,x:x+rect.w/2,y:best.pos-24/state.zoom}}
 }
 function snapValue(v,targets){if(!state.snapEnabled)return v;const th=8/Math.max(.1,state.zoom);let best=v,dist=Infinity;for(const t of targets){const d=Math.abs(v-t);if(d<=th&&d<dist){best=t;dist=d}}return Math.round(best*1000)/1000}
+function snapDeformPointWorld(o,point,world){
+  if(!state.snapEnabled){clearSnapFeedback();return world}
+  const tx=snapTargets('x',new Set([o.id])),ty=snapTargets('y',new Set([o.id]));
+  if(Math.abs(o.rotation||0)<.001){tx.push(o.x,o.x+o.w/2,o.x+o.w);ty.push(o.y,o.y+o.h/2,o.y+o.h)}
+  ensureDeformPoints(o).forEach(p=>{if(p.id===point.id)return;const wp=objectLocalToWorld(o,deformPointCurveLocal(o,p));tx.push(wp.x);ty.push(wp.y)});
+  const th=8/Math.max(.1,state.zoom);let x=world.x,y=world.y,bx=Infinity,by=Infinity,xLine=null,yLine=null;
+  for(const t of tx){const d=Math.abs(world.x-t);if(d<=th&&d<bx){bx=d;x=t;xLine=t}}
+  for(const t of ty){const d=Math.abs(world.y-t);if(d<=th&&d<by){by=d;y=t;yLine=t}}
+  snapFeedback={lines:[],distances:[]};if(xLine!=null)snapFeedback.lines.push({axis:'vertical',value:xLine});if(yLine!=null)snapFeedback.lines.push({axis:'horizontal',value:yLine});renderSnapFeedback();
+  return{x:Math.round(x*1000)/1000,y:Math.round(y*1000)/1000}
+}
 function snapRectMove(rect,x,y,excludeIds=new Set()){
   if(!state.snapEnabled){clearSnapFeedback();return{x,y}}const tx=snapTargets('x',excludeIds),ty=snapTargets('y',excludeIds),th=8/state.zoom;let dx=0,dy=0,bx=Infinity,by=Infinity,xLine=null,yLine=null;
   for(const c of[x,x+rect.w/2,x+rect.w])for(const t of tx){const d=Math.abs(c-t);if(d<=th&&d<bx){bx=d;dx=t-c;xLine=t}}
@@ -798,7 +823,7 @@ viewport.addEventListener('pointermove',e=>{
   }
   if(gesture.type==='deformPoint'){
     const o=state.objects.find(x=>x.id===gesture.id);if(!o||!isFillShape(o))return;const point=ensureDeformPoints(o).find(p=>p.id===gesture.pointId);if(!point)return;
-    const local=worldPointToObjectLocal(o,clientToWorld(e.clientX,e.clientY)),base=deformPointBaseLocal(o,point),limit=Math.max(o.w,o.h)*1.5;
+    const rawWorld=clientToWorld(e.clientX,e.clientY),snappedWorld=snapDeformPointWorld(o,point,rawWorld),local=worldPointToObjectLocal(o,snappedWorld),base=deformPointBaseLocal(o,point),limit=Math.max(o.w,o.h)*1.5;
     const other=isEllipse(o)?ellipseDeformAt(o,point.t,point.id):rectDeformAt(o,point.side,point.t,point.id);
     const selfWeight=isEllipse(o)?1:Math.max(.001,Math.min(1,point.t/.12,(1-point.t)/.12));
     point.dx=clamp(Math.round(((local.x-base.x-other.dx)/selfWeight)*100)/100,-limit,limit);
@@ -919,24 +944,28 @@ $('#lockAspect').onchange=e=>mutateSelected(o=>{if(isFillShape(o))o.lockAspect=e
 $('#deformEnabled').onchange=e=>{mutateSelected(o=>{if(isFillShape(o)){o.deformEnabled=e.target.checked;ensureDeformPoints(o);if(!e.target.checked){selectedDeformPointId=null;deformAddMode=false}}},true);commitHistory(e.target.checked?'启用局部形变':'关闭局部形变')};
 $('#deformSmoothness').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.deformSmoothness=clamp(+e.target.value||58,20,90)});$('#deformSmoothnessVal').textContent=e.target.value+'%'};
 $('#deformSmoothness').onchange=()=>commitHistory('调整形变平滑范围');
-$('#addDeformPoint').onclick=()=>{const o=selected();if(!isFillShape(o)||!o.deformEnabled||o.locked)return;deformAddMode=!deformAddMode;$('#addDeformPoint').classList.toggle('active',deformAddMode);setDataStatus(deformAddMode?'点击或双击对象轮廓以增加形变点':'已退出增加形变点模式','ok')};
+$('#addDeformPoint').onclick=()=>{const o=selected();if(!isFillShape(o)||!o.deformEnabled||o.locked)return;deformAddMode=!deformAddMode;$('#addDeformPoint').classList.toggle('active',deformAddMode);setDataStatus(deformAddMode?'现在点击对象任意位置，会自动投影到最近轮廓增加形变点':'已退出增加形变点模式','ok')};
 $('#deleteDeformPoint').onclick=()=>{if(!deleteSelectedDeformPoint())setDataStatus('请先选中一个紫色形变点','err')};
 $('#resetDeform').onclick=()=>{mutateSelected(o=>{if(isFillShape(o)){ensureDeformPoints(o).forEach(p=>{p.dx=0;p.dy=0})}},true);commitHistory('重置形变')};
 $('#objW').oninput=e=>mutateSelected(o=>{if(o.type!=='box')return;const ratio=o.w/Math.max(1,o.h),w=Math.max(20,+e.target.value||20);o.w=w;if(o.lockAspect&&!isLine(o))o.h=Math.max(20,w/ratio)},true);
 $('#objH').oninput=e=>mutateSelected(o=>{if(o.type!=='box'||isLine(o))return;const ratio=o.w/Math.max(1,o.h),h=Math.max(20,+e.target.value||20);o.h=h;if(o.lockAspect)o.w=Math.max(20,h*ratio)},true);
-[['radiusTL','tl'],['radiusTR','tr'],['radiusBR','br'],['radiusBL','bl']].forEach(([id,key])=>{$('#'+id).oninput=e=>mutateSelected(o=>{if(isFillShape(o)&&!isEllipse(o)){o.cornerRadii=o.cornerRadii||cornerRadii(o);o.cornerRadii[key]=Math.max(0,+e.target.value||0);o.radius=o.cornerRadii.tl}})});
-$('#syncCorners').onclick=()=>{mutateSelected(o=>{if(isFillShape(o)&&!isEllipse(o)){const v=Math.max(0,+$('#radiusTL').value||0);o.cornerRadii={tl:v,tr:v,br:v,bl:v};o.radius=v}},true);commitHistory('同步四角圆角')};
+$('#radiusAll').oninput=e=>{const v=Math.max(0,+e.target.value||0);mutateSelected(o=>{if(isFillShape(o)&&!isEllipse(o)){o.cornerRadii={tl:v,tr:v,br:v,bl:v};o.radius=v}});['radiusTL','radiusTR','radiusBR','radiusBL'].forEach(id=>$('#'+id).value=v)};
+[['radiusTL','tl'],['radiusTR','tr'],['radiusBR','br'],['radiusBL','bl']].forEach(([id,key])=>{$('#'+id).oninput=e=>{mutateSelected(o=>{if(isFillShape(o)&&!isEllipse(o)){o.cornerRadii=o.cornerRadii||cornerRadii(o);o.cornerRadii[key]=Math.max(0,+e.target.value||0);o.radius=o.cornerRadii.tl}});const o=selected();if(isFillShape(o)&&!isEllipse(o)){const r=cornerRadii(o),same=Math.abs(r.tl-r.tr)<.001&&Math.abs(r.tl-r.br)<.001&&Math.abs(r.tl-r.bl)<.001;$('#radiusAll').value=same?Math.round(r.tl):''}}});
+$('#syncCorners').onclick=()=>{mutateSelected(o=>{if(isFillShape(o)&&!isEllipse(o)){const v=Math.max(0,+$('#radiusTL').value||0);o.cornerRadii={tl:v,tr:v,br:v,bl:v};o.radius=v}},true);const o=selected();if(isFillShape(o)&&!isEllipse(o))$('#radiusAll').value=Math.round(cornerRadii(o).tl);commitHistory('同步四角圆角')};
 $('#gradientType').onchange=e=>mutateSelected(o=>{if(isFillShape(o)){o.gradientType=e.target.value;$('#angleRow').style.display=o.gradientType==='radial'?'none':''}},true);
 $('#bgOpacity').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.bgOpacity=+e.target.value/100});$('#bgOpacityVal').textContent=e.target.value+'%'};
 $('#angle').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.angle=+e.target.value});$('#angleVal').textContent=e.target.value+'°'};
 $('#addColor').onclick=()=>{mutateSelected(o=>{if(isFillShape(o))o.colors.push({c:'#ffffff',p:100})},true);commitHistory('添加对象渐变颜色')};
 $('#borderSide').onchange=()=>{const o=selected();if(isFillShape(o))refreshBorderControls(o)};
 $('#borderOn').oninput=e=>mutateSelected(o=>{if(isFillShape(o))o.borderOn=e.target.checked});
-$('#borderSideOn').oninput=e=>mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.on=e.target.checked}});
-$('#borderWidth').oninput=e=>mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.width=Math.max(0,+e.target.value||0);syncLegacyBorderFromTop(o)}});
+$('#borderAllWidth').oninput=e=>mutateSelected(o=>{if(isFillShape(o)){const v=Math.max(0,+e.target.value||0),bs=ensureBorders(o);BORDER_SIDE_KEYS.forEach(k=>bs[k].width=v);syncLegacyBorderFromTop(o)}});
+$('#borderAllPaint').onchange=e=>{mutateSelected(o=>{if(isFillShape(o)){const bs=ensureBorders(o);BORDER_SIDE_KEYS.forEach(k=>bs[k].paint=e.target.value)}},true);const o=selected();if(isFillShape(o))refreshBorderControls(o)};
+$('#borderAllOpacity').oninput=e=>{mutateSelected(o=>{if(isFillShape(o)){const v=+e.target.value/100,bs=ensureBorders(o);BORDER_SIDE_KEYS.forEach(k=>bs[k].opacity=v);syncLegacyBorderFromTop(o)}});$('#borderAllOpacityVal').textContent=e.target.value+'%'};
+$('#borderSideOn').oninput=e=>{mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.on=e.target.checked}});const o=selected();if(isFillShape(o))refreshBorderControls(o)};
+$('#borderWidth').oninput=e=>{mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.width=Math.max(0,+e.target.value||0);syncLegacyBorderFromTop(o)}});const o=selected();if(isFillShape(o))refreshBorderControls(o)};
 $('#borderPaint').onchange=e=>{mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.paint=e.target.value}},true);const o=selected();if(isFillShape(o))refreshBorderControls(o)};
-$('#borderOpacity').oninput=e=>{mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.opacity=+e.target.value/100;syncLegacyBorderFromTop(o)}});$('#borderOpacityVal').textContent=e.target.value+'%'};
-$('#copyBorderToAll').onclick=()=>{mutateSelected(o=>{if(!isFillShape(o))return;const src=structuredClone(activeBorderSpec(o));const borders=ensureBorders(o);BORDER_SIDE_KEYS.forEach(k=>borders[k]=structuredClone(src));syncLegacyBorderFromTop(o)},true);commitHistory('复制边框到四边')};
+$('#borderOpacity').oninput=e=>{mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.opacity=+e.target.value/100;syncLegacyBorderFromTop(o)}});$('#borderOpacityVal').textContent=e.target.value+'%';const o=selected();if(isFillShape(o))refreshBorderControls(o)};
+$('#copyBorderToAll').onclick=()=>{mutateSelected(o=>{if(!isFillShape(o))return;const src=structuredClone(activeBorderSpec(o));const borders=ensureBorders(o);BORDER_SIDE_KEYS.forEach(k=>borders[k]=structuredClone(src));syncLegacyBorderFromTop(o)},true);const o=selected();if(isFillShape(o))refreshBorderControls(o);commitHistory('复制边框到四边')};
 $('#boxImageOpacity').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.imageOpacity=+e.target.value/100});$('#boxImageOpacityVal').textContent=e.target.value+'%'};$('#boxImageFit').onchange=e=>mutateSelected(o=>{if(isFillShape(o))o.imageFit=e.target.value});
 $('#lineWidth').oninput=e=>mutateSelected(o=>{if(isLine(o))o.lineWidth=clamp(+e.target.value||1,1,100)},true);
 $('#lineOpacity').oninput=e=>{mutateSelected(o=>{if(isLine(o))o.lineOpacity=+e.target.value/100});$('#lineOpacityVal').textContent=e.target.value+'%'};

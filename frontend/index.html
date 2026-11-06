@@ -70,14 +70,17 @@
       <section class="section object-card" id="boxPanel">
         <div class="section-title" id="shapePanelTitle">方框外观</div>
         <div id="radiusRow">
-          <div class="section-title sub-title">四角圆角</div>
-          <div class="corner-grid">
-            <label>左上 <input id="radiusTL" type="number" min="0" max="2000" step="1"></label>
-            <label>右上 <input id="radiusTR" type="number" min="0" max="2000" step="1"></label>
-            <label>左下 <input id="radiusBL" type="number" min="0" max="2000" step="1"></label>
-            <label>右下 <input id="radiusBR" type="number" min="0" max="2000" step="1"></label>
-          </div>
-          <button class="smallbtn full mt6" id="syncCorners">用左上值同步四角</button>
+          <div class="row"><label>统一圆角</label><input id="radiusAll" type="number" min="0" max="2000" step="1" placeholder="混合"></div>
+          <details class="advanced-fold" id="cornerDetails">
+            <summary>分别设置四个圆角</summary>
+            <div class="corner-grid mt8">
+              <label>左上 <input id="radiusTL" type="number" min="0" max="2000" step="1"></label>
+              <label>右上 <input id="radiusTR" type="number" min="0" max="2000" step="1"></label>
+              <label>左下 <input id="radiusBL" type="number" min="0" max="2000" step="1"></label>
+              <label>右下 <input id="radiusBR" type="number" min="0" max="2000" step="1"></label>
+            </div>
+            <button class="smallbtn full mt6" id="syncCorners">用左上值同步四角</button>
+          </details>
         </div>
         <div class="row"><label>渐变类型</label><select id="gradientType"><option value="linear">线性渐变</option><option value="radial">中心渐变</option></select></div>
         <div class="row"><label>渐变蒙层透明度 <span id="bgOpacityVal"></span></label><input id="bgOpacity" type="range" min="0" max="100"></div>
@@ -99,17 +102,29 @@
         </div>
 
         <div class="subsection">
-          <div class="section-title">四边边框</div>
+          <div class="section-title">边框</div>
           <label class="toggle"><input id="borderOn" type="checkbox"> 显示边框</label>
-          <div class="row"><label>当前编辑边</label><select id="borderSide"><option value="top">上边</option><option value="right">右边</option><option value="bottom">下边</option><option value="left">左边</option></select></div>
-          <label class="toggle"><input id="borderSideOn" type="checkbox"> 启用当前边</label>
-          <div class="row"><label>粗细</label><input id="borderWidth" type="number" min="0" max="200" step="1"></div>
-          <div class="row"><label>颜色模式</label><select id="borderPaint"><option value="solid">纯色</option><option value="linear">线性渐变</option><option value="radial">中心渐变</option></select></div>
-          <div class="row color-value-row"><label>颜色 1</label><div class="color-editor"><input id="borderColorPicker" type="color"><input id="borderColor" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
-          <div class="row color-value-row" id="borderColor2Row"><label>颜色 2</label><div class="color-editor"><input id="borderColor2Picker" type="color"><input id="borderColor2" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
-          <div class="row"><label>透明度 <span id="borderOpacityVal"></span></label><input id="borderOpacity" type="range" min="0" max="100"></div>
-          <button class="smallbtn full mt6" id="copyBorderToAll">复制当前边参数到四边</button>
-          <div class="hint mt8">四边可分别设置开关、粗细、透明度与颜色。渐变支持“线性渐变”和“中心渐变”。</div>
+          <div class="row"><label>统一粗细</label><input id="borderAllWidth" type="number" min="0" max="200" step="1"></div>
+          <div class="row"><label>统一颜色模式</label><select id="borderAllPaint"><option value="solid">纯色</option><option value="linear">线性渐变</option><option value="radial">中心渐变</option></select></div>
+          <div class="row color-value-row"><label>统一颜色 1</label><div class="color-editor"><input id="borderAllColor1Picker" type="color"><input id="borderAllColor1" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+          <div class="row color-value-row" id="borderAllColor2Row"><label>统一颜色 2</label><div class="color-editor"><input id="borderAllColor2Picker" type="color"><input id="borderAllColor2" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+          <div class="row"><label>统一透明度 <span id="borderAllOpacityVal"></span></label><input id="borderAllOpacity" type="range" min="0" max="100"></div>
+          <div class="hint" id="borderUnifiedHint"></div>
+
+          <details class="advanced-fold" id="borderDetails">
+            <summary>分别设置四条边框</summary>
+            <div class="mt8">
+              <div class="row"><label>当前编辑边</label><select id="borderSide"><option value="top">上边</option><option value="right">右边</option><option value="bottom">下边</option><option value="left">左边</option></select></div>
+              <label class="toggle"><input id="borderSideOn" type="checkbox"> 启用当前边</label>
+              <div class="row"><label>粗细</label><input id="borderWidth" type="number" min="0" max="200" step="1"></div>
+              <div class="row"><label>颜色模式</label><select id="borderPaint"><option value="solid">纯色</option><option value="linear">线性渐变</option><option value="radial">中心渐变</option></select></div>
+              <div class="row color-value-row"><label>颜色 1</label><div class="color-editor"><input id="borderColorPicker" type="color"><input id="borderColor" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+              <div class="row color-value-row" id="borderColor2Row"><label>颜色 2</label><div class="color-editor"><input id="borderColor2Picker" type="color"><input id="borderColor2" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+              <div class="row"><label>透明度 <span id="borderOpacityVal"></span></label><input id="borderOpacity" type="range" min="0" max="100"></div>
+              <button class="smallbtn full mt6" id="copyBorderToAll">复制当前边参数到四边</button>
+            </div>
+          </details>
+          <div class="hint mt8">默认统一修改四边；需要不同效果时再展开“分别设置四条边框”。</div>
         </div>
       </section>
 
