@@ -60,3 +60,26 @@ input[type=range]{width:100%}input[type=color]{width:40px;height:34px;padding:0;
 .deform-insert-preview{position:absolute;display:none;width:22px;height:22px;align-items:center;justify-content:center;background:#8053d7;color:#fff;border:2px solid #fff;border-radius:50%;font:700 18px/1 system-ui;pointer-events:none;z-index:15;box-shadow:0 0 0 1px #8053d7;transform:translate(-50%,-50%) rotate(var(--deform-ui-rotation,0deg)) scale(var(--deform-ui-scale,1))}
 .deform-editing>.deform-insert-preview.show{display:flex}
 .object.deform-adding{cursor:crosshair}
+
+/* The visible contour owns the hit region; the model rectangle has no mouse surface. */
+.object.deform-active{pointer-events:none;outline:none}
+.deform-hit-area{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:2}
+.deform-hit-area path{fill:transparent;stroke:transparent;pointer-events:all;cursor:move}
+.deform-editing>.deform-hit-area path{cursor:default}
+.deform-selection-frame{position:absolute;border:1px solid #2563eb;pointer-events:none;display:none;z-index:16}
+.object.deform-active.selected>.deform-selection-frame,.object.deform-active.multi-selected>.deform-selection-frame{display:block}
+.object.deform-active.multi-selected:not(.selected)>.deform-selection-frame{border-style:dashed}
+.object.deform-active.selected.single-selection>.deform-selection-frame>.handle{display:block}
+.deform-selection-frame>.handle{width:12px;height:12px;pointer-events:auto;left:auto;top:auto;right:auto;bottom:auto;transform:translate(-50%,-50%) scale(var(--deform-ui-scale,1));z-index:20}
+.deform-selection-frame>.nw{left:calc(0px - var(--deform-resize-gap,22px));top:calc(0px - var(--deform-resize-gap,22px))}
+.deform-selection-frame>.n{left:50%;top:calc(0px - var(--deform-resize-gap,22px))}
+.deform-selection-frame>.ne{left:calc(100% + var(--deform-resize-gap,22px));top:calc(0px - var(--deform-resize-gap,22px))}
+.deform-selection-frame>.e{left:calc(100% + var(--deform-resize-gap,22px));top:50%}
+.deform-selection-frame>.se{left:calc(100% + var(--deform-resize-gap,22px));top:calc(100% + var(--deform-resize-gap,22px))}
+.deform-selection-frame>.s{left:50%;top:calc(100% + var(--deform-resize-gap,22px))}
+.deform-selection-frame>.sw{left:calc(0px - var(--deform-resize-gap,22px));top:calc(100% + var(--deform-resize-gap,22px))}
+.deform-selection-frame>.w{left:calc(0px - var(--deform-resize-gap,22px));top:50%}
+.object.deform-active.selected.single-selection>.deform-selection-frame>.rotate-handle{display:block;pointer-events:auto}
+.object.deform-active>.deform-handle{pointer-events:auto}
+.deform-selection-frame>.rotate-handle{top:calc(0px - var(--deform-rotate-gap,48px));transform:translate(-50%,-50%) scale(var(--deform-ui-scale,1))}
+.deform-selection-frame>.rotate-handle::after{display:none}

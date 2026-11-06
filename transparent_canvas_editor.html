@@ -68,6 +68,29 @@ input[type=range]{width:100%}input[type=color]{width:40px;height:34px;padding:0;
 .deform-editing>.deform-insert-preview.show{display:flex}
 .object.deform-adding{cursor:crosshair}
 
+/* The visible contour owns the hit region; the model rectangle has no mouse surface. */
+.object.deform-active{pointer-events:none;outline:none}
+.deform-hit-area{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:2}
+.deform-hit-area path{fill:transparent;stroke:transparent;pointer-events:all;cursor:move}
+.deform-editing>.deform-hit-area path{cursor:default}
+.deform-selection-frame{position:absolute;border:1px solid #2563eb;pointer-events:none;display:none;z-index:16}
+.object.deform-active.selected>.deform-selection-frame,.object.deform-active.multi-selected>.deform-selection-frame{display:block}
+.object.deform-active.multi-selected:not(.selected)>.deform-selection-frame{border-style:dashed}
+.object.deform-active.selected.single-selection>.deform-selection-frame>.handle{display:block}
+.deform-selection-frame>.handle{width:12px;height:12px;pointer-events:auto;left:auto;top:auto;right:auto;bottom:auto;transform:translate(-50%,-50%) scale(var(--deform-ui-scale,1));z-index:20}
+.deform-selection-frame>.nw{left:calc(0px - var(--deform-resize-gap,22px));top:calc(0px - var(--deform-resize-gap,22px))}
+.deform-selection-frame>.n{left:50%;top:calc(0px - var(--deform-resize-gap,22px))}
+.deform-selection-frame>.ne{left:calc(100% + var(--deform-resize-gap,22px));top:calc(0px - var(--deform-resize-gap,22px))}
+.deform-selection-frame>.e{left:calc(100% + var(--deform-resize-gap,22px));top:50%}
+.deform-selection-frame>.se{left:calc(100% + var(--deform-resize-gap,22px));top:calc(100% + var(--deform-resize-gap,22px))}
+.deform-selection-frame>.s{left:50%;top:calc(100% + var(--deform-resize-gap,22px))}
+.deform-selection-frame>.sw{left:calc(0px - var(--deform-resize-gap,22px));top:calc(100% + var(--deform-resize-gap,22px))}
+.deform-selection-frame>.w{left:calc(0px - var(--deform-resize-gap,22px));top:50%}
+.object.deform-active.selected.single-selection>.deform-selection-frame>.rotate-handle{display:block;pointer-events:auto}
+.object.deform-active>.deform-handle{pointer-events:auto}
+.deform-selection-frame>.rotate-handle{top:calc(0px - var(--deform-rotate-gap,48px));transform:translate(-50%,-50%) scale(var(--deform-ui-scale,1))}
+.deform-selection-frame>.rotate-handle::after{display:none}
+
 </style>
 </head>
 <body>
@@ -200,7 +223,7 @@ input[type=range]{width:100%}input[type=color]{width:40px;height:34px;padding:0;
             <button class="smallbtn" id="editDeform" aria-pressed="true">编辑轮廓</button>
             <button class="smallbtn" id="moveDeformObject" aria-pressed="false">移动 / 缩放</button>
           </div>
-          <div class="hint mt8">沿轮廓移动鼠标，出现 ＋ 后点击即可加点并拖动。点位编号与下方列表对应；拖点只影响它两侧的相邻线段。</div>
+          <div class="hint mt8">沿轮廓移动鼠标，出现 ＋ 后点击即可加点并拖动。点位编号与下方列表对应；拖点只影响它两侧的相邻线段。蓝色方块可直接缩放整个轮廓。</div>
           <div class="row"><label>整体弧度平滑 <span id="deformSmoothnessVal"></span></label><input id="deformSmoothness" type="range" min="20" max="90" value="58"></div>
           <div class="inline2">
             <button class="smallbtn" id="addDeformPoint">＋ 增加形变点</button>
@@ -735,11 +758,11 @@ function isDeformEditing(o){return !!(isFillShape(o)&&o.deformEnabled&&deformEdi
 function deformOutlinePath(o){
   const line=p=>`${p.x.toFixed(3)} ${p.y.toFixed(3)}`;let d='';
   if(isEllipse(o)){
-    for(let i=0;i<160;i++){const p=deformPointCurveLocal(o,{side:'ellipse',t:i/160});d+=(i?' L':'M')+line(p)}return d+' Z'
+    for(const t of deformSampleParameters(o,'ellipse')){const p=deformPointCurveLocal(o,{side:'ellipse',t});d+=(d?' L':'M')+line(p)}return d+' Z'
   }
   const r=normalizedCornerRadii(o),corners=[{x:o.w,y:r.tr,r:r.tr},{x:o.w-r.br,y:o.h,r:r.br},{x:0,y:o.h-r.bl,r:r.bl},{x:r.tl,y:0,r:r.tl}];
   BORDER_SIDE_KEYS.forEach((side,index)=>{
-    for(let i=0;i<=64;i++){const p=deformPointCurveLocal(o,{side,t:i/64});d+=(d?' L':'M')+line(p)}
+    for(const t of deformSampleParameters(o,side)){const p=deformPointCurveLocal(o,{side,t});d+=(d?' L':'M')+line(p)}
     const c=corners[index];d+=(c.r?` A${c.r} ${c.r} 0 0 1 `:' L')+line(c)
   });return d+' Z'
 }
@@ -750,7 +773,7 @@ function deformHandleHTML(o){
 function syncDeformHandles(el,o){
   if(!o?.deformEnabled||!isFillShape(o))return;
   el.classList.toggle('deform-editing',isDeformEditing(o));el.classList.toggle('deform-adding',deformAddMode&&isDeformEditing(o));
-  el.style.setProperty('--deform-ui-rotation',-(o.rotation||0)+'deg');
+  el.style.setProperty('--deform-ui-rotation',-(o.rotation||0)+'deg');syncDeformGeometry(el,o);
   ensureDeformPoints(o).forEach(p=>{const h=el.querySelector(`[data-deform-point="${p.id}"]`);if(!h)return;const a=deformPointCurveLocal(o,p);h.style.left=a.x+'px';h.style.top=a.y+'px';h.classList.toggle('selected-point',p.id===selectedDeformPointId)});
   const svg=el.querySelector('.deform-outline');if(svg&&isDeformEditing(o)){
     const d=deformOutlinePath(o);svg.querySelectorAll('path').forEach(p=>p.setAttribute('d',d));svg.querySelector('.deform-outline-ink').setAttribute('stroke-width',1.25/Math.max(.1,state.zoom));svg.querySelector('.deform-outline-hit').setAttribute('stroke-width',24/Math.max(.1,state.zoom))
@@ -783,15 +806,61 @@ function cancelDeformGesture(){
   const g=gesture;if(g?.type!=='deformPoint')return;const o=state.objects.find(o=>o.id===g.id);
   if(o)o.deformPoints=structuredClone(g.before);gesture=null;selectedDeformPointId=g.added?null:g.pointId;clearSnapFeedback();hideDeformPreview();renderObjects();setDataStatus('已取消本次形变调整')
 }
+function deformSampleParameters(o,side){
+  const ellipse=isEllipse(o),steps=ellipse?160:64,values=ensureDeformPoints(o).filter(p=>p.side===side).map(p=>p.t);
+  for(let i=0;i<=(ellipse?steps-1:steps);i++)values.push(i/steps);
+  return[...new Set(values)].sort((a,b)=>a-b)
+}
+function deformContourPoints(o){
+  if(isEllipse(o))return deformSampleParameters(o,'ellipse').map(t=>deformPointCurveLocal(o,{side:'ellipse',t}));
+  const points=[],r=normalizedCornerRadii(o),corners=[{x:o.w-r.tr,y:r.tr,r:r.tr},{x:o.w-r.br,y:o.h-r.br,r:r.br},{x:r.bl,y:o.h-r.bl,r:r.bl},{x:r.tl,y:r.tl,r:r.tl}];
+  BORDER_SIDE_KEYS.forEach((side,index)=>{
+    deformSampleParameters(o,side).forEach(t=>points.push(deformPointCurveLocal(o,{side,t})));
+    const c=corners[index];if(c.r)for(let i=1;i<=16;i++){const a=-Math.PI/2+index*Math.PI/2+i/16*Math.PI/2;points.push({x:c.x+Math.cos(a)*c.r,y:c.y+Math.sin(a)*c.r})}
+  });return points
+}
+function pointsBounds(points){
+  let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;
+  for(const p of points){left=Math.min(left,p.x);top=Math.min(top,p.y);right=Math.max(right,p.x);bottom=Math.max(bottom,p.y)}
+  return{x:left,y:top,w:Math.max(.001,right-left),h:Math.max(.001,bottom-top)}
+}
+function getDeformLocalBounds(o){return pointsBounds(deformContourPoints(o))}
+function getObjectEditRect(o){
+  if(isFillShape(o)&&o.deformEnabled){const b=getDeformLocalBounds(o);return{x:o.x+b.x,y:o.y+b.y,w:b.w,h:b.h}}
+  return{x:o.x,y:o.y,...getObjectSize(o)}
+}
+function deformObjectControlsHTML(){return '<svg class="deform-hit-area" aria-hidden="true"><path/></svg><div class="deform-selection-frame">'+handleHTML()+'</div>'}
+function syncDeformGeometry(el,o){
+  if(!isFillShape(o)||!o.deformEnabled)return;
+  const path=el.querySelector('.deform-hit-area path');if(path){path.setAttribute('d',deformOutlinePath(o));path.setAttribute('stroke-width',o.borderOn?maxBorderWidth(o):0)}
+  const b=getDeformLocalBounds(o),frame=el.querySelector('.deform-selection-frame');
+  if(frame){frame.style.left=b.x+'px';frame.style.top=b.y+'px';frame.style.width=b.w+'px';frame.style.height=b.h+'px'}
+  el.style.setProperty('--deform-resize-gap',22/Math.max(.1,state.zoom)+'px');el.style.setProperty('--deform-rotate-gap',48/Math.max(.1,state.zoom)+'px')
+}
+function pointInsideContour(point,points){
+  let winding=0;
+  for(let i=0;i<points.length;i++){
+    const a=points[i],b=points[(i+1)%points.length],cross=(b.x-a.x)*(point.y-a.y)-(point.x-a.x)*(b.y-a.y);
+    if(a.y<=point.y){if(b.y>point.y&&cross>0)winding++}else if(b.y<=point.y&&cross<0)winding--
+  }return winding!==0
+}
+function segmentIntersectsRect(a,b,r){
+  let lo=0,hi=1;
+  for(const [key,min,max]of[['x',r.x,r.x+r.w],['y',r.y,r.y+r.h]]){
+    const delta=b[key]-a[key];if(Math.abs(delta)<1e-9){if(a[key]<min||a[key]>max)return false;continue}
+    const u=(min-a[key])/delta,v=(max-a[key])/delta;lo=Math.max(lo,Math.min(u,v));hi=Math.min(hi,Math.max(u,v));if(lo>hi)return false
+  }return true
+}
+function objectIntersectsSelection(o,rect){
+  if(!rectsIntersect(getObjectBounds(o),rect))return false;
+  if(!isFillShape(o)||!o.deformEnabled)return true;
+  const points=deformContourPoints(o).map(p=>objectLocalToWorld(o,p)),corners=[{x:rect.x,y:rect.y},{x:rect.x+rect.w,y:rect.y},{x:rect.x+rect.w,y:rect.y+rect.h},{x:rect.x,y:rect.y+rect.h}];
+  if(corners.some(p=>pointInsideContour(p,points)))return true;
+  return points.some((p,i)=>segmentIntersectsRect(p,points[(i+1)%points.length],rect))
+}
 function deformExtents(o){
-  if(!o?.deformEnabled||!isFillShape(o))return{left:0,right:0,top:0,bottom:0};
-  let minX=0,minY=0,maxX=o.w,maxY=o.h;
-  if(isEllipse(o)){
-    for(let i=0;i<128;i++){const tt=i/128,a=-Math.PI/2+tt*Math.PI*2,d=ellipseDeformAt(o,tt),x=o.w/2+Math.cos(a)*o.w/2+d.dx,y=o.h/2+Math.sin(a)*o.h/2+d.dy;minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y)}
-  }else{
-    for(const side of BORDER_SIDE_KEYS)for(let i=0;i<=40;i++){const tt=i/40,base=deformPointBaseLocal(o,{side,t:tt,dx:0,dy:0}),d=rectDeformAt(o,side,tt),x=base.x+d.dx,y=base.y+d.dy;minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y)}
-  }
-  return{left:Math.max(0,-minX),right:Math.max(0,maxX-o.w),top:Math.max(0,-minY),bottom:Math.max(0,maxY-o.h)}
+  if(!isFillShape(o)||!o.deformEnabled)return{left:0,right:0,top:0,bottom:0};const b=getDeformLocalBounds(o);
+  return{left:Math.max(0,-b.x),top:Math.max(0,-b.y),right:Math.max(0,b.x+b.w-o.w),bottom:Math.max(0,b.y+b.h-o.h)}
 }
 function nearestDeformLocation(o,local){
   let best=null;
@@ -870,18 +939,19 @@ function setDeformPointPosition(o,point,local){
   point.dx=clamp(local.x-base.x,-limit,limit);point.dy=clamp(local.y-base.y,-limit,limit)
 }
 function deformPreviewPad(o){
-  const outer=o.shadowOn?Math.max(0,finiteNumber(o.shadowBlur,0)*2+finiteNumber(o.shadowSpread,0))+Math.hypot(finiteNumber(o.shadowX,0),finiteNumber(o.shadowY,0)):0,d=deformExtents(o),bulge=Math.max(d.left,d.right,d.top,d.bottom);
-  return Math.ceil(clamp(Math.max(8,outer+maxBorderWidth(o)+4,bulge+8),8,500))
+  const outer=o.shadowOn?Math.max(0,finiteNumber(o.shadowBlur,0)*2+finiteNumber(o.shadowSpread,0))+Math.hypot(finiteNumber(o.shadowX,0),finiteNumber(o.shadowY,0)):0;
+  return Math.ceil(Math.max(8,outer+maxBorderWidth(o)+4))
 }
 async function renderDeformCanvas(el,o){
   let canvas=el.querySelector('.deform-canvas');if(!canvas){canvas=document.createElement('canvas');canvas.className='deform-canvas';el.prepend(canvas)}
   const token=(Number(canvas.dataset.renderToken)||0)+1;canvas.dataset.renderToken=String(token);
-  const pad=deformPreviewPad(o),cssW=Math.ceil(o.w+pad*2),cssH=Math.ceil(o.h+pad*2),dpr=clamp(Math.min(window.devicePixelRatio||1,4096/Math.max(cssW,cssH)),.5,2),tmp=canvas._renderBuffer||(canvas._renderBuffer=document.createElement('canvas'));
+  const pad=deformPreviewPad(o),b=o.deformEnabled?getDeformLocalBounds(o):{x:0,y:0,w:o.w,h:o.h},left=Math.floor(b.x-pad),top=Math.floor(b.y-pad),cssW=Math.ceil(b.x+b.w+pad-left),cssH=Math.ceil(b.y+b.h+pad-top);
+  const dpr=Math.min(2,window.devicePixelRatio||1,4096/Math.max(cssW,cssH)),tmp=canvas._renderBuffer||(canvas._renderBuffer=document.createElement('canvas'));
   tmp.width=Math.max(1,Math.ceil(cssW*dpr));tmp.height=Math.max(1,Math.ceil(cssH*dpr));
   const ctx=tmp.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);
-  const local={...o,x:pad,y:pad,rotation:0};await drawBox(ctx,local);
+  const local={...o,x:-left,y:-top,rotation:0};await drawBox(ctx,local);
   if(Number(canvas.dataset.renderToken)!==token)return;
-  canvas.width=tmp.width;canvas.height=tmp.height;canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';canvas.style.left=(-pad)+'px';canvas.style.top=(-pad)+'px';
+  canvas.width=tmp.width;canvas.height=tmp.height;canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';canvas.style.left=left+'px';canvas.style.top=top+'px';
   const out=canvas.getContext('2d');out.clearRect(0,0,canvas.width,canvas.height);out.drawImage(tmp,0,0)
 }
 function updateWorldDom(){
@@ -938,7 +1008,7 @@ function renderObjects(syncUI=true){
       }else if(o.deformEnabled||bordersNeedCanvas(o)){
         el.style.border='none';el.style.boxShadow='none';el.style.borderRadius='0';
         const canvas=document.createElement('canvas');canvas.className='deform-canvas';el.appendChild(canvas);
-        el.insertAdjacentHTML('beforeend',handleHTML()+(o.deformEnabled?deformHandleHTML(o):''));if(o.deformEnabled)syncDeformHandles(el,o);renderDeformCanvas(el,o)
+        el.insertAdjacentHTML('beforeend',(o.deformEnabled?deformObjectControlsHTML()+deformHandleHTML(o):handleHTML()));if(o.deformEnabled)syncDeformHandles(el,o);renderDeformCanvas(el,o)
       }else{
         el.style.borderRadius=isEllipse(o)?'50%':borderRadiusCSS(o);
         applySolidBordersCSS(el,o);
@@ -1091,9 +1161,9 @@ function refreshPanels(){
   $('#boxPanel').hidden=!fillShape;$('#deformPanel').hidden=!fillShape;$('#linePanel').hidden=!line;$('#shadowPanel').hidden=o?.type!=='box';$('#textPanel').hidden=o?.type!=='text';
   $('#deleteObj').disabled=multi?editableSelectedObjects().length===0:(!has||locked);
   if(!o){$('#layerName').value='';return}
-  $('#layerName').value=o.name||'';$('#objX').value=Math.round(o.x);$('#objY').value=Math.round(o.y);$('#objRotation').value=Math.round(o.rotation||0);$('#lockAspect').checked=!!o.lockAspect;
+  const editRect=getObjectEditRect(o);$('#layerName').value=o.name||'';$('#objX').value=Math.round(editRect.x*100)/100;$('#objY').value=Math.round(editRect.y*100)/100;$('#objRotation').value=Math.round(o.rotation||0);$('#lockAspect').checked=!!o.lockAspect;
   if(o.type==='box'){
-    $('#sizeFields').style.display='grid';$('#objW').value=Math.round(o.w);$('#objH').value=Math.round(o.h);
+    $('#sizeFields').style.display='grid';$('#objW').value=Math.round(editRect.w*100)/100;$('#objH').value=Math.round(editRect.h*100)/100;
     $('#objWLabel').textContent=line?'长度':'宽';$('#objHField').style.display=line?'none':'';$('#objWField').style.display='';$('#objWField').style.gridColumn=line?'1 / -1':'';
     if(line){
       staticColorEditors.lineColor.set(o.lineColor);$('#lineWidth').value=o.lineWidth;$('#lineOpacity').value=Math.round(o.lineOpacity*100);$('#lineOpacityVal').textContent=Math.round(o.lineOpacity*100)+'%';
@@ -1209,7 +1279,7 @@ function bindObjectEvents(el,o){
     if(e.shiftKey&&!dir&&!deformPointId&&!isDeformEditing(o)){selectObject(o,true);renderObjects();return}
     if(!state.selectedBoxIds.includes(o.id)){selectObject(o,false);renderObjects()}
     if(o.locked){gesture=null;return}
-    if(isDeformEditing(o)){
+    if(isDeformEditing(o)&&!dir){
       e.preventDefault();document.activeElement?.blur();hideDeformPreview();
       let point=ensureDeformPoints(o).find(p=>p.id===deformPointId),before=structuredClone(o.deformPoints),added=false;
       if(!point){
@@ -1230,7 +1300,8 @@ function bindObjectEvents(el,o){
       gesture={type:'rotate',id:o.id,center,startAngle:Math.atan2(p.y-center.y,p.x-center.x),origRotation:o.rotation||0};
       el.classList.add('rotating')
     }else if(dir&&o.type==='box'&&state.selectedBoxIds.length===1){
-      gesture={type:'resize',id:o.id,dir,sx:e.clientX,sy:e.clientY,ratio:o.w/Math.max(1,o.h),lockAspect:!!o.lockAspect,orig:{x:o.x,y:o.y,w:o.w,h:o.h}}
+      const deformed=isFillShape(o)&&o.deformEnabled,b=deformed?getDeformLocalBounds(o):{x:o.x,y:o.y,w:o.w,h:o.h};
+      gesture={type:'resize',id:o.id,dir,sx:e.clientX,sy:e.clientY,ratio:b.w/Math.max(.001,b.h),lockAspect:!!o.lockAspect,orig:b,deformed,modelOriginal:deformed?structuredClone(o):null,pointerLocal:deformed?worldPointToObjectLocal(o,clientToWorld(e.clientX,e.clientY)):null};hideDeformPreview()
     }else if(state.selectedBoxIds.length>1&&state.selectedBoxIds.includes(o.id)){
       const items=editableSelectedObjects(),origins=items.map(item=>({id:item.id,x:item.x,y:item.y}));
       if(!origins.length){gesture=null;return}
@@ -1241,7 +1312,7 @@ function bindObjectEvents(el,o){
     viewport.setPointerCapture(e.pointerId)
   });
   el.addEventListener('pointermove',e=>{
-    if(gesture||!isDeformEditing(o)||e.target.closest('.deform-handle')){hideDeformPreview();return}
+    if(gesture||!isDeformEditing(o)||e.target.closest('.deform-handle,.handle,.rotate-handle')){hideDeformPreview();return}
     const local=worldPointToObjectLocal(o,clientToWorld(e.clientX,e.clientY)),loc=nearestDeformLocation(o,local);
     if(loc&&(deformAddMode||loc.distance<=14/Math.max(.1,state.zoom)))showDeformPreview(el,o,loc);else hideDeformPreview()
   });
@@ -1260,11 +1331,12 @@ function getObjectSize(o){if(o.type==='box')return{w:o.w,h:o.h};const m=textMetr
 function getUnrotatedVisualRect(o){
   const base=getObjectSize(o),cy=o.y+base.h/2;
   if(isLine(o)){const h=Math.max(1,o.lineWidth);return{x:o.x,y:cy-h/2,w:o.w,h}}
-  let rect;if(isFillShape(o)&&o.deformEnabled){const d=deformExtents(o);rect={x:o.x-d.left,y:o.y-d.top,w:o.w+d.left+d.right,h:o.h+d.top+d.bottom}}else rect={x:o.x,y:o.y,w:base.w,h:base.h};
+  let rect;if(isFillShape(o)&&o.deformEnabled){const b=getDeformLocalBounds(o);rect={x:o.x+b.x,y:o.y+b.y,w:b.w,h:b.h}}else rect={x:o.x,y:o.y,w:base.w,h:base.h};
   if(isFillShape(o)&&o.borderOn){const p=maxBorderWidth(o)/2;rect={x:rect.x-p,y:rect.y-p,w:rect.w+p*2,h:rect.h+p*2}}
   return rect
 }
 function getObjectBounds(o){
+  if(isFillShape(o)&&o.deformEnabled){const b=pointsBounds(deformContourPoints(o).map(p=>objectLocalToWorld(o,p))),pad=o.borderOn?maxBorderWidth(o)/2:0;return{x:b.x-pad,y:b.y-pad,w:b.w+pad*2,h:b.h+pad*2}}
   const base=getObjectSize(o),cx=o.x+base.w/2,cy=o.y+base.h/2,rect=getUnrotatedVisualRect(o);
   const angle=((o.rotation||0)%360)*Math.PI/180;if(Math.abs(angle)<1e-8)return rect;
   const c=Math.cos(angle),s=Math.sin(angle),pts=[[rect.x,rect.y],[rect.x+rect.w,rect.y],[rect.x+rect.w,rect.y+rect.h],[rect.x,rect.y+rect.h]].map(([x,y])=>{const dx=x-cx,dy=y-cy;return{x:cx+dx*c-dy*s,y:cy+dx*s+dy*c}});
@@ -1344,7 +1416,7 @@ function snapMove(o,x,y){
   const b=getObjectBounds(o),offsetX=b.x-o.x,offsetY=b.y-o.y,p=snapRectMove({w:b.w,h:b.h},x+offsetX,y+offsetY,new Set([o.id]));
   return{x:p.x-offsetX,y:p.y-offsetY}
 }
-function syncPositionFields(o){if(!o||o.id!==state.selectedId||hasMultiBoxes())return;$('#objX').value=Math.round(o.x);$('#objY').value=Math.round(o.y);if(o.type==='box'){$('#objW').value=Math.round(o.w);$('#objH').value=Math.round(o.h)}}
+function syncPositionFields(o){if(!o||o.id!==state.selectedId||hasMultiBoxes())return;const r=getObjectEditRect(o);$('#objX').value=Math.round(r.x*100)/100;$('#objY').value=Math.round(r.y*100)/100;if(o.type==='box'){$('#objW').value=Math.round(r.w*100)/100;$('#objH').value=Math.round(r.h*100)/100}}
 function applyAspectResize(g,d,x,y,w,h,preserve){
   const ratio=g.ratio||1,horiz=d.includes('e')||d.includes('w'),vert=d.includes('n')||d.includes('s');
   if(!preserve)return{x,y,w,h};
@@ -1357,6 +1429,53 @@ function applyAspectResize(g,d,x,y,w,h,preserve){
   const scale=Math.max(1,20/Math.max(.001,w),20/Math.max(.001,h));if(scale>1){w*=scale;h*=scale}
   if(d.includes('w'))x=g.orig.x+g.orig.w-w;if(d.includes('n'))y=g.orig.y+g.orig.h-h;
   return{x,y,w,h}
+}
+function deformBaseDerivative(o,p){
+  if(isEllipse(o)){const a=-Math.PI/2+p.t*Math.PI*2;return{x:-Math.sin(a)*o.w*Math.PI,y:Math.cos(a)*o.h*Math.PI}}
+  const r=normalizedCornerRadii(o);
+  if(p.side==='top')return{x:Math.max(0,o.w-r.tl-r.tr),y:0};if(p.side==='right')return{x:0,y:Math.max(0,o.h-r.tr-r.br)};
+  if(p.side==='bottom')return{x:-Math.max(0,o.w-r.br-r.bl),y:0};return{x:0,y:-Math.max(0,o.h-r.bl-r.tl)}
+}
+function resizeDeformGeometry(o,width,height,original){
+  ensureDeformPoints(original);const sx=width/original.w,sy=height/original.h;
+  o.w=width;o.h=height;
+  if(!isEllipse(o)){const r=cornerRadii(original),scale=Math.min(sx,sy);o.cornerRadii=Object.fromEntries(Object.entries(r).map(([key,v])=>[key,v*scale]));o.radius=o.cornerRadii.tl}
+  o.deformPoints=original.deformPoints.map(p=>{
+    const oldBase=deformPointBaseLocal(original,p),nextBase=deformPointBaseLocal(o,p),oldSlope=deformBaseDerivative(original,p),nextSlope=deformBaseDerivative(o,p);
+    return{...p,dx:(oldBase.x+p.dx)*sx-nextBase.x,dy:(oldBase.y+p.dy)*sy-nextBase.y,slopeX:(oldSlope.x+p.slopeX)*sx-nextSlope.x,slopeY:(oldSlope.y+p.slopeY)*sy-nextSlope.y}
+  })
+}
+function applyDeformedResize(o,original,bounds,target){
+  const sx=Math.max(.01/original.w,target.w/bounds.w),sy=Math.max(.01/original.h,target.h/bounds.h);
+  resizeDeformGeometry(o,original.w*sx,original.h*sy,original);
+  const shift={x:target.x-bounds.x*sx,y:target.y-bounds.y*sy},center=objectLocalToWorld(original,{x:shift.x+o.w/2,y:shift.y+o.h/2});
+  o.x=center.x-o.w/2;o.y=center.y-o.h/2
+}
+function resizeDeformedDimensions(o,width,height){
+  const bounds=getDeformLocalBounds(o),original=structuredClone(o);applyDeformedResize(o,original,bounds,{...bounds,w:width,h:height})
+}
+function snapResizeWorldPoint(point,excludeId){
+  if(!state.snapEnabled){clearSnapFeedback();return point}
+  const tx=snapTargets('x',new Set([excludeId])),ty=snapTargets('y',new Set([excludeId])),x=snapValue(point.x,tx),y=snapValue(point.y,ty),lines=[];
+  if(tx.some(t=>Math.abs(t-x)<.001))lines.push({axis:'vertical',value:x});if(ty.some(t=>Math.abs(t-y)<.001))lines.push({axis:'horizontal',value:y});
+  snapFeedback={lines,distances:[]};renderSnapFeedback();return{x,y}
+}
+function updateDeformedResize(o,g,e){
+  const original=g.modelOriginal,b=g.orig,d=g.dir,now=worldPointToObjectLocal(original,clientToWorld(e.clientX,e.clientY));
+  let dx=now.x-g.pointerLocal.x,dy=now.y-g.pointerLocal.y;
+  if(!e.altKey){
+    const handle={x:d.includes('e')?b.x+b.w:d.includes('w')?b.x:b.x+b.w/2,y:d.includes('s')?b.y+b.h:d.includes('n')?b.y:b.y+b.h/2};
+    const world=objectLocalToWorld(original,{x:handle.x+dx,y:handle.y+dy}),snap=worldPointToObjectLocal(original,snapResizeWorldPoint(world,o.id));dx=snap.x-handle.x;dy=snap.y-handle.y
+  }else clearSnapFeedback();
+  let{x,y,w,h}=b;if(d.includes('e'))w+=dx;if(d.includes('w')){x+=dx;w-=dx}if(d.includes('s'))h+=dy;if(d.includes('n')){y+=dy;h-=dy}
+  ({x,y,w,h}=applyAspectResize(g,d,x,y,w,h,g.lockAspect||e.shiftKey));
+  const minW=20,minH=20;
+  if(w<minW){if(d.includes('w'))x=b.x+b.w-minW;w=minW}if(h<minH){if(d.includes('n'))y=b.y+b.h-minH;h=minH}
+  if(g.lockAspect||e.shiftKey){const factor=Math.max(1,minW/w,minH/h);w*=factor;h*=factor;if(d.includes('w'))x=b.x+b.w-w;if(d.includes('n'))y=b.y+b.h-h}
+  applyDeformedResize(o,original,b,{x,y,w,h});renderObjects(false);syncPositionFields(o)
+}
+function cancelDeformedResize(){
+  const g=gesture;if(g?.type!=='resize'||!g.deformed)return false;const o=state.objects.find(o=>o.id===g.id);if(o)Object.assign(o,structuredClone(g.modelOriginal));gesture=null;clearSnapFeedback();renderObjects();return true
 }
 window.addEventListener('pointermove',e=>{
   if(!gesture)return;
@@ -1374,8 +1493,9 @@ window.addEventListener('pointermove',e=>{
     if(e.shiftKey){axis=Math.abs(rawWorld.x-gesture.startWorld.x)>=Math.abs(rawWorld.y-gesture.startWorld.y)?'x':'y';if(axis==='x')rawWorld.y=gesture.startWorld.y;else rawWorld.x=gesture.startWorld.x}
     const snappedWorld=e.altKey?(clearSnapFeedback(),rawWorld):snapDeformPointWorld(o,point,rawWorld,axis);
     setDeformPointPosition(o,point,worldPointToObjectLocal(o,snappedWorld));
-    renderObjects(false);syncDeformPointFields(o);return
+    renderObjects(false);syncDeformPointFields(o);syncPositionFields(o);return
   }
+  if(gesture.type==='resize'&&gesture.deformed){const o=state.objects.find(o=>o.id===gesture.id);if(o)updateDeformedResize(o,gesture,e);return}
   if(gesture.type==='rotate'){
     const o=state.objects.find(x=>x.id===gesture.id);if(!o)return;const p=clientToWorld(e.clientX,e.clientY),a=Math.atan2(p.y-gesture.center.y,p.x-gesture.center.x),delta=(a-gesture.startAngle)*180/Math.PI;
     let rotation=gesture.origRotation+delta;if(e.shiftKey)rotation=Math.round(rotation/15)*15;o.rotation=Math.round(rotation*100)/100;renderObjects(false);$('#objRotation').value=Math.round(o.rotation);return
@@ -1414,17 +1534,17 @@ window.addEventListener('pointerup',e=>{
     selectionMarquee.classList.remove('show');
     if(moved<3){if(!g.baseIds.length)clearSelection()}
     else{
-      const rect={x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)},hits=state.objects.filter(o=>o.visible!==false&&rectsIntersect(getObjectBounds(o),rect)).map(o=>o.id);
+      const rect={x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)},hits=state.objects.filter(o=>o.visible!==false&&objectIntersectsSelection(o,rect)).map(o=>o.id);
       state.selectedBoxIds=[...new Set([...g.baseIds,...hits])];state.selectedId=state.selectedBoxIds.at(-1)||null
     }
     renderObjects();updateSmartHint();return
   }
   clearSnapFeedback();
-  if(type==='move'||type==='moveGroup')commitHistory('移动对象');else if(type==='resize')commitHistory('调整对象尺寸');else if(type==='rotate')commitHistory('旋转对象');else if(type==='deformPoint'){renderObjects();commitHistory(g.added?'增加形变点':
+  if(type==='move'||type==='moveGroup')commitHistory('移动对象');else if(type==='resize'){renderObjects();commitHistory('调整对象尺寸')}else if(type==='rotate')commitHistory('旋转对象');else if(type==='deformPoint'){renderObjects();commitHistory(g.added?'增加形变点':
     '调整形变点')}
 });
 window.addEventListener('pointercancel',()=>{
-  if(!gesture||gesture.type==='guide')return;if(gesture.type==='deformPoint'){cancelDeformGesture();return}const type=gesture.type;gesture=null;viewport.classList.remove('panning');selectionMarquee.classList.remove('show');world.querySelectorAll('.rotating,.deforming').forEach(el=>{el.classList.remove('rotating');el.classList.remove('deforming')});clearSnapFeedback();
+  if(!gesture||gesture.type==='guide')return;if(gesture.type==='deformPoint'){cancelDeformGesture();return}if(cancelDeformedResize())return;const type=gesture.type;gesture=null;viewport.classList.remove('panning');selectionMarquee.classList.remove('show');world.querySelectorAll('.rotating,.deforming').forEach(el=>{el.classList.remove('rotating');el.classList.remove('deforming')});clearSnapFeedback();
   if(type==='move'||type==='moveGroup'||type==='resize'||type==='rotate'||type==='deformPoint')commitHistory(type==='resize'?'调整对象尺寸':type==='rotate'?'旋转对象':type==='deformPoint'?'形变对象':'移动对象')
 });
 
@@ -1485,7 +1605,7 @@ $('#fitView').onclick=()=>{const pad=100;state.zoom=clamp(Math.min((viewport.cli
 
 function mutateSelected(fn,syncUI=false){const o=selected();if(!o||hasMultiBoxes()||o.locked)return;fn(o);renderObjects(syncUI)}
 $('#layerName').oninput=e=>{const o=selected();if(!o||hasMultiBoxes()||o.locked)return;o.name=e.target.value;renderLayers()};
-$('#objX').oninput=e=>mutateSelected(o=>o.x=+e.target.value||0);$('#objY').oninput=e=>mutateSelected(o=>o.y=+e.target.value||0);
+$('#objX').oninput=e=>mutateSelected(o=>o.x+=(+e.target.value||0)-getObjectEditRect(o).x);$('#objY').oninput=e=>mutateSelected(o=>o.y+=(+e.target.value||0)-getObjectEditRect(o).y);
 $('#objRotation').oninput=e=>mutateSelected(o=>o.rotation=finiteNumber(e.target.value,0));
 $('#lockAspect').onchange=e=>mutateSelected(o=>{if(isFillShape(o))o.lockAspect=e.target.checked});
 $('#deformEnabled').onchange=e=>{mutateSelected(o=>{if(isFillShape(o)){o.deformEnabled=e.target.checked;ensureDeformPoints(o);deformEditMode=true;if(!e.target.checked){selectedDeformPointId=null;deformAddMode=false}}},true);commitHistory(e.target.checked?'启用局部形变':'关闭局部形变')};
@@ -1504,8 +1624,8 @@ for(const [id,axis]of[['deformPointX','x'],['deformPointY','y']]){
 $('#resetDeformPoint').onclick=()=>{const o=selected();if(!isDeformEditing(o))return;const p=ensureDeformPoints(o).find(p=>p.id===selectedDeformPointId);if(p){setDeformPointPosition(o,p,deformPointBaseLocal(o,p));renderObjects();commitHistory('重置形变点')}};
 $('#deleteDeformPoint').onclick=()=>{if(!deleteSelectedDeformPoint())setDataStatus('请先选中一个紫色形变点','err')};
 $('#resetDeform').onclick=()=>{mutateSelected(o=>{if(isFillShape(o)){ensureDeformPoints(o).forEach(p=>{p.dx=0;p.dy=0;p.slopeX=0;p.slopeY=0})}},true);commitHistory('重置形变')};
-$('#objW').oninput=e=>mutateSelected(o=>{if(o.type!=='box')return;const ratio=o.w/Math.max(1,o.h),w=Math.max(20,+e.target.value||20);o.w=w;if(o.lockAspect&&!isLine(o))o.h=Math.max(20,w/ratio)},true);
-$('#objH').oninput=e=>mutateSelected(o=>{if(o.type!=='box'||isLine(o))return;const ratio=o.w/Math.max(1,o.h),h=Math.max(20,+e.target.value||20);o.h=h;if(o.lockAspect)o.w=Math.max(20,h*ratio)},true);
+$('#objW').oninput=e=>mutateSelected(o=>{if(o.type!=='box')return;const r=getObjectEditRect(o),ratio=r.w/Math.max(.001,r.h),w=Math.max(20,+e.target.value||20);if(isFillShape(o)&&o.deformEnabled)resizeDeformedDimensions(o,w,o.lockAspect?Math.max(20,w/ratio):r.h);else{o.w=w;if(o.lockAspect&&!isLine(o))o.h=Math.max(20,w/ratio)}},true);
+$('#objH').oninput=e=>mutateSelected(o=>{if(o.type!=='box'||isLine(o))return;const r=getObjectEditRect(o),ratio=r.w/Math.max(.001,r.h),h=Math.max(20,+e.target.value||20);if(o.deformEnabled)resizeDeformedDimensions(o,o.lockAspect?Math.max(20,h*ratio):r.w,h);else{o.h=h;if(o.lockAspect)o.w=Math.max(20,h*ratio)}},true);
 $('#radiusAll').oninput=e=>{const v=Math.max(0,+e.target.value||0);mutateSelected(o=>{if(isFillShape(o)&&!isEllipse(o)){o.cornerRadii={tl:v,tr:v,br:v,bl:v};o.radius=v}});['radiusTL','radiusTR','radiusBR','radiusBL'].forEach(id=>$('#'+id).value=v)};
 [['radiusTL','tl'],['radiusTR','tr'],['radiusBR','br'],['radiusBL','bl']].forEach(([id,key])=>{$('#'+id).oninput=e=>{mutateSelected(o=>{if(isFillShape(o)&&!isEllipse(o)){o.cornerRadii=o.cornerRadii||cornerRadii(o);o.cornerRadii[key]=Math.max(0,+e.target.value||0);o.radius=o.cornerRadii.tl}});const o=selected();if(isFillShape(o)&&!isEllipse(o)){const r=cornerRadii(o),same=Math.abs(r.tl-r.tr)<.001&&Math.abs(r.tl-r.br)<.001&&Math.abs(r.tl-r.bl)<.001;$('#radiusAll').value=same?Math.round(r.tl):''}}});
 $('#syncCorners').onclick=()=>{mutateSelected(o=>{if(isFillShape(o)&&!isEllipse(o)){const v=Math.max(0,+$('#radiusTL').value||0);o.cornerRadii={tl:v,tr:v,br:v,bl:v};o.radius=v}},true);const o=selected();if(isFillShape(o)&&!isEllipse(o))$('#radiusAll').value=Math.round(cornerRadii(o).tl);commitHistory('同步四角圆角')};
@@ -1737,18 +1857,18 @@ document.querySelector('.workspace').addEventListener('contextmenu',e=>{
   e.preventDefault();showContextMenu(e.clientX,e.clientY,null)
 });
 document.addEventListener('pointerdown',e=>{if(!$('#contextMenu').contains(e.target))hideContextMenu()});
-window.addEventListener('blur',()=>{if(gesture?.type==='deformPoint')cancelDeformGesture();hideContextMenu();setSpacePanHeld(false);viewport.classList.remove('panning');if(gesture?.type==='pan')gesture=null});
+window.addEventListener('blur',()=>{if(gesture?.type==='deformPoint')cancelDeformGesture();cancelDeformedResize();hideContextMenu();setSpacePanHeld(false);viewport.classList.remove('panning');if(gesture?.type==='pan')gesture=null});
 
 document.addEventListener('keyup',e=>{if(e.code==='Space'){e.preventDefault();setSpacePanHeld(false)}});
 document.addEventListener('keydown',e=>{
   const key=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey,editing=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)||document.activeElement?.isContentEditable;
   if(e.code==='Space'&&!editing){e.preventDefault();setSpacePanHeld(true);return}
-  if(mod&&key==='z'&&!editing){e.preventDefault();if(gesture?.type==='deformPoint'){cancelDeformGesture();return}e.shiftKey?redoHistory():undoHistory();return}
-  if(mod&&key==='y'&&!editing){e.preventDefault();if(gesture?.type==='deformPoint')return;redoHistory();return}
+  if(mod&&key==='z'&&!editing){e.preventDefault();if(gesture?.type==='deformPoint'){cancelDeformGesture();return}if(cancelDeformedResize())return;e.shiftKey?redoHistory():undoHistory();return}
+  if(mod&&key==='y'&&!editing){e.preventDefault();if(gesture?.type==='deformPoint'||gesture?.type==='resize')return;redoHistory();return}
   if(e.key==='?'&&!editing){e.preventDefault();$('#rightbarShell').classList.toggle('shortcuts-open');return}
   if(editing)return;
   if(mod&&key==='a'){e.preventDefault();state.selectedBoxIds=state.objects.filter(o=>o.visible!==false).map(o=>o.id);state.selectedId=state.selectedBoxIds.at(-1)||null;renderObjects();return}
-  if(e.key==='Escape'){e.preventDefault();if(gesture?.type==='deformPoint'){cancelDeformGesture();return}if(deformAddMode){deformAddMode=false;hideDeformPreview();renderObjects();setDataStatus('已退出增加形变点模式');return}if(selectedDeformPointId!=null){selectedDeformPointId=null;renderObjects();return}clearSelection();renderObjects();return}
+  if(e.key==='Escape'){e.preventDefault();if(gesture?.type==='deformPoint'){cancelDeformGesture();return}if(cancelDeformedResize())return;if(deformAddMode){deformAddMode=false;hideDeformPreview();renderObjects();setDataStatus('已退出增加形变点模式');return}if(selectedDeformPointId!=null){selectedDeformPointId=null;renderObjects();return}clearSelection();renderObjects();return}
   if(e.key==='Home'){e.preventDefault();const b=selectionBounds();if(b)focusBounds(b,false);else setDataStatus('请先选择对象','err');return}
   if(key==='f'&&!mod&&!e.altKey){e.preventDefault();const b=selectionBounds();if(b)focusBounds(b,true);else setDataStatus('请先选择对象','err');return}
   if(gesture?.type==='deformPoint')return;
@@ -1850,7 +1970,7 @@ function jumpHistory(id){
   $('#rightbarShell').classList.add('history-open');$('.history-group').classList.add('open')
 }
 
-const PROJECT_FORMAT='transparent-canvas-editor',PROJECT_VERSION=12;
+const PROJECT_FORMAT='transparent-canvas-editor',PROJECT_VERSION=13;
 function projectSnapshot(){return{format:PROJECT_FORMAT,version:PROJECT_VERSION,savedAt:new Date().toISOString(),assets:{images:exportImageAssets(),fonts:structuredClone(state.customFonts)},canvas:{width:state.canvasW,height:state.canvasH,backgroundOpacity:state.canvasBgOpacity,gradientType:state.canvasGradientType,gradientAngle:state.canvasAngle,colors:structuredClone(state.canvasColors),imageRef:state.canvasImageRef,imageOpacity:state.canvasImageOpacity,imageFit:state.canvasImageFit},objects:structuredClone(state.objects),assists:{snapEnabled:state.snapEnabled,guidesVisible:state.guidesVisible,guides:structuredClone(state.guides)},view:{zoom:state.zoom,panX:state.panX,panY:state.panY},selectedId:state.selectedId,selectedBoxIds:[...state.selectedBoxIds]}}
 function setDataStatus(msg,type='',duration=1800){
   const el=$('#dataStatus');clearTimeout(statusTimer);el.textContent=msg;el.className='right-status show'+(type?' '+type:'');
@@ -1919,7 +2039,7 @@ function normalizeObject(raw,idFallback,assetAliases=new Map()){
     const cleanedDeform=shape==='line'?{points:[],nextId:1}:cleanDeformPointList(raw.deformPoints,shape,raw.deform);
     return{
       id,type:'box',shape,name:typeof raw.name==='string'?raw.name:defaultName,visible:raw.visible!==false,locked:raw.locked===true,rotation:finiteNumber(raw.rotation,0),lockAspect:shape!=='line'&&raw.lockAspect===true,
-      x:finiteNumber(raw.x,180),y:finiteNumber(raw.y,150),w:Math.max(20,finiteNumber(raw.w,shape==='line'?300:420)),h:shape==='line'?20:Math.max(20,finiteNumber(raw.h,shape==='ellipse'?240:300)),
+      x:finiteNumber(raw.x,180),y:finiteNumber(raw.y,150),w:Math.max(raw.deformModel==='local-segments-v1'?.01:20,finiteNumber(raw.w,shape==='line'?300:420)),h:shape==='line'?20:Math.max(raw.deformModel==='local-segments-v1'?.01:20,finiteNumber(raw.h,shape==='ellipse'?240:300)),
       radius:legacyRadius,cornerRadii,bgOpacity:clamp(finiteNumber(raw.bgOpacity,.88),0,1),gradientType:cleanGradientType(raw.gradientType),angle:finiteNumber(raw.angle,135),colors:cleanStops(raw.colors,[{c:'#f7f8fa',p:0},{c:'#d9dde2',p:55},{c:'#bfc5cb',p:100}]),
       imageRef,imageOpacity:clamp(finiteNumber(raw.imageOpacity,1),0,1),imageFit:cleanFit(raw.imageFit),borderOn:shape==='line'?false:raw.borderOn!==false,borderWidth:legacyBorderWidth,borderColor:legacyBorderColor,borderOpacity:legacyBorderOpacity,borders,
       shadowOn:legacyInner?false:(shape==='line'?raw.shadowOn===true:raw.shadowOn!==false),
@@ -1977,7 +2097,7 @@ function rectSideBase(o,side,t,inset=0){
 }
 function appendDeformedRectPath(ctx,o,inset=0){
   const x=o.x+inset,y=o.y+inset,w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2),r=normalizedCornerRadii(o,inset),steps=32;
-  const appendSide=side=>{for(let i=0;i<=steps;i++){const t=i/steps,b=rectSideBase(o,side,t,inset),d=rectDeformAt(o,side,t);if(i===0&&side==='top')ctx.moveTo(b.x+d.dx,b.y+d.dy);else if(i>0||side!=='top')ctx.lineTo(b.x+d.dx,b.y+d.dy)}};
+  const appendSide=side=>{let index=0;for(const t of deformSampleParameters(o,side)){const b=rectSideBase(o,side,t,inset),d=rectDeformAt(o,side,t);if(index===0&&side==='top')ctx.moveTo(b.x+d.dx,b.y+d.dy);else ctx.lineTo(b.x+d.dx,b.y+d.dy);index++}};
   appendSide('top');ctx.arcTo(x+w,y,x+w,y+r.tr,r.tr);
   appendSide('right');ctx.arcTo(x+w,y+h,x+w-r.br,y+h,r.br);
   appendSide('bottom');ctx.arcTo(x,y+h,x,y+h-r.bl,r.bl);
@@ -1985,7 +2105,7 @@ function appendDeformedRectPath(ctx,o,inset=0){
 }
 function appendDeformedEllipsePath(ctx,o,inset=0){
   const x=o.x+inset,y=o.y+inset,w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2),cx=x+w/2,cy=y+h/2,steps=128;
-  for(let i=0;i<steps;i++){const t=i/steps,a=-Math.PI/2+t*Math.PI*2,d=ellipseDeformAt(o,t),px=cx+Math.cos(a)*w/2+d.dx,py=cy+Math.sin(a)*h/2+d.dy;if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py)}ctx.closePath()
+  let index=0;for(const t of deformSampleParameters(o,'ellipse')){const a=-Math.PI/2+t*Math.PI*2,d=ellipseDeformAt(o,t),px=cx+Math.cos(a)*w/2+d.dx,py=cy+Math.sin(a)*h/2+d.dy;if(index++===0)ctx.moveTo(px,py);else ctx.lineTo(px,py)}ctx.closePath()
 }
 function appendShapeSubpath(ctx,o,inset=0){
   const x=o.x+inset,y=o.y+inset,w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2);
