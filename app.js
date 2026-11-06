@@ -292,8 +292,16 @@ function ensureDeformPoints(o){
       o.deformPoints.forEach(p=>{[p.dx,p.dy]=map[p.side]})
     }
   }
-  let max=0;o.deformPoints.forEach(p=>{p.id=Math.max(1,Math.floor(finiteNumber(p.id,++max)));max=Math.max(max,p.id);p.t=isEllipse(o)?((finiteNumber(p.t,0)%1)+1)%1:clamp(finiteNumber(p.t,.5),0,1);p.dx=finiteNumber(p.dx,0);p.dy=finiteNumber(p.dy,0)});
-  o.nextDeformPointId=Math.max(max+1,Math.floor(finiteNumber(o.nextDeformPointId,max+1)));return o.deformPoints
+  let max=0;o.deformPoints.forEach(p=>{p.id=Math.max(1,Math.floor(finiteNumber(p.id,++max)));max=Math.max(max,p.id);p.t=isEllipse(o)?((finiteNumber(p.t,0)%1)+1)%1:clamp(finiteNumber(p.t,.5),0,1);p.dx=finiteNumber(p.dx,0);p.dy=finiteNumber(p.dy,0);p.slopeX=finiteNumber(p.slopeX,0);p.slopeY=finiteNumber(p.slopeY,0)});
+  o.nextDeformPointId=Math.max(max+1,Math.floor(finiteNumber(o.nextDeformPointId,max+1)));
+  if(o.deformModel!=='local-segments-v1'){
+    // Legacy coefficients are sampled once at the visible anchors. Refit their intervening
+    // spans locally instead of retaining the old cancellation waves and long tails.
+    const offsets=o.deformPoints.map(p=>legacyDeformOffset(o,p.side,p.t));
+    o.deformPoints.forEach((p,i)=>{p.dx=offsets[i].dx;p.dy=offsets[i].dy;p.slopeX=0;p.slopeY=0});
+    o.deformModel='local-segments-v1';updateLocalDeformTangents(o)
+  }
+  return o.deformPoints
 }
 function deformPointBaseLocal(o,p){
   if(isEllipse(o)||p.side==='ellipse'){const a=-Math.PI/2+p.t*Math.PI*2;return{x:o.w/2+Math.cos(a)*o.w/2,y:o.h/2+Math.sin(a)*o.h/2}}
@@ -388,52 +396,61 @@ function addDeformPointAt(o,local,allowFar=false){
   const near=points.find(p=>{const a=deformPointCurveLocal(o,p),dt=Math.abs(p.t-loc.t);return Math.hypot(a.x-position.x,a.y-position.y)*state.zoom<14||(p.side===loc.side&&(isEllipse(o)?Math.min(dt,1-dt):dt)<.012)});
   if(near){selectedDeformPointId=near.id;return true}
   if(points.length>=64){setDataStatus('每个对象最多 64 个形变点','err');return false}
-  const id=o.nextDeformPointId++;points.push({id,side:loc.side,t:loc.t,dx:0,dy:0});selectedDeformPointId=id;return true
+  const field=localDeformAt(o,loc.side,loc.t),id=o.nextDeformPointId++;points.push({id,side:loc.side,t:loc.t,dx:field.dx,dy:field.dy,slopeX:field.slopeX,slopeY:field.slopeY});selectedDeformPointId=id;return true
 }
 function deleteSelectedDeformPoint(){
   const o=selected();if(!isFillShape(o)||!o.deformEnabled||o.locked||hasMultiBoxes()||selectedDeformPointId==null)return false;
   const points=ensureDeformPoints(o),i=points.findIndex(p=>p.id===selectedDeformPointId);if(i<0){selectedDeformPointId=null;return false}
-  // Removing a contribution must not displace the remaining control anchors.
-  const anchors=captureDeformAnchors(o,points[i]);points.splice(i,1);
-  const rest=anchors.points.filter(p=>p.id!==selectedDeformPointId);if(rest.length){const next=captureDeformAnchors(o,rest[0]);next.positions=rest.map(p=>anchors.positions[anchors.points.findIndex(a=>a.id===p.id)]);applyDeformAnchors(next)}
+  points.splice(i,1);
   selectedDeformPointId=points[Math.min(i,points.length-1)]?.id??null;renderObjects();commitHistory('删除形变点');return true
 }
-function deformWeight(o,point,t){
-  const distance=Math.abs(t-point.t),d=isEllipse(o)?Math.min(distance,1-distance):distance,fade=isEllipse(o)?1:Math.max(0,Math.min(1,t/.12,(1-t)/.12));
-  return smoothKernel(d,deformRange(o))*fade
+function legacyDeformOffset(o,side,t){
+  let dx=0,dy=0;const ellipse=isEllipse(o),range=deformRange(o),fade=ellipse?1:Math.max(0,Math.min(1,t/.12,(1-t)/.12));
+  for(const p of o.deformPoints){if(p.side!==side)continue;const distance=Math.abs(t-p.t),d=ellipse?Math.min(distance,1-distance):distance,w=smoothKernel(d,range)*fade;dx+=p.dx*w;dy+=p.dy*w}return{dx,dy}
 }
-function captureDeformAnchors(o,point){
-  const points=ensureDeformPoints(o).filter(p=>isEllipse(o)||p.side===point.side),positions=points.map(p=>deformPointCurveLocal(o,p)),bases=points.map(p=>deformPointBaseLocal(o,p));
-  const matrix=points.map(row=>points.map(col=>deformWeight(o,col,row.t))),order=points.map((_,i)=>i),n=points.length;let singular=false;
-  // Factor once per drag. Each pointer frame then solves two O(n²) systems.
-  for(let k=0;k<n;k++){
-    let pivot=k;for(let i=k+1;i<n;i++)if(Math.abs(matrix[i][k])>Math.abs(matrix[pivot][k]))pivot=i;
-    if(Math.abs(matrix[pivot][k])<1e-8){singular=true;break}
-    [matrix[k],matrix[pivot]]=[matrix[pivot],matrix[k]];[order[k],order[pivot]]=[order[pivot],order[k]];
-    for(let i=k+1;i<n;i++){matrix[i][k]/=matrix[k][k];for(let j=k+1;j<n;j++)matrix[i][j]-=matrix[i][k]*matrix[k][j]}
+function localDeformKnots(o,side){
+  const nodes=ensureDeformPoints(o).filter(p=>p.side===side).sort((a,b)=>a.t-b.t||a.id-b.id),unique=[];
+  for(const p of nodes){if(unique.length&&Math.abs(unique.at(-1).t-p.t)<1e-8)continue;unique.push(p)}
+  if(isEllipse(o))return unique;
+  const end=t=>({t,dx:0,dy:0,slopeX:0,slopeY:0});
+  return[end(0),...unique.filter(p=>p.t>1e-8&&p.t<1-1e-8),end(1)]
+}
+function localDeformSegment(o,side,t){
+  const nodes=localDeformKnots(o,side);if(!nodes.length)return null;
+  if(!isEllipse(o)){
+    t=clamp(t,0,1);for(let i=0;i<nodes.length-1;i++)if(t<=nodes[i+1].t)return{a:nodes[i],b:nodes[i+1],t};return null
   }
-  return{o,points,positions,bases,matrix,order,singular}
+  t=((t%1)+1)%1;
+  for(let i=0;i<nodes.length;i++){
+    const a=nodes[i],b=i+1<nodes.length?nodes[i+1]:{...nodes[0],t:nodes[0].t+1},sample=t<a.t?t+1:t;
+    if(sample>=a.t&&sample<=b.t)return{a,b,t:sample}
+  }return null
 }
-function applyDeformAnchors(a){
-  if(a.singular)return false;const n=a.points.length;
-  const solve=axis=>{
-    const b=a.order.map(i=>a.positions[i][axis]-a.bases[i][axis]);
-    for(let i=0;i<n;i++)for(let j=0;j<i;j++)b[i]-=a.matrix[i][j]*b[j];
-    for(let i=n-1;i>=0;i--){for(let j=i+1;j<n;j++)b[i]-=a.matrix[i][j]*b[j];b[i]/=a.matrix[i][i]}return b
-  };
-  const dx=solve('x'),dy=solve('y');if(![...dx,...dy].every(v=>Number.isFinite(v)&&Math.abs(v)<=20000))return false;
-  a.points.forEach((p,i)=>{p.dx=dx[i];p.dy=dy[i]});return true
+function localDeformAt(o,side,t){
+  const segment=localDeformSegment(o,side,t);if(!segment)return{dx:0,dy:0,slopeX:0,slopeY:0};
+  const {a,b}=segment,h=b.t-a.t,u=clamp((segment.t-a.t)/h,0,1),u2=u*u,u3=u2*u;
+  const value=(key,slope)=>(2*u3-3*u2+1)*a[key]+(u3-2*u2+u)*h*a[slope]+(-2*u3+3*u2)*b[key]+(u3-u2)*h*b[slope];
+  const derivative=(key,slope)=>(6*u2-6*u)/h*a[key]+(3*u2-4*u+1)*a[slope]+(-6*u2+6*u)/h*b[key]+(3*u2-2*u)*b[slope];
+  return{dx:value('dx','slopeX'),dy:value('dy','slopeY'),slopeX:derivative('dx','slopeX'),slopeY:derivative('dy','slopeY')}
 }
-function setDeformPointPosition(o,point,local,anchors=null){
-  const a=anchors||captureDeformAnchors(o,point),i=a.points.findIndex(p=>p.id===point.id);if(i<0)return;
-  const base=deformPointBaseLocal(o,point),limit=Math.max(o.w,o.h)*1.5;
-  a.positions[i]={x:clamp(local.x,base.x-limit,base.x+limit),y:clamp(local.y,base.y-limit,base.y+limit)};
-  if(!applyDeformAnchors(a)){
-    if(!a.singular){setDataStatus('点位过于密集，请减少附近的形变点后再调整','err');return}
-    // Legacy projects may contain coincident anchors; retain their old representation.
-    const other=isEllipse(o)?ellipseDeformAt(o,point.t,point.id):rectDeformAt(o,point.side,point.t,point.id),weight=deformWeight(o,point,point.t);
-    if(weight>1e-6){point.dx=clamp((a.positions[i].x-base.x-other.dx)/weight,-20000,20000);point.dy=clamp((a.positions[i].y-base.y-other.dy)/weight,-20000,20000)}
+function updateLocalDeformTangents(o){
+  const amount=clamp((90-finiteNumber(o.deformSmoothness,58))/70,0,1);
+  for(const side of isEllipse(o)?['ellipse']:BORDER_SIDE_KEYS){
+    const nodes=localDeformKnots(o,side),n=nodes.length;if(!n)continue;
+    for(let i=0;i<n;i++){
+      const p=nodes[i];if(p.id==null)continue;
+      const prev=i?nodes[i-1]:{...nodes[n-1],t:nodes[n-1].t-1},next=i+1<n?nodes[i+1]:{...nodes[0],t:nodes[0].t+1},h0=p.t-prev.t,h1=next.t-p.t;
+      for(const [key,slope]of[['dx','slopeX'],['dy','slopeY']]){
+        const d0=(p[key]-prev[key])/h0,d1=(next[key]-p[key])/h1,w0=2*h1+h0,w1=h1+2*h0;
+        p[slope]=h0>1e-8&&h1>1e-8&&d0*d1>0?amount*(w0+w1)/(w0/d0+w1/d1):0
+      }
+    }
   }
+}
+function setDeformPointPosition(o,point,local){
+  ensureDeformPoints(o);const base=deformPointBaseLocal(o,point),limit=Math.min(20000,Math.max(o.w,o.h)*1.5);
+  // Only this anchor changes. Hermite spans outside its two neighbours retain identical data.
+  point.dx=clamp(local.x-base.x,-limit,limit);point.dy=clamp(local.y-base.y,-limit,limit)
 }
 function deformPreviewPad(o){
   const outer=o.shadowOn?Math.max(0,finiteNumber(o.shadowBlur,0)*2+finiteNumber(o.shadowSpread,0))+Math.hypot(finiteNumber(o.shadowX,0),finiteNumber(o.shadowY,0)):0,d=deformExtents(o),bulge=Math.max(d.left,d.right,d.top,d.bottom);
@@ -787,7 +804,7 @@ function bindObjectEvents(el,o){
       }
       if(!point)return;
       selectedDeformPointId=point.id;deformAddMode=false;
-      gesture={type:'deformPoint',id:o.id,pointId:point.id,sx:e.clientX,sy:e.clientY,startWorld:objectLocalToWorld(o,deformPointCurveLocal(o,point)),pointerWorld:clientToWorld(e.clientX,e.clientY),anchors:captureDeformAnchors(o,point),before,added,moved:false};
+      gesture={type:'deformPoint',id:o.id,pointId:point.id,sx:e.clientX,sy:e.clientY,startWorld:objectLocalToWorld(o,deformPointCurveLocal(o,point)),pointerWorld:clientToWorld(e.clientX,e.clientY),before,added,moved:false};
       // Keep the pressed DOM target alive so pointer capture survives crossing guides and toolbars.
       const node=objectNodeCache.get(o.id);if(node){if(!node.querySelector(`[data-deform-point="${point.id}"]`))node.insertAdjacentHTML('beforeend',deformPointHandleHTML(point));syncDeformHandles(node,o);node.classList.add('deforming')}
       refreshPanels();updateSmartHint();viewport.setPointerCapture(e.pointerId);return
@@ -939,7 +956,7 @@ window.addEventListener('pointermove',e=>{
     let axis=null;
     if(e.shiftKey){axis=Math.abs(rawWorld.x-gesture.startWorld.x)>=Math.abs(rawWorld.y-gesture.startWorld.y)?'x':'y';if(axis==='x')rawWorld.y=gesture.startWorld.y;else rawWorld.x=gesture.startWorld.x}
     const snappedWorld=e.altKey?(clearSnapFeedback(),rawWorld):snapDeformPointWorld(o,point,rawWorld,axis);
-    setDeformPointPosition(o,point,worldPointToObjectLocal(o,snappedWorld),gesture.anchors);
+    setDeformPointPosition(o,point,worldPointToObjectLocal(o,snappedWorld));
     renderObjects(false);syncDeformPointFields(o);return
   }
   if(gesture.type==='rotate'){
@@ -1058,11 +1075,9 @@ $('#deformEnabled').onchange=e=>{mutateSelected(o=>{if(isFillShape(o)){o.deformE
 $('#editDeform').onclick=()=>{deformEditMode=true;deformAddMode=false;renderObjects()};
 $('#moveDeformObject').onclick=()=>{deformEditMode=false;deformAddMode=false;selectedDeformPointId=null;hideDeformPreview();renderObjects()};
 $('#deformSmoothness').oninput=e=>{
-  mutateSelected(o=>{if(!isFillShape(o))return;const groups=isEllipse(o)?['ellipse']:BORDER_SIDE_KEYS,anchors=groups.map(side=>{const p=ensureDeformPoints(o).find(p=>p.side===side);return p?{side,positions:captureDeformAnchors(o,p).positions}:null}).filter(Boolean);
-    o.deformSmoothness=clamp(+e.target.value||58,20,90);for(const a of anchors){const p=o.deformPoints.find(p=>p.side===a.side),next=captureDeformAnchors(o,p);next.positions=a.positions;applyDeformAnchors(next)}
-  });$('#deformSmoothnessVal').textContent=e.target.value+'%'
+  mutateSelected(o=>{if(!isFillShape(o))return;ensureDeformPoints(o);o.deformSmoothness=clamp(+e.target.value||58,20,90);updateLocalDeformTangents(o)});$('#deformSmoothnessVal').textContent=e.target.value+'%'
 };
-$('#deformSmoothness').onchange=()=>{renderObjects();commitHistory('调整形变平滑范围')};
+$('#deformSmoothness').onchange=()=>{renderObjects();commitHistory('调整整体弧度平滑')};
 $('#addDeformPoint').onclick=()=>{const o=selected();if(!isFillShape(o)||!o.deformEnabled||o.locked)return;deformEditMode=true;deformAddMode=!deformAddMode;renderObjects();setDataStatus(deformAddMode?'移动到轮廓查看 ＋ 预览，点击后可直接拖动；Esc 取消':'已退出增加形变点模式','ok')};
 $('#deformPointSelect').onchange=e=>{selectedDeformPointId=Number(e.target.value)||null;deformEditMode=true;renderObjects()};
 for(const [id,axis]of[['deformPointX','x'],['deformPointY','y']]){
@@ -1071,7 +1086,7 @@ for(const [id,axis]of[['deformPointX','x'],['deformPointY','y']]){
 }
 $('#resetDeformPoint').onclick=()=>{const o=selected();if(!isDeformEditing(o))return;const p=ensureDeformPoints(o).find(p=>p.id===selectedDeformPointId);if(p){setDeformPointPosition(o,p,deformPointBaseLocal(o,p));renderObjects();commitHistory('重置形变点')}};
 $('#deleteDeformPoint').onclick=()=>{if(!deleteSelectedDeformPoint())setDataStatus('请先选中一个紫色形变点','err')};
-$('#resetDeform').onclick=()=>{mutateSelected(o=>{if(isFillShape(o)){ensureDeformPoints(o).forEach(p=>{p.dx=0;p.dy=0})}},true);commitHistory('重置形变')};
+$('#resetDeform').onclick=()=>{mutateSelected(o=>{if(isFillShape(o)){ensureDeformPoints(o).forEach(p=>{p.dx=0;p.dy=0;p.slopeX=0;p.slopeY=0})}},true);commitHistory('重置形变')};
 $('#objW').oninput=e=>mutateSelected(o=>{if(o.type!=='box')return;const ratio=o.w/Math.max(1,o.h),w=Math.max(20,+e.target.value||20);o.w=w;if(o.lockAspect&&!isLine(o))o.h=Math.max(20,w/ratio)},true);
 $('#objH').oninput=e=>mutateSelected(o=>{if(o.type!=='box'||isLine(o))return;const ratio=o.w/Math.max(1,o.h),h=Math.max(20,+e.target.value||20);o.h=h;if(o.lockAspect)o.w=Math.max(20,h*ratio)},true);
 $('#radiusAll').oninput=e=>{const v=Math.max(0,+e.target.value||0);mutateSelected(o=>{if(isFillShape(o)&&!isEllipse(o)){o.cornerRadii={tl:v,tr:v,br:v,bl:v};o.radius=v}});['radiusTL','radiusTR','radiusBR','radiusBL'].forEach(id=>$('#'+id).value=v)};
@@ -1418,7 +1433,7 @@ function jumpHistory(id){
   $('#rightbarShell').classList.add('history-open');$('.history-group').classList.add('open')
 }
 
-const PROJECT_FORMAT='transparent-canvas-editor',PROJECT_VERSION=11;
+const PROJECT_FORMAT='transparent-canvas-editor',PROJECT_VERSION=12;
 function projectSnapshot(){return{format:PROJECT_FORMAT,version:PROJECT_VERSION,savedAt:new Date().toISOString(),assets:{images:exportImageAssets(),fonts:structuredClone(state.customFonts)},canvas:{width:state.canvasW,height:state.canvasH,backgroundOpacity:state.canvasBgOpacity,gradientType:state.canvasGradientType,gradientAngle:state.canvasAngle,colors:structuredClone(state.canvasColors),imageRef:state.canvasImageRef,imageOpacity:state.canvasImageOpacity,imageFit:state.canvasImageFit},objects:structuredClone(state.objects),assists:{snapEnabled:state.snapEnabled,guidesVisible:state.guidesVisible,guides:structuredClone(state.guides)},view:{zoom:state.zoom,panX:state.panX,panY:state.panY},selectedId:state.selectedId,selectedBoxIds:[...state.selectedBoxIds]}}
 function setDataStatus(msg,type='',duration=1800){
   const el=$('#dataStatus');clearTimeout(statusTimer);el.textContent=msg;el.className='right-status show'+(type?' '+type:'');
@@ -1464,7 +1479,7 @@ function cleanBorders(rawBorders,color,width,opacity){
   const out={};BORDER_SIDE_KEYS.forEach(k=>out[k]=cleanBorderSpec(rawBorders?.[k],color,width,opacity));return out
 }
 function cleanDeformPointList(rawPoints,shape,legacy){
-  let points=Array.isArray(rawPoints)?rawPoints.slice(0,128).map((p,i)=>({id:Math.max(1,Math.floor(finiteNumber(p?.id,i+1))),side:shape==='ellipse'?'ellipse':(BORDER_SIDE_KEYS.includes(p?.side)?p.side:'top'),t:clamp(finiteNumber(p?.t,.5),0,1),dx:clamp(finiteNumber(p?.dx,0),-20000,20000),dy:clamp(finiteNumber(p?.dy,0),-20000,20000)})):[];
+  let points=Array.isArray(rawPoints)?rawPoints.slice(0,128).map((p,i)=>({id:Math.max(1,Math.floor(finiteNumber(p?.id,i+1))),side:shape==='ellipse'?'ellipse':(BORDER_SIDE_KEYS.includes(p?.side)?p.side:'top'),t:clamp(finiteNumber(p?.t,.5),0,1),dx:clamp(finiteNumber(p?.dx,0),-20000,20000),dy:clamp(finiteNumber(p?.dy,0),-20000,20000),slopeX:clamp(finiteNumber(p?.slopeX,0),-1e9,1e9),slopeY:clamp(finiteNumber(p?.slopeY,0),-1e9,1e9)})):[];
   if(!Array.isArray(rawPoints)){
     points=defaultDeformPoints(shape).map(p=>({...p}));
     const d=legacy||{};
@@ -1504,7 +1519,7 @@ function normalizeObject(raw,idFallback,assetAliases=new Map()){
       innerShadowSpread:clamp(finiteNumber(raw.innerShadowSpread,legacyInner?raw.shadowSpread:0),-100,200),
       innerShadowColor:cleanColor(raw.innerShadowColor,legacyInner?cleanColor(raw.shadowColor,innerDefaultColor):innerDefaultColor),
       innerShadowOpacity:clamp(finiteNumber(raw.innerShadowOpacity,legacyInner?raw.shadowOpacity:(shape==='ellipse'?.16:.18)),0,1),
-      deformEnabled:shape!=='line'&&raw.deformEnabled===true,
+      deformEnabled:shape!=='line'&&raw.deformEnabled===true,deformModel:raw.deformModel==='local-segments-v1'?'local-segments-v1':null,
       deformSmoothness:clamp(finiteNumber(raw.deformSmoothness,58),20,90),
       deform:shape==='line'?{top:0,right:0,bottom:0,left:0}:{top:clamp(finiteNumber(raw.deform?.top,0),-20000,20000),right:clamp(finiteNumber(raw.deform?.right,0),-20000,20000),bottom:clamp(finiteNumber(raw.deform?.bottom,0),-20000,20000),left:clamp(finiteNumber(raw.deform?.left,0),-20000,20000)},deformPoints:cleanedDeform.points,nextDeformPointId:cleanedDeform.nextId,
       lineColor:cleanColor(raw.lineColor,'#2563eb'),lineWidth:clamp(finiteNumber(raw.lineWidth,4),1,100),lineOpacity:clamp(finiteNumber(raw.lineOpacity,1),0,1)
@@ -1534,14 +1549,8 @@ function appendRoundedRectPath4(ctx,o,inset=0){
 }
 function deformRange(o){return .055+clamp(finiteNumber(o.deformSmoothness,58),20,90)/100*.38}
 function smoothKernel(distance,range){if(distance>=range)return 0;const q=distance/range;return .5+.5*Math.cos(Math.PI*q)}
-function rectDeformAt(o,side,t,excludeId=null){
-  let dx=0,dy=0;const range=deformRange(o),edgeFade=Math.max(0,Math.min(1,t/.12,(1-t)/.12));
-  ensureDeformPoints(o).forEach(p=>{if(p.side!==side||p.id===excludeId)return;const w=smoothKernel(Math.abs(t-p.t),range)*edgeFade;dx+=p.dx*w;dy+=p.dy*w});return{dx,dy}
-}
-function ellipseDeformAt(o,t,excludeId=null){
-  let dx=0,dy=0;const range=deformRange(o);
-  ensureDeformPoints(o).forEach(p=>{if(p.side!=='ellipse'||p.id===excludeId)return;const d=Math.abs(t-p.t),cd=Math.min(d,1-d),w=smoothKernel(cd,range);dx+=p.dx*w;dy+=p.dy*w});return{dx,dy}
-}
+function rectDeformAt(o,side,t){return localDeformAt(o,side,t)}
+function ellipseDeformAt(o,t){return localDeformAt(o,'ellipse',t)}
 function rectSideBase(o,side,t,inset=0){
   const x=o.x+inset,y=o.y+inset,w=Math.max(.01,o.w-inset*2),h=Math.max(.01,o.h-inset*2),r=normalizedCornerRadii(o,inset);
   if(side==='top')return{x:x+r.tl+t*Math.max(0,w-r.tl-r.tr),y};
