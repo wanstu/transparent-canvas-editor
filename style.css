@@ -36,3 +36,27 @@ input[type=range]{width:100%}input[type=color]{width:40px;height:34px;padding:0;
 .context-menu{display:none;position:absolute;z-index:120;min-width:190px;padding:6px;background:rgba(255,255,255,.985);border:1px solid #d8e0ea;border-radius:11px;box-shadow:0 16px 38px rgba(31,41,55,.2)}.context-menu.open{display:block}.context-item{width:100%;border:0;background:transparent;border-radius:7px;padding:8px 9px;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#46536a;cursor:pointer;text-align:left;font-size:12px}.context-item:hover{background:#eef4fb}.context-item.danger{color:#c03949}.context-item:disabled{opacity:.4;cursor:not-allowed}.context-sep{height:1px;background:#e7ebf0;margin:4px 2px}.context-shortcut{font-size:10px;color:#98a2b1}
 .help{position:absolute;right:82px;bottom:16px;z-index:30;background:rgba(255,255,255,.92);border:1px solid #dce3ec;border-radius:11px;padding:8px 11px;font-size:11px;color:#6b788d;cursor:pointer;box-shadow:0 6px 20px rgba(44,52,67,.07);max-width:min(760px,calc(100% - 180px));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.help:hover{color:#245aaf;border-color:#b7cdf0;background:#fff}.aspect-lock{align-self:end;min-height:42px;padding-bottom:7px}
 @media(max-width:900px){:root{--panel:310px}.sidebar{padding:14px}.main-tabs{margin:0 -14px;padding-left:14px;padding-right:14px}.help{display:none}.rightbar-shell{right:8px}.history-panel{width:240px}}
+/* Editing controls stay legible and easy to grab at every canvas zoom. */
+.deform-mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:10px;background:#f1eefb}
+.deform-mode-switch .smallbtn{border-color:transparent;background:transparent;color:#6c6385}
+.deform-mode-switch .smallbtn.active{background:#fff;color:#7546c9;border-color:#d9caf5;box-shadow:0 2px 5px #5b21b612}
+.deform-point-fields{padding:10px;border:1px solid #e9defb;border-radius:9px;background:#fbf9ff;margin:8px 0}
+.object.deform-editing{outline:none;cursor:default}
+.object.deform-editing.selected.single-selection>.handle,.object.deform-editing.selected.single-selection>.rotate-handle{display:none}
+.object.deform-active.selected.single-selection:not(.locked)>.deform-handle{display:none}
+.object.deform-editing.selected.single-selection:not(.locked)>.deform-handle{display:grid}
+.deform-handle{width:28px;height:28px;place-items:center;border:0;background:transparent;box-shadow:none;transform:translate(-50%,-50%) rotate(var(--deform-ui-rotation,0deg)) scale(var(--deform-ui-scale,1));z-index:12;font-style:normal;isolation:isolate}
+.deform-handle::before{content:"";position:absolute;width:12px;height:12px;border:2px solid #8053d7;border-radius:50%;background:#fff;box-shadow:0 1px 5px #4e268b33;z-index:-1}
+.deform-handle span{position:absolute;left:24px;top:1px;padding:1px 4px;border:1px solid #ded3f4;border-radius:4px;background:#ffffffed;color:#7951b5;font-size:10px;line-height:14px;pointer-events:none}
+.deform-handle.selected-point{background:transparent;border:0;box-shadow:none;z-index:14}
+.deform-handle.selected-point::before{background:#8053d7;border-color:#fff;box-shadow:0 0 0 2px #8053d7}
+.deform-handle.selected-point span{background:#8053d7;color:#fff;border-color:#8053d7}
+.deform-handle:hover::before{box-shadow:0 0 0 4px #8053d724}
+.deform-outline{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:8;display:none}
+.deform-editing>.deform-outline{display:block}
+.deform-outline path{fill:none;stroke-linejoin:round}
+.deform-outline-ink{stroke:#8b5cf6;opacity:.8}
+.deform-outline-hit{stroke:transparent;pointer-events:stroke;cursor:crosshair}
+.deform-insert-preview{position:absolute;display:none;width:22px;height:22px;align-items:center;justify-content:center;background:#8053d7;color:#fff;border:2px solid #fff;border-radius:50%;font:700 18px/1 system-ui;pointer-events:none;z-index:15;box-shadow:0 0 0 1px #8053d7;transform:translate(-50%,-50%) rotate(var(--deform-ui-rotation,0deg)) scale(var(--deform-ui-scale,1))}
+.deform-editing>.deform-insert-preview.show{display:flex}
+.object.deform-adding{cursor:crosshair}

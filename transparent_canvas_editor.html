@@ -43,6 +43,31 @@ input[type=range]{width:100%}input[type=color]{width:40px;height:34px;padding:0;
 .context-menu{display:none;position:absolute;z-index:120;min-width:190px;padding:6px;background:rgba(255,255,255,.985);border:1px solid #d8e0ea;border-radius:11px;box-shadow:0 16px 38px rgba(31,41,55,.2)}.context-menu.open{display:block}.context-item{width:100%;border:0;background:transparent;border-radius:7px;padding:8px 9px;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#46536a;cursor:pointer;text-align:left;font-size:12px}.context-item:hover{background:#eef4fb}.context-item.danger{color:#c03949}.context-item:disabled{opacity:.4;cursor:not-allowed}.context-sep{height:1px;background:#e7ebf0;margin:4px 2px}.context-shortcut{font-size:10px;color:#98a2b1}
 .help{position:absolute;right:82px;bottom:16px;z-index:30;background:rgba(255,255,255,.92);border:1px solid #dce3ec;border-radius:11px;padding:8px 11px;font-size:11px;color:#6b788d;cursor:pointer;box-shadow:0 6px 20px rgba(44,52,67,.07);max-width:min(760px,calc(100% - 180px));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.help:hover{color:#245aaf;border-color:#b7cdf0;background:#fff}.aspect-lock{align-self:end;min-height:42px;padding-bottom:7px}
 @media(max-width:900px){:root{--panel:310px}.sidebar{padding:14px}.main-tabs{margin:0 -14px;padding-left:14px;padding-right:14px}.help{display:none}.rightbar-shell{right:8px}.history-panel{width:240px}}
+/* Editing controls stay legible and easy to grab at every canvas zoom. */
+.deform-mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:10px;background:#f1eefb}
+.deform-mode-switch .smallbtn{border-color:transparent;background:transparent;color:#6c6385}
+.deform-mode-switch .smallbtn.active{background:#fff;color:#7546c9;border-color:#d9caf5;box-shadow:0 2px 5px #5b21b612}
+.deform-point-fields{padding:10px;border:1px solid #e9defb;border-radius:9px;background:#fbf9ff;margin:8px 0}
+.object.deform-editing{outline:none;cursor:default}
+.object.deform-editing.selected.single-selection>.handle,.object.deform-editing.selected.single-selection>.rotate-handle{display:none}
+.object.deform-active.selected.single-selection:not(.locked)>.deform-handle{display:none}
+.object.deform-editing.selected.single-selection:not(.locked)>.deform-handle{display:grid}
+.deform-handle{width:28px;height:28px;place-items:center;border:0;background:transparent;box-shadow:none;transform:translate(-50%,-50%) rotate(var(--deform-ui-rotation,0deg)) scale(var(--deform-ui-scale,1));z-index:12;font-style:normal;isolation:isolate}
+.deform-handle::before{content:"";position:absolute;width:12px;height:12px;border:2px solid #8053d7;border-radius:50%;background:#fff;box-shadow:0 1px 5px #4e268b33;z-index:-1}
+.deform-handle span{position:absolute;left:24px;top:1px;padding:1px 4px;border:1px solid #ded3f4;border-radius:4px;background:#ffffffed;color:#7951b5;font-size:10px;line-height:14px;pointer-events:none}
+.deform-handle.selected-point{background:transparent;border:0;box-shadow:none;z-index:14}
+.deform-handle.selected-point::before{background:#8053d7;border-color:#fff;box-shadow:0 0 0 2px #8053d7}
+.deform-handle.selected-point span{background:#8053d7;color:#fff;border-color:#8053d7}
+.deform-handle:hover::before{box-shadow:0 0 0 4px #8053d724}
+.deform-outline{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:8;display:none}
+.deform-editing>.deform-outline{display:block}
+.deform-outline path{fill:none;stroke-linejoin:round}
+.deform-outline-ink{stroke:#8b5cf6;opacity:.8}
+.deform-outline-hit{stroke:transparent;pointer-events:stroke;cursor:crosshair}
+.deform-insert-preview{position:absolute;display:none;width:22px;height:22px;align-items:center;justify-content:center;background:#8053d7;color:#fff;border:2px solid #fff;border-radius:50%;font:700 18px/1 system-ui;pointer-events:none;z-index:15;box-shadow:0 0 0 1px #8053d7;transform:translate(-50%,-50%) rotate(var(--deform-ui-rotation,0deg)) scale(var(--deform-ui-scale,1))}
+.deform-editing>.deform-insert-preview.show{display:flex}
+.object.deform-adding{cursor:crosshair}
+
 </style>
 </head>
 <body>
@@ -170,13 +195,29 @@ input[type=range]{width:100%}input[type=color]{width:40px;height:34px;padding:0;
       <section class="section object-card" id="deformPanel" hidden>
         <div class="section-title">局部弧度形变</div>
         <label class="toggle"><input id="deformEnabled" type="checkbox"> 启用形变点</label>
-        <div class="row"><label>平滑范围 <span id="deformSmoothnessVal"></span></label><input id="deformSmoothness" type="range" min="20" max="90" value="58"></div>
-        <div class="inline2">
-          <button class="smallbtn" id="addDeformPoint">＋ 增加形变点</button>
-          <button class="smallbtn" id="deleteDeformPoint">－ 删除选中点</button>
+        <div id="deformTools" hidden>
+          <div class="deform-mode-switch mt8" role="group" aria-label="形变操作模式">
+            <button class="smallbtn" id="editDeform" aria-pressed="true">编辑轮廓</button>
+            <button class="smallbtn" id="moveDeformObject" aria-pressed="false">移动 / 缩放</button>
+          </div>
+          <div class="hint mt8">沿轮廓移动鼠标，出现 ＋ 后点击即可加点并拖动。点位编号与下方列表对应。</div>
+          <div class="row"><label>平滑范围 <span id="deformSmoothnessVal"></span></label><input id="deformSmoothness" type="range" min="20" max="90" value="58"></div>
+          <div class="inline2">
+            <button class="smallbtn" id="addDeformPoint">＋ 增加形变点</button>
+            <button class="smallbtn" id="deleteDeformPoint">－ 删除选中点</button>
+          </div>
+          <div class="row"><label for="deformPointSelect">选中点</label><select id="deformPointSelect"></select></div>
+          <div id="deformPointFields" class="deform-point-fields" hidden>
+            <div class="hint">点坐标 · 相对对象左上角 / px</div>
+            <div class="inline2">
+              <div class="row"><label for="deformPointX">X</label><input id="deformPointX" type="number" step="0.1"></div>
+              <div class="row"><label for="deformPointY">Y</label><input id="deformPointY" type="number" step="0.1"></div>
+            </div>
+            <button class="smallbtn full" id="resetDeformPoint">重置当前点</button>
+          </div>
+          <button class="smallbtn full mt6" id="resetDeform">重置全部形变</button>
+          <div class="hint mt8">方向键 1px · Shift + 方向键 10px · Alt + 方向键 0.1px<br>拖动时 Shift 锁轴 · Alt 暂停吸附 · Esc 取消本次调整<br>Tab 切换点 · Delete 删除选中点</div>
         </div>
-        <button class="smallbtn full mt6" id="resetDeform">重置形变</button>
-        <div class="hint mt8">可直接双击边缘增加点；单击紫色点选中后按 Delete 删除。也可点“增加形变点”后再点击轮廓。拖动点会按平滑范围自动影响附近轮廓。</div>
       </section>
 
       <section class="section object-card" id="shadowPanel" hidden>
@@ -405,6 +446,7 @@ const objectNodeCache=new Map();
 let worldUpdateRAF=0;
 let selectedDeformPointId=null;
 let deformAddMode=false;
+let deformEditMode=true;
 const measureCtx=document.createElement('canvas').getContext('2d');
 const uid=()=>state.nextId++;
 function parseColorValue(value){
@@ -681,10 +723,57 @@ function deformPointBaseLocal(o,p){
 function deformPointCurveLocal(o,p){
   const b=deformPointBaseLocal(o,p),d=isEllipse(o)?ellipseDeformAt(o,p.t):rectDeformAt(o,p.side,p.t);return{x:b.x+d.dx,y:b.y+d.dy}
 }
-function deformHandleHTML(o){return ensureDeformPoints(o).map(p=>`<i class="deform-handle${p.id===selectedDeformPointId?' selected-point':''}" data-deform-point="${p.id}" title="拖动形变点；Delete 删除"></i>`).join('')}
+function isDeformEditing(o){return !!(isFillShape(o)&&o.deformEnabled&&deformEditMode&&!o.locked&&state.selectedId===o.id&&state.selectedBoxIds.length===1)}
+function deformOutlinePath(o){
+  const line=p=>`${p.x.toFixed(3)} ${p.y.toFixed(3)}`;let d='';
+  if(isEllipse(o)){
+    for(let i=0;i<160;i++){const p=deformPointCurveLocal(o,{side:'ellipse',t:i/160});d+=(i?' L':'M')+line(p)}return d+' Z'
+  }
+  const r=normalizedCornerRadii(o),corners=[{x:o.w,y:r.tr,r:r.tr},{x:o.w-r.br,y:o.h,r:r.br},{x:0,y:o.h-r.bl,r:r.bl},{x:r.tl,y:0,r:r.tl}];
+  BORDER_SIDE_KEYS.forEach((side,index)=>{
+    for(let i=0;i<=64;i++){const p=deformPointCurveLocal(o,{side,t:i/64});d+=(d?' L':'M')+line(p)}
+    const c=corners[index];d+=(c.r?` A${c.r} ${c.r} 0 0 1 `:' L')+line(c)
+  });return d+' Z'
+}
+function deformPointHandleHTML(p){return `<i class="deform-handle${p.id===selectedDeformPointId?' selected-point':''}" data-deform-point="${p.id}" role="button" aria-label="形变点 ${p.id}" title="形变点 ${p.id} · 拖动调整，方向键微调，Delete 删除"><span>${p.id}</span></i>`}
+function deformHandleHTML(o){
+  return '<svg class="deform-outline" aria-hidden="true"><path class="deform-outline-ink"/><path class="deform-outline-hit"/></svg><i class="deform-insert-preview" aria-hidden="true">+</i>'+ensureDeformPoints(o).map(deformPointHandleHTML).join('')
+}
 function syncDeformHandles(el,o){
   if(!o?.deformEnabled||!isFillShape(o))return;
-  ensureDeformPoints(o).forEach(p=>{const h=el.querySelector(`[data-deform-point="${p.id}"]`);if(!h)return;const a=deformPointCurveLocal(o,p);h.style.left=a.x+'px';h.style.top=a.y+'px';h.classList.toggle('selected-point',p.id===selectedDeformPointId)})
+  el.classList.toggle('deform-editing',isDeformEditing(o));el.classList.toggle('deform-adding',deformAddMode&&isDeformEditing(o));
+  el.style.setProperty('--deform-ui-rotation',-(o.rotation||0)+'deg');
+  ensureDeformPoints(o).forEach(p=>{const h=el.querySelector(`[data-deform-point="${p.id}"]`);if(!h)return;const a=deformPointCurveLocal(o,p);h.style.left=a.x+'px';h.style.top=a.y+'px';h.classList.toggle('selected-point',p.id===selectedDeformPointId)});
+  const svg=el.querySelector('.deform-outline');if(svg&&isDeformEditing(o)){
+    const d=deformOutlinePath(o);svg.querySelectorAll('path').forEach(p=>p.setAttribute('d',d));svg.querySelector('.deform-outline-ink').setAttribute('stroke-width',1.25/Math.max(.1,state.zoom));svg.querySelector('.deform-outline-hit').setAttribute('stroke-width',24/Math.max(.1,state.zoom))
+  }
+}
+function hideDeformPreview(){world.querySelectorAll('.deform-insert-preview.show').forEach(el=>el.classList.remove('show'))}
+function showDeformPreview(el,o,loc){
+  const preview=el.querySelector('.deform-insert-preview');if(!preview)return;
+  const point=deformPointCurveLocal(o,loc),near=ensureDeformPoints(o).some(p=>Math.hypot(deformPointCurveLocal(o,p).x-point.x,deformPointCurveLocal(o,p).y-point.y)*state.zoom<14);
+  if(near){preview.classList.remove('show');return}
+  preview.style.left=point.x+'px';preview.style.top=point.y+'px';preview.classList.add('show')
+}
+function syncDeformPointFields(o){
+  const p=ensureDeformPoints(o).find(p=>p.id===selectedDeformPointId);if(!p)return;
+  const a=deformPointCurveLocal(o,p);for(const [id,v]of[['deformPointX',a.x],['deformPointY',a.y]])if(document.activeElement!==$('#'+id))$('#'+id).value=Number(v.toFixed(2));
+}
+function refreshDeformControls(o){
+  const editable=!!(o.deformEnabled&&!o.locked&&!hasMultiBoxes()),points=ensureDeformPoints(o),point=points.find(p=>p.id===selectedDeformPointId);
+  $('#deformTools').hidden=!o.deformEnabled;$('#editDeform').disabled=!editable;$('#moveDeformObject').disabled=!editable;
+  $('#editDeform').classList.toggle('active',deformEditMode);$('#moveDeformObject').classList.toggle('active',!deformEditMode);
+  $('#editDeform').setAttribute('aria-pressed',String(deformEditMode));$('#moveDeformObject').setAttribute('aria-pressed',String(!deformEditMode));
+  $('#addDeformPoint').textContent=deformAddMode?'点击轮廓加点…':'＋ 增加形变点';
+  $('#deformPointSelect').innerHTML='<option value="">选择形变点 · '+points.length+' 个</option>'+points.map(p=>`<option value="${p.id}">#${p.id} · ${{top:'上边',right:'右边',bottom:'下边',left:'左边',ellipse:'圆周'}[p.side]||'轮廓'}</option>`).join('');
+  $('#deformPointSelect').value=point?String(point.id):'';$('#deformPointSelect').disabled=!editable;
+  $('#deformPointFields').hidden=!point;
+  ['deformPointX','deformPointY','resetDeformPoint'].forEach(id=>$('#'+id).disabled=!editable||!point);
+  if(point)syncDeformPointFields(o)
+}
+function cancelDeformGesture(){
+  const g=gesture;if(g?.type!=='deformPoint')return;const o=state.objects.find(o=>o.id===g.id);
+  if(o)o.deformPoints=structuredClone(g.before);gesture=null;selectedDeformPointId=g.added?null:g.pointId;clearSnapFeedback();hideDeformPreview();renderObjects();setDataStatus('已取消本次形变调整')
 }
 function deformExtents(o){
   if(!o?.deformEnabled||!isFillShape(o))return{left:0,right:0,top:0,bottom:0};
@@ -697,22 +786,71 @@ function deformExtents(o){
   return{left:Math.max(0,-minX),right:Math.max(0,maxX-o.w),top:Math.max(0,-minY),bottom:Math.max(0,maxY-o.h)}
 }
 function nearestDeformLocation(o,local){
-  const candidates=[];
-  if(isEllipse(o)){
-    for(let i=0;i<160;i++){const t=i/160,a=-Math.PI/2+t*Math.PI*2,d=ellipseDeformAt(o,t),x=o.w/2+Math.cos(a)*o.w/2+d.dx,y=o.h/2+Math.sin(a)*o.h/2+d.dy;candidates.push({side:'ellipse',t,distance:Math.hypot(local.x-x,local.y-y)})}
-  }else{
-    for(const side of BORDER_SIDE_KEYS)for(let i=0;i<=80;i++){const t=i/80,b=deformPointBaseLocal(o,{side,t,dx:0,dy:0}),d=rectDeformAt(o,side,t),x=b.x+d.dx,y=b.y+d.dy;candidates.push({side,t,distance:Math.hypot(local.x-x,local.y-y)})}
-  }
-  return candidates.sort((a,b)=>a.distance-b.distance)[0]||null
+  let best=null;
+  const sample=(side,t)=>{const p=deformPointCurveLocal(o,{side,t});return{side,t,distance:Math.hypot(local.x-p.x,local.y-p.y)}};
+  for(const side of isEllipse(o)?['ellipse']:BORDER_SIDE_KEYS){
+    const steps=isEllipse(o)?128:64;let candidate=null;
+    for(let i=0;i<=steps;i++){const c=sample(side,i/steps);if(!candidate||c.distance<candidate.distance)candidate=c}
+    // Refine in the actual deformed contour rather than snapping to coarse sample slots.
+    let lo=candidate.t-1/steps,hi=candidate.t+1/steps;
+    if(!isEllipse(o)){lo=Math.max(.03,lo);hi=Math.min(.97,hi)}
+    for(let i=0;i<14;i++){const a=lo+(hi-lo)/3,b=hi-(hi-lo)/3;if(sample(side,a).distance<sample(side,b).distance)hi=b;else lo=a}
+    const c=sample(side,isEllipse(o)?((lo+hi)/2+1)%1:clamp((lo+hi)/2,.03,.97));if(!best||c.distance<best.distance)best=c
+  }return best
 }
 function addDeformPointAt(o,local,allowFar=false){
-  if(!isFillShape(o)||!o.deformEnabled)return false;const loc=nearestDeformLocation(o,local),threshold=34/Math.max(.1,state.zoom);if(!loc||(!allowFar&&loc.distance>threshold))return false;
-  if(!isEllipse(o))loc.t=clamp(loc.t,.03,.97);
-  const points=ensureDeformPoints(o),id=o.nextDeformPointId++;points.push({id,side:loc.side,t:loc.t,dx:0,dy:0});selectedDeformPointId=id;return true
+  if(!isFillShape(o)||!o.deformEnabled||o.locked)return false;
+  const loc=nearestDeformLocation(o,local);if(!loc||(!allowFar&&loc.distance>14/Math.max(.1,state.zoom)))return false;
+  const points=ensureDeformPoints(o),position=deformPointCurveLocal(o,loc);
+  const near=points.find(p=>{const a=deformPointCurveLocal(o,p),dt=Math.abs(p.t-loc.t);return Math.hypot(a.x-position.x,a.y-position.y)*state.zoom<14||(p.side===loc.side&&(isEllipse(o)?Math.min(dt,1-dt):dt)<.012)});
+  if(near){selectedDeformPointId=near.id;return true}
+  if(points.length>=64){setDataStatus('每个对象最多 64 个形变点','err');return false}
+  const id=o.nextDeformPointId++;points.push({id,side:loc.side,t:loc.t,dx:0,dy:0});selectedDeformPointId=id;return true
 }
 function deleteSelectedDeformPoint(){
-  const o=selected();if(!isFillShape(o)||!o.deformEnabled||selectedDeformPointId==null)return false;const points=ensureDeformPoints(o),i=points.findIndex(p=>p.id===selectedDeformPointId);if(i<0)return false;
-  points.splice(i,1);selectedDeformPointId=points.at(-1)?.id??null;renderObjects();commitHistory('删除形变点');return true
+  const o=selected();if(!isFillShape(o)||!o.deformEnabled||o.locked||hasMultiBoxes()||selectedDeformPointId==null)return false;
+  const points=ensureDeformPoints(o),i=points.findIndex(p=>p.id===selectedDeformPointId);if(i<0){selectedDeformPointId=null;return false}
+  // Removing a contribution must not displace the remaining control anchors.
+  const anchors=captureDeformAnchors(o,points[i]);points.splice(i,1);
+  const rest=anchors.points.filter(p=>p.id!==selectedDeformPointId);if(rest.length){const next=captureDeformAnchors(o,rest[0]);next.positions=rest.map(p=>anchors.positions[anchors.points.findIndex(a=>a.id===p.id)]);applyDeformAnchors(next)}
+  selectedDeformPointId=points[Math.min(i,points.length-1)]?.id??null;renderObjects();commitHistory('删除形变点');return true
+}
+function deformWeight(o,point,t){
+  const distance=Math.abs(t-point.t),d=isEllipse(o)?Math.min(distance,1-distance):distance,fade=isEllipse(o)?1:Math.max(0,Math.min(1,t/.12,(1-t)/.12));
+  return smoothKernel(d,deformRange(o))*fade
+}
+function captureDeformAnchors(o,point){
+  const points=ensureDeformPoints(o).filter(p=>isEllipse(o)||p.side===point.side),positions=points.map(p=>deformPointCurveLocal(o,p)),bases=points.map(p=>deformPointBaseLocal(o,p));
+  const matrix=points.map(row=>points.map(col=>deformWeight(o,col,row.t))),order=points.map((_,i)=>i),n=points.length;let singular=false;
+  // Factor once per drag. Each pointer frame then solves two O(n²) systems.
+  for(let k=0;k<n;k++){
+    let pivot=k;for(let i=k+1;i<n;i++)if(Math.abs(matrix[i][k])>Math.abs(matrix[pivot][k]))pivot=i;
+    if(Math.abs(matrix[pivot][k])<1e-8){singular=true;break}
+    [matrix[k],matrix[pivot]]=[matrix[pivot],matrix[k]];[order[k],order[pivot]]=[order[pivot],order[k]];
+    for(let i=k+1;i<n;i++){matrix[i][k]/=matrix[k][k];for(let j=k+1;j<n;j++)matrix[i][j]-=matrix[i][k]*matrix[k][j]}
+  }
+  return{o,points,positions,bases,matrix,order,singular}
+}
+function applyDeformAnchors(a){
+  if(a.singular)return false;const n=a.points.length;
+  const solve=axis=>{
+    const b=a.order.map(i=>a.positions[i][axis]-a.bases[i][axis]);
+    for(let i=0;i<n;i++)for(let j=0;j<i;j++)b[i]-=a.matrix[i][j]*b[j];
+    for(let i=n-1;i>=0;i--){for(let j=i+1;j<n;j++)b[i]-=a.matrix[i][j]*b[j];b[i]/=a.matrix[i][i]}return b
+  };
+  const dx=solve('x'),dy=solve('y');if(![...dx,...dy].every(v=>Number.isFinite(v)&&Math.abs(v)<=20000))return false;
+  a.points.forEach((p,i)=>{p.dx=dx[i];p.dy=dy[i]});return true
+}
+function setDeformPointPosition(o,point,local,anchors=null){
+  const a=anchors||captureDeformAnchors(o,point),i=a.points.findIndex(p=>p.id===point.id);if(i<0)return;
+  const base=deformPointBaseLocal(o,point),limit=Math.max(o.w,o.h)*1.5;
+  a.positions[i]={x:clamp(local.x,base.x-limit,base.x+limit),y:clamp(local.y,base.y-limit,base.y+limit)};
+  if(!applyDeformAnchors(a)){
+    if(!a.singular){setDataStatus('点位过于密集，请减少附近的形变点后再调整','err');return}
+    // Legacy projects may contain coincident anchors; retain their old representation.
+    const other=isEllipse(o)?ellipseDeformAt(o,point.t,point.id):rectDeformAt(o,point.side,point.t,point.id),weight=deformWeight(o,point,point.t);
+    if(weight>1e-6){point.dx=clamp((a.positions[i].x-base.x-other.dx)/weight,-20000,20000);point.dy=clamp((a.positions[i].y-base.y-other.dy)/weight,-20000,20000)}
+  }
 }
 function deformPreviewPad(o){
   const outer=o.shadowOn?Math.max(0,finiteNumber(o.shadowBlur,0)*2+finiteNumber(o.shadowSpread,0))+Math.hypot(finiteNumber(o.shadowX,0),finiteNumber(o.shadowY,0)):0,d=deformExtents(o),bulge=Math.max(d.left,d.right,d.top,d.bottom);
@@ -773,7 +911,7 @@ function renderObjects(syncUI=true){
     if(o.visible===false)return;
     const el=document.createElement('div');
     const primary=o.id===state.selectedId,multi=boxIds.has(o.id),shapeClass=o.type==='box'?(isLine(o)?' line-object':isEllipse(o)?' ellipse-object':' box-object'):' text-object';
-    el.className='object'+shapeClass+(o.deformEnabled&&isFillShape(o)?' deform-active':'')+(o.locked?' locked':'')+(primary?' selected':'')+(multi?' multi-selected':'')+(primary&&singleBox&&!o.locked?' single-selection':'');
+    el.className='object'+shapeClass+(o.deformEnabled&&isFillShape(o)?' deform-active':'')+(o.locked?' locked':'')+(primary?' selected':'')+(multi?' multi-selected':'')+(primary&&singleBox&&!o.locked?' single-selection':'')+(isDeformEditing(o)?' deform-editing':'');
     el.dataset.id=o.id;el.style.left=o.x+'px';el.style.top=o.y+'px';el.style.zIndex=i+3;el.style.transform=`rotate(${o.rotation||0}deg)`;el.style.transformOrigin='50% 50%';
     if(o.type==='box'){
       el.style.width=o.w+'px';el.style.height=o.h+'px';
@@ -878,7 +1016,7 @@ function updateSmartHint(){
   const el=$('#smartHint');if(!el)return;const n=selectedObjects().length;let msg='';
   if(spacePanHeld)msg='平移模式：按住 Space + 左键拖动 · 松开 Space 恢复编辑';
   else if(!n)msg='空白拖动框选 · Ctrl+A 全选 · Space / 中键平移 · 滚轮缩放 · ? 全部快捷键';
-  else if(n===1){const o=selected(),kind=objectKindName(o);msg=isFillShape(o)&&o.deformEnabled?kind+'形变模式 · 拖紫色点 · 双击轮廓加点 · Delete 删除选中点 · ? 全部操作':isLine(o)?'直线已选中 · 两端手柄调整长度 · 上方圆点旋转 · Home 居中 · F 缩放到选中 · ? 全部快捷键':o?.type==='box'?kind+'已选中 · 上方圆点旋转 · Shift 缩放锁比例 · Home 居中 · F 缩放到选中 · ? 全部快捷键':'文字已选中 · 上方圆点旋转 · Shift+点击追加多选 · Home 居中 · F 缩放到选中 · ? 全部快捷键'}
+  else if(n===1){const o=selected(),kind=objectKindName(o);msg=isFillShape(o)&&o.deformEnabled?kind+(deformEditMode?' · 编辑轮廓：边缘点击加点并拖动 · Shift 锁轴 · Alt 暂停吸附 · 方向键微调':' · 移动 / 缩放：点击「编辑轮廓」继续调整形变'):isLine(o)?'直线已选中 · 两端手柄调整长度 · 上方圆点旋转 · Home 居中 · F 缩放到选中 · ? 全部快捷键':o?.type==='box'?kind+'已选中 · 上方圆点旋转 · Shift 缩放锁比例 · Home 居中 · F 缩放到选中 · ? 全部快捷键':'文字已选中 · 上方圆点旋转 · Shift+点击追加多选 · Home 居中 · F 缩放到选中 · ? 全部快捷键'}
   else msg=n+' 个对象已选中 · Shift+点击增减选择 · F 缩放到选中 · 方向键移动 · Delete 删除 · ? 全部快捷键';
   el.textContent=msg;el.title=msg+' · 点击查看完整快捷键'
 }
@@ -959,7 +1097,7 @@ function refreshPanels(){
       const points=ensureDeformPoints(o);if(selectedDeformPointId!=null&&!points.some(p=>p.id===selectedDeformPointId))selectedDeformPointId=null;
       $('#deformEnabled').checked=!!o.deformEnabled;$('#deformSmoothness').value=clamp(finiteNumber(o.deformSmoothness,58),20,90);$('#deformSmoothnessVal').textContent=Math.round(clamp(finiteNumber(o.deformSmoothness,58),20,90))+'%';
       $('#deformPanel').querySelectorAll('input,select,button,textarea').forEach(el=>el.disabled=locked||multi);
-      $('#addDeformPoint').disabled=locked||multi||!o.deformEnabled;$('#addDeformPoint').classList.toggle('active',deformAddMode);$('#deleteDeformPoint').disabled=locked||multi||!o.deformEnabled||selectedDeformPointId==null
+      $('#addDeformPoint').disabled=locked||multi||!o.deformEnabled;$('#addDeformPoint').classList.toggle('active',deformAddMode);$('#deleteDeformPoint').disabled=locked||multi||!o.deformEnabled||selectedDeformPointId==null;refreshDeformControls(o)
     }
     $('#shadowOn').checked=!!o.shadowOn;$('#shadowX').value=finiteNumber(o.shadowX,0);$('#shadowY').value=finiteNumber(o.shadowY,0);$('#shadowBlur').value=Math.max(0,finiteNumber(o.shadowBlur,0));$('#shadowSpread').value=finiteNumber(o.shadowSpread,0);staticColorEditors.shadowColor.set(o.shadowColor||'#000000');$('#shadowOpacity').value=Math.round(clamp(finiteNumber(o.shadowOpacity,.25),0,1)*100);$('#shadowOpacityVal').textContent=Math.round(clamp(finiteNumber(o.shadowOpacity,.25),0,1)*100)+'%';
     $('#innerShadowSection').hidden=line;
@@ -1050,17 +1188,26 @@ function bindObjectEvents(el,o){
     if(e.button===1||(e.button===0&&spacePanHeld)){e.stopPropagation();beginPan(e);return}
     if(e.button!==0)return;
     e.stopPropagation();
-    const dir=e.target.dataset.dir,deformPointId=Number(e.target.dataset.deformPoint)||null;
-    if(e.shiftKey&&!dir&&!deformPointId){selectObject(o,true);renderObjects();return}
+    const dir=e.target.dataset.dir,deformPointId=Number(e.target.closest('[data-deform-point]')?.dataset.deformPoint)||null;
+    if(e.shiftKey&&!dir&&!deformPointId&&!isDeformEditing(o)){selectObject(o,true);renderObjects();return}
     if(!state.selectedBoxIds.includes(o.id)){selectObject(o,false);renderObjects()}
     if(o.locked){gesture=null;return}
-    if(deformAddMode&&isFillShape(o)&&o.deformEnabled&&!deformPointId&&!dir){
-      const local=worldPointToObjectLocal(o,clientToWorld(e.clientX,e.clientY));
-      if(addDeformPointAt(o,local,true)){deformAddMode=false;$('#addDeformPoint').classList.remove('active');renderObjects();commitHistory('增加形变点')}else setDataStatus('当前对象无法增加形变点','err');
-      return
-    }
-    if(deformPointId&&isFillShape(o)&&o.deformEnabled&&state.selectedBoxIds.length===1){
-      selectedDeformPointId=deformPointId;$('#deleteDeformPoint').disabled=false;e.target.classList.add('selected-point');gesture={type:'deformPoint',id:o.id,pointId:deformPointId};el.classList.add('deforming')
+    if(isDeformEditing(o)){
+      e.preventDefault();document.activeElement?.blur();hideDeformPreview();
+      let point=ensureDeformPoints(o).find(p=>p.id===deformPointId),before=structuredClone(o.deformPoints),added=false;
+      if(!point){
+        const local=worldPointToObjectLocal(o,clientToWorld(e.clientX,e.clientY)),loc=nearestDeformLocation(o,local);
+        if(!deformAddMode&&(!loc||loc.distance>14/Math.max(.1,state.zoom))){selectedDeformPointId=null;renderObjects();return}
+        const count=o.deformPoints.length;
+        if(!addDeformPointAt(o,local,deformAddMode))return;
+        added=o.deformPoints.length>count;point=o.deformPoints.find(p=>p.id===selectedDeformPointId)
+      }
+      if(!point)return;
+      selectedDeformPointId=point.id;deformAddMode=false;
+      gesture={type:'deformPoint',id:o.id,pointId:point.id,sx:e.clientX,sy:e.clientY,startWorld:objectLocalToWorld(o,deformPointCurveLocal(o,point)),pointerWorld:clientToWorld(e.clientX,e.clientY),anchors:captureDeformAnchors(o,point),before,added,moved:false};
+      // Keep the pressed DOM target alive so pointer capture survives crossing guides and toolbars.
+      const node=objectNodeCache.get(o.id);if(node){if(!node.querySelector(`[data-deform-point="${point.id}"]`))node.insertAdjacentHTML('beforeend',deformPointHandleHTML(point));syncDeformHandles(node,o);node.classList.add('deforming')}
+      refreshPanels();updateSmartHint();viewport.setPointerCapture(e.pointerId);return
     }else if(dir==='rotate'&&state.selectedBoxIds.length===1){
       const s=getObjectSize(o),center={x:o.x+s.w/2,y:o.y+s.h/2},p=clientToWorld(e.clientX,e.clientY);
       gesture={type:'rotate',id:o.id,center,startAngle:Math.atan2(p.y-center.y,p.x-center.x),origRotation:o.rotation||0};
@@ -1076,13 +1223,17 @@ function bindObjectEvents(el,o){
     }
     viewport.setPointerCapture(e.pointerId)
   });
+  el.addEventListener('pointermove',e=>{
+    if(gesture||!isDeformEditing(o)||e.target.closest('.deform-handle')){hideDeformPreview();return}
+    const local=worldPointToObjectLocal(o,clientToWorld(e.clientX,e.clientY)),loc=nearestDeformLocation(o,local);
+    if(loc&&(deformAddMode||loc.distance<=14/Math.max(.1,state.zoom)))showDeformPreview(el,o,loc);else hideDeformPreview()
+  });
+  el.addEventListener('pointerleave',hideDeformPreview);
   el.addEventListener('dblclick',e=>{
-    if(!isFillShape(o)||!o.deformEnabled||o.locked||e.target.closest('.deform-handle,.handle,.rotate-handle'))return;
-    e.preventDefault();e.stopPropagation();const local=worldPointToObjectLocal(o,clientToWorld(e.clientX,e.clientY));
-    if(addDeformPointAt(o,local,true)){renderObjects();commitHistory('增加形变点')}else setDataStatus('当前对象无法增加形变点','err')
+    if(!isDeformEditing(o))return;e.preventDefault();e.stopPropagation()
   });
   el.addEventListener('contextmenu',e=>{
-    e.preventDefault();e.stopPropagation();const pointId=Number(e.target.dataset.deformPoint)||null;
+    e.preventDefault();e.stopPropagation();const pointId=Number(e.target.closest('[data-deform-point]')?.dataset.deformPoint)||null;
     if(state.selectedBoxIds.includes(o.id)&&state.selectedBoxIds.length>1){state.selectedId=o.id}
     else if(state.selectedId!==o.id){selectObject(o,false);renderObjects()}
     if(pointId)selectedDeformPointId=pointId;showContextMenu(e.clientX,e.clientY,o,pointId)
@@ -1150,14 +1301,14 @@ function equalSpacingCandidate(axis,rect,x,y,excludeIds,threshold){
   return axis==='x'?{pos:best.pos,d:best.d,feedback:{axis:'x',gap:best.gap,x:best.pos+rect.w/2,y:y-24/state.zoom}}:{pos:best.pos,d:best.d,feedback:{axis:'y',gap:best.gap,x:x+rect.w/2,y:best.pos-24/state.zoom}}
 }
 function snapValue(v,targets){if(!state.snapEnabled)return v;const th=8/Math.max(.1,state.zoom);let best=v,dist=Infinity;for(const t of targets){const d=Math.abs(v-t);if(d<=th&&d<dist){best=t;dist=d}}return Math.round(best*1000)/1000}
-function snapDeformPointWorld(o,point,world){
+function snapDeformPointWorld(o,point,world,axis=null){
   if(!state.snapEnabled){clearSnapFeedback();return world}
   const tx=snapTargets('x',new Set([o.id])),ty=snapTargets('y',new Set([o.id]));
   if(Math.abs(o.rotation||0)<.001){tx.push(o.x,o.x+o.w/2,o.x+o.w);ty.push(o.y,o.y+o.h/2,o.y+o.h)}
   ensureDeformPoints(o).forEach(p=>{if(p.id===point.id)return;const wp=objectLocalToWorld(o,deformPointCurveLocal(o,p));tx.push(wp.x);ty.push(wp.y)});
   const th=8/Math.max(.1,state.zoom);let x=world.x,y=world.y,bx=Infinity,by=Infinity,xLine=null,yLine=null;
-  for(const t of tx){const d=Math.abs(world.x-t);if(d<=th&&d<bx){bx=d;x=t;xLine=t}}
-  for(const t of ty){const d=Math.abs(world.y-t);if(d<=th&&d<by){by=d;y=t;yLine=t}}
+  for(const t of axis==='y'?[]:tx){const d=Math.abs(world.x-t);if(d<=th&&d<bx){bx=d;x=t;xLine=t}}
+  for(const t of axis==='x'?[]:ty){const d=Math.abs(world.y-t);if(d<=th&&d<by){by=d;y=t;yLine=t}}
   snapFeedback={lines:[],distances:[]};if(xLine!=null)snapFeedback.lines.push({axis:'vertical',value:xLine});if(yLine!=null)snapFeedback.lines.push({axis:'horizontal',value:yLine});renderSnapFeedback();
   return{x:Math.round(x*1000)/1000,y:Math.round(y*1000)/1000}
 }
@@ -1190,7 +1341,7 @@ function applyAspectResize(g,d,x,y,w,h,preserve){
   if(d.includes('w'))x=g.orig.x+g.orig.w-w;if(d.includes('n'))y=g.orig.y+g.orig.h-h;
   return{x,y,w,h}
 }
-viewport.addEventListener('pointermove',e=>{
+window.addEventListener('pointermove',e=>{
   if(!gesture)return;
   if(gesture.type==='pan'){state.panX=gesture.orig.x+(e.clientX-gesture.sx);state.panY=gesture.orig.y+(e.clientY-gesture.sy);updateWorldTransform();return}
   if(gesture.type==='marquee'){
@@ -1199,13 +1350,14 @@ viewport.addEventListener('pointermove',e=>{
   }
   if(gesture.type==='deformPoint'){
     const o=state.objects.find(x=>x.id===gesture.id);if(!o||!isFillShape(o))return;const point=ensureDeformPoints(o).find(p=>p.id===gesture.pointId);if(!point)return;
-    const rawWorld=clientToWorld(e.clientX,e.clientY),snappedWorld=snapDeformPointWorld(o,point,rawWorld),local=worldPointToObjectLocal(o,snappedWorld),base=deformPointBaseLocal(o,point),limit=Math.max(o.w,o.h)*1.5;
-    const other=isEllipse(o)?ellipseDeformAt(o,point.t,point.id):rectDeformAt(o,point.side,point.t,point.id);
-    const selfWeight=isEllipse(o)?1:Math.max(.001,Math.min(1,point.t/.12,(1-point.t)/.12));
-    point.dx=clamp(Math.round(((local.x-base.x-other.dx)/selfWeight)*100)/100,-limit,limit);
-    point.dy=clamp(Math.round(((local.y-base.y-other.dy)/selfWeight)*100)/100,-limit,limit);
-    if(Math.abs(point.dx)<3/Math.max(.1,state.zoom))point.dx=0;if(Math.abs(point.dy)<3/Math.max(.1,state.zoom))point.dy=0;
-    renderObjects(false);return
+    if(!gesture.moved&&Math.hypot(e.clientX-gesture.sx,e.clientY-gesture.sy)<3)return;
+    gesture.moved=true;
+    const pointer=clientToWorld(e.clientX,e.clientY),rawWorld={x:gesture.startWorld.x+pointer.x-gesture.pointerWorld.x,y:gesture.startWorld.y+pointer.y-gesture.pointerWorld.y};
+    let axis=null;
+    if(e.shiftKey){axis=Math.abs(rawWorld.x-gesture.startWorld.x)>=Math.abs(rawWorld.y-gesture.startWorld.y)?'x':'y';if(axis==='x')rawWorld.y=gesture.startWorld.y;else rawWorld.x=gesture.startWorld.x}
+    const snappedWorld=e.altKey?(clearSnapFeedback(),rawWorld):snapDeformPointWorld(o,point,rawWorld,axis);
+    setDeformPointPosition(o,point,worldPointToObjectLocal(o,snappedWorld),gesture.anchors);
+    renderObjects(false);syncDeformPointFields(o);return
   }
   if(gesture.type==='rotate'){
     const o=state.objects.find(x=>x.id===gesture.id);if(!o)return;const p=clientToWorld(e.clientX,e.clientY),a=Math.atan2(p.y-gesture.center.y,p.x-gesture.center.x),delta=(a-gesture.startAngle)*180/Math.PI;
@@ -1238,7 +1390,7 @@ viewport.addEventListener('pointerdown',e=>{
   }
 });
 viewport.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault()});
-viewport.addEventListener('pointerup',e=>{
+window.addEventListener('pointerup',e=>{
   if(!gesture||gesture.type==='guide')return;const g=gesture,type=g.type;gesture=null;viewport.classList.remove('panning');world.querySelectorAll('.rotating,.deforming').forEach(el=>{el.classList.remove('rotating');el.classList.remove('deforming')});
   if(type==='marquee'){
     const moved=Math.hypot(e.clientX-g.sx,e.clientY-g.sy),a=clientToWorld(g.sx,g.sy),b=clientToWorld(e.clientX,e.clientY);
@@ -1251,10 +1403,11 @@ viewport.addEventListener('pointerup',e=>{
     renderObjects();updateSmartHint();return
   }
   clearSnapFeedback();
-  if(type==='move'||type==='moveGroup')commitHistory('移动对象');else if(type==='resize')commitHistory('调整对象尺寸');else if(type==='rotate')commitHistory('旋转对象');else if(type==='deformPoint')commitHistory('形变对象')
+  if(type==='move'||type==='moveGroup')commitHistory('移动对象');else if(type==='resize')commitHistory('调整对象尺寸');else if(type==='rotate')commitHistory('旋转对象');else if(type==='deformPoint'){renderObjects();commitHistory(g.added?'增加形变点':
+    '调整形变点')}
 });
-viewport.addEventListener('pointercancel',()=>{
-  if(!gesture||gesture.type==='guide')return;const type=gesture.type;gesture=null;viewport.classList.remove('panning');selectionMarquee.classList.remove('show');world.querySelectorAll('.rotating,.deforming').forEach(el=>{el.classList.remove('rotating');el.classList.remove('deforming')});clearSnapFeedback();
+window.addEventListener('pointercancel',()=>{
+  if(!gesture||gesture.type==='guide')return;if(gesture.type==='deformPoint'){cancelDeformGesture();return}const type=gesture.type;gesture=null;viewport.classList.remove('panning');selectionMarquee.classList.remove('show');world.querySelectorAll('.rotating,.deforming').forEach(el=>{el.classList.remove('rotating');el.classList.remove('deforming')});clearSnapFeedback();
   if(type==='move'||type==='moveGroup'||type==='resize'||type==='rotate'||type==='deformPoint')commitHistory(type==='resize'?'调整对象尺寸':type==='rotate'?'旋转对象':type==='deformPoint'?'形变对象':'移动对象')
 });
 
@@ -1298,12 +1451,13 @@ document.addEventListener('pointermove',e=>{if(!gesture||gesture.type!=='guide')
 document.addEventListener('pointerup',()=>{if(!gesture||gesture.type!=='guide')return;const wasNew=!!gesture.newGuide,list=state.guides[gesture.axis],v=list?.[gesture.index],max=gesture.axis==='vertical'?state.canvasW:state.canvasH;if(!Number.isFinite(v)||v<0||v>max)list.splice(gesture.index,1);gesture=null;hideGuideLabel();renderGuides();commitHistory(wasNew?'添加参考线':'移动参考线')});
 
 function updateWorldTransform(){
+  hideDeformPreview();world.style.setProperty('--deform-ui-scale',1/Math.max(.1,state.zoom));
   world.style.width=state.canvasW+'px';world.style.height=state.canvasH+'px';world.style.transform=`translate(${state.panX}px,${state.panY}px) scale(${state.zoom})`;
   const rw=state.canvasW*state.zoom,rh=state.canvasH*state.zoom;
   topRuler.style.left=state.panX+'px';topRuler.style.top=(state.panY-RULER_SIZE)+'px';topRuler.style.width=rw+'px';topRuler.style.height=RULER_SIZE+'px';
   leftRuler.style.left=(state.panX-RULER_SIZE)+'px';leftRuler.style.top=state.panY+'px';leftRuler.style.width=RULER_SIZE+'px';leftRuler.style.height=rh+'px';
   const corner=document.querySelector('.ruler-corner');corner.style.left=(state.panX-RULER_SIZE)+'px';corner.style.top=(state.panY-RULER_SIZE)+'px';
-  $('#zoomLabel').textContent=Math.round(state.zoom*100)+'%';$('#canvasSizeLabel').textContent=state.canvasW+' × '+state.canvasH;renderRulers();renderGuides()
+  $('#zoomLabel').textContent=Math.round(state.zoom*100)+'%';$('#canvasSizeLabel').textContent=state.canvasW+' × '+state.canvasH;renderRulers();renderGuides();const o=selected();if(isFillShape(o)&&o.deformEnabled){const el=objectNodeCache.get(o.id);if(el)syncDeformHandles(el,o)}
 }
 function zoomAt(clientX,clientY,newZoom){newZoom=clamp(newZoom,.1,5);const r=viewport.getBoundingClientRect(),vx=clientX-r.left,vy=clientY-r.top,wx=(vx-state.panX)/state.zoom,wy=(vy-state.panY)/state.zoom;state.panX=vx-wx*newZoom;state.panY=vy-wy*newZoom;state.zoom=newZoom;updateWorldTransform()}
 viewport.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,state.zoom*(e.deltaY<0?1.12:1/1.12))},{passive:false});
@@ -1317,10 +1471,22 @@ $('#layerName').oninput=e=>{const o=selected();if(!o||hasMultiBoxes()||o.locked)
 $('#objX').oninput=e=>mutateSelected(o=>o.x=+e.target.value||0);$('#objY').oninput=e=>mutateSelected(o=>o.y=+e.target.value||0);
 $('#objRotation').oninput=e=>mutateSelected(o=>o.rotation=finiteNumber(e.target.value,0));
 $('#lockAspect').onchange=e=>mutateSelected(o=>{if(isFillShape(o))o.lockAspect=e.target.checked});
-$('#deformEnabled').onchange=e=>{mutateSelected(o=>{if(isFillShape(o)){o.deformEnabled=e.target.checked;ensureDeformPoints(o);if(!e.target.checked){selectedDeformPointId=null;deformAddMode=false}}},true);commitHistory(e.target.checked?'启用局部形变':'关闭局部形变')};
-$('#deformSmoothness').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.deformSmoothness=clamp(+e.target.value||58,20,90)});$('#deformSmoothnessVal').textContent=e.target.value+'%'};
-$('#deformSmoothness').onchange=()=>commitHistory('调整形变平滑范围');
-$('#addDeformPoint').onclick=()=>{const o=selected();if(!isFillShape(o)||!o.deformEnabled||o.locked)return;deformAddMode=!deformAddMode;$('#addDeformPoint').classList.toggle('active',deformAddMode);setDataStatus(deformAddMode?'现在点击对象任意位置，会自动投影到最近轮廓增加形变点':'已退出增加形变点模式','ok')};
+$('#deformEnabled').onchange=e=>{mutateSelected(o=>{if(isFillShape(o)){o.deformEnabled=e.target.checked;ensureDeformPoints(o);deformEditMode=true;if(!e.target.checked){selectedDeformPointId=null;deformAddMode=false}}},true);commitHistory(e.target.checked?'启用局部形变':'关闭局部形变')};
+$('#editDeform').onclick=()=>{deformEditMode=true;deformAddMode=false;renderObjects()};
+$('#moveDeformObject').onclick=()=>{deformEditMode=false;deformAddMode=false;selectedDeformPointId=null;hideDeformPreview();renderObjects()};
+$('#deformSmoothness').oninput=e=>{
+  mutateSelected(o=>{if(!isFillShape(o))return;const groups=isEllipse(o)?['ellipse']:BORDER_SIDE_KEYS,anchors=groups.map(side=>{const p=ensureDeformPoints(o).find(p=>p.side===side);return p?{side,positions:captureDeformAnchors(o,p).positions}:null}).filter(Boolean);
+    o.deformSmoothness=clamp(+e.target.value||58,20,90);for(const a of anchors){const p=o.deformPoints.find(p=>p.side===a.side),next=captureDeformAnchors(o,p);next.positions=a.positions;applyDeformAnchors(next)}
+  });$('#deformSmoothnessVal').textContent=e.target.value+'%'
+};
+$('#deformSmoothness').onchange=()=>{renderObjects();commitHistory('调整形变平滑范围')};
+$('#addDeformPoint').onclick=()=>{const o=selected();if(!isFillShape(o)||!o.deformEnabled||o.locked)return;deformEditMode=true;deformAddMode=!deformAddMode;renderObjects();setDataStatus(deformAddMode?'移动到轮廓查看 ＋ 预览，点击后可直接拖动；Esc 取消':'已退出增加形变点模式','ok')};
+$('#deformPointSelect').onchange=e=>{selectedDeformPointId=Number(e.target.value)||null;deformEditMode=true;renderObjects()};
+for(const [id,axis]of[['deformPointX','x'],['deformPointY','y']]){
+  $('#'+id).oninput=e=>{if(e.target.value==='')return;const v=Number(e.target.value);if(!Number.isFinite(v))return;const o=selected();if(!isDeformEditing(o))return;const p=ensureDeformPoints(o).find(p=>p.id===selectedDeformPointId);if(!p)return;const position=deformPointCurveLocal(o,p);position[axis]=v;setDeformPointPosition(o,p,position);renderObjects(false)};
+  $('#'+id).onchange=()=>{const o=selected();if(isFillShape(o))syncDeformPointFields(o);commitHistory('修改形变点坐标')}
+}
+$('#resetDeformPoint').onclick=()=>{const o=selected();if(!isDeformEditing(o))return;const p=ensureDeformPoints(o).find(p=>p.id===selectedDeformPointId);if(p){setDeformPointPosition(o,p,deformPointBaseLocal(o,p));renderObjects();commitHistory('重置形变点')}};
 $('#deleteDeformPoint').onclick=()=>{if(!deleteSelectedDeformPoint())setDataStatus('请先选中一个紫色形变点','err')};
 $('#resetDeform').onclick=()=>{mutateSelected(o=>{if(isFillShape(o)){ensureDeformPoints(o).forEach(p=>{p.dx=0;p.dy=0})}},true);commitHistory('重置形变')};
 $('#objW').oninput=e=>mutateSelected(o=>{if(o.type!=='box')return;const ratio=o.w/Math.max(1,o.h),w=Math.max(20,+e.target.value||20);o.w=w;if(o.lockAspect&&!isLine(o))o.h=Math.max(20,w/ratio)},true);
@@ -1477,10 +1643,10 @@ function hideContextMenu(){$('#contextMenu').classList.remove('open')}
 function showContextMenu(clientX,clientY,target=null,deformPointId=null){
   const menu=$('#contextMenu');menu.innerHTML='';
   const items=selectedObjects(),multi=items.length>1&&target&&state.selectedBoxIds.includes(target.id);
-  if(deformPointId&&isFillShape(target)&&target.deformEnabled){
+  if(deformPointId&&isFillShape(target)&&target.deformEnabled&&!target.locked){
     selectedDeformPointId=deformPointId;
     menu.append(
-      contextItem('重置该形变点',()=>{const p=ensureDeformPoints(target).find(x=>x.id===deformPointId);if(p){p.dx=0;p.dy=0;renderObjects();commitHistory('重置形变点')}}),
+      contextItem('重置该形变点',()=>{const p=ensureDeformPoints(target).find(x=>x.id===deformPointId);if(p){setDeformPointPosition(target,p,deformPointBaseLocal(target,p));renderObjects();commitHistory('重置形变点')}}),
       contextItem('删除形变点',deleteSelectedDeformPoint,{danger:true,shortcut:'Delete'})
     )
   }else if(multi){
@@ -1556,26 +1722,30 @@ document.querySelector('.workspace').addEventListener('contextmenu',e=>{
   e.preventDefault();showContextMenu(e.clientX,e.clientY,null)
 });
 document.addEventListener('pointerdown',e=>{if(!$('#contextMenu').contains(e.target))hideContextMenu()});
-window.addEventListener('blur',()=>{hideContextMenu();setSpacePanHeld(false);viewport.classList.remove('panning');if(gesture?.type==='pan')gesture=null});
+window.addEventListener('blur',()=>{if(gesture?.type==='deformPoint')cancelDeformGesture();hideContextMenu();setSpacePanHeld(false);viewport.classList.remove('panning');if(gesture?.type==='pan')gesture=null});
 
 document.addEventListener('keyup',e=>{if(e.code==='Space'){e.preventDefault();setSpacePanHeld(false)}});
 document.addEventListener('keydown',e=>{
   const key=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey,editing=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)||document.activeElement?.isContentEditable;
   if(e.code==='Space'&&!editing){e.preventDefault();setSpacePanHeld(true);return}
-  if(mod&&key==='z'&&!editing){e.preventDefault();e.shiftKey?redoHistory():undoHistory();return}
-  if(mod&&key==='y'&&!editing){e.preventDefault();redoHistory();return}
+  if(mod&&key==='z'&&!editing){e.preventDefault();if(gesture?.type==='deformPoint'){cancelDeformGesture();return}e.shiftKey?redoHistory():undoHistory();return}
+  if(mod&&key==='y'&&!editing){e.preventDefault();if(gesture?.type==='deformPoint')return;redoHistory();return}
   if(e.key==='?'&&!editing){e.preventDefault();$('#rightbarShell').classList.toggle('shortcuts-open');return}
   if(editing)return;
   if(mod&&key==='a'){e.preventDefault();state.selectedBoxIds=state.objects.filter(o=>o.visible!==false).map(o=>o.id);state.selectedId=state.selectedBoxIds.at(-1)||null;renderObjects();return}
-  if(e.key==='Escape'){e.preventDefault();if(deformAddMode){deformAddMode=false;$('#addDeformPoint').classList.remove('active');setDataStatus('已退出增加形变点模式');return}if(selectedDeformPointId!=null){selectedDeformPointId=null;renderObjects();return}clearSelection();renderObjects();return}
+  if(e.key==='Escape'){e.preventDefault();if(gesture?.type==='deformPoint'){cancelDeformGesture();return}if(deformAddMode){deformAddMode=false;hideDeformPreview();renderObjects();setDataStatus('已退出增加形变点模式');return}if(selectedDeformPointId!=null){selectedDeformPointId=null;renderObjects();return}clearSelection();renderObjects();return}
   if(e.key==='Home'){e.preventDefault();const b=selectionBounds();if(b)focusBounds(b,false);else setDataStatus('请先选择对象','err');return}
   if(key==='f'&&!mod&&!e.altKey){e.preventDefault();const b=selectionBounds();if(b)focusBounds(b,true);else setDataStatus('请先选择对象','err');return}
+  if(gesture?.type==='deformPoint')return;
+  if(isDeformEditing(selected())&&key==='tab'&&document.activeElement===document.body){e.preventDefault();const ps=ensureDeformPoints(selected()),i=ps.findIndex(p=>p.id===selectedDeformPointId);selectedDeformPointId=ps.length?ps[(i+(e.shiftKey?-1:1)+ps.length)%ps.length].id:null;renderObjects();return}
   if((e.key==='Delete'||e.key==='Backspace')&&selectedDeformPointId!=null){e.preventDefault();if(deleteSelectedDeformPoint())return}
   if((e.key==='Delete'||e.key==='Backspace')&&(state.selectedId!=null||state.selectedBoxIds.length)){e.preventDefault();deleteSelected();return}
   if(mod&&key==='d'){e.preventDefault();duplicateSelection();return}
   if(mod&&key==='c'){e.preventDefault();copySelectedBoxes();return}
   if(mod&&key==='v'){e.preventDefault();pasteSelectedBoxes();return}
   if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+    const o=selected(),point=isDeformEditing(o)?ensureDeformPoints(o).find(p=>p.id===selectedDeformPointId):null;
+    if(isDeformEditing(o)){e.preventDefault();if(!point){setDataStatus('先选择一个形变点，再用方向键微调');return}const step=e.altKey?.1:e.shiftKey?10:1,world=objectLocalToWorld(o,deformPointCurveLocal(o,point));if(e.key==='ArrowLeft')world.x-=step;if(e.key==='ArrowRight')world.x+=step;if(e.key==='ArrowUp')world.y-=step;if(e.key==='ArrowDown')world.y+=step;setDeformPointPosition(o,point,worldPointToObjectLocal(o,world));renderObjects();commitHistory('微调形变点');return}
     const ids=state.selectedBoxIds.length?new Set(state.selectedBoxIds):new Set(state.selectedId?[state.selectedId]:[]);if(!ids.size)return;e.preventDefault();const step=e.shiftKey?10:1;
     state.objects.filter(o=>ids.has(o.id)&&!o.locked).forEach(o=>{if(e.key==='ArrowLeft')o.x-=step;if(e.key==='ArrowRight')o.x+=step;if(e.key==='ArrowUp')o.y-=step;if(e.key==='ArrowDown')o.y+=step});renderObjects();commitHistory('键盘移动对象')
   }
