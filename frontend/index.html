@@ -106,8 +106,14 @@
           <label class="toggle"><input id="borderOn" type="checkbox"> 显示边框</label>
           <div class="row"><label>统一粗细</label><input id="borderAllWidth" type="number" min="0" max="200" step="1"></div>
           <div class="row"><label>统一颜色模式</label><select id="borderAllPaint"><option value="solid">纯色</option><option value="linear">线性渐变</option><option value="radial">中心渐变</option></select></div>
-          <div class="row color-value-row"><label>统一颜色 1</label><div class="color-editor"><input id="borderAllColor1Picker" type="color"><input id="borderAllColor1" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
-          <div class="row color-value-row" id="borderAllColor2Row"><label>统一颜色 2</label><div class="color-editor"><input id="borderAllColor2Picker" type="color"><input id="borderAllColor2" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+          <div class="row color-value-row" id="borderAllSolidRow"><label>统一颜色</label><div class="color-editor"><input id="borderAllColor1Picker" type="color"><input id="borderAllColor1" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+          <div id="borderAllGradientGroup">
+            <div class="row" id="borderAllAngleRow"><label>渐变旋转 <span id="borderAllAngleVal"></span></label><input id="borderAllAngle" type="range" min="0" max="360"></div>
+            <div class="row" id="borderAllCenterRow"><label>中心位置 <span id="borderAllCenterVal"></span></label><input id="borderAllCenter" type="range" min="0" max="100"></div>
+            <div class="row" id="borderAllRangeRow"><label>扩散范围 <span id="borderAllRangeVal"></span></label><input id="borderAllRange" type="range" min="1" max="300"></div>
+            <div id="borderAllColors"></div>
+            <button class="add-stop" id="borderAllAddStop">＋ 添加渐变颜色</button>
+          </div>
           <div class="row"><label>统一透明度 <span id="borderAllOpacityVal"></span></label><input id="borderAllOpacity" type="range" min="0" max="100"></div>
           <div class="hint" id="borderUnifiedHint"></div>
 
@@ -118,8 +124,14 @@
               <label class="toggle"><input id="borderSideOn" type="checkbox"> 启用当前边</label>
               <div class="row"><label>粗细</label><input id="borderWidth" type="number" min="0" max="200" step="1"></div>
               <div class="row"><label>颜色模式</label><select id="borderPaint"><option value="solid">纯色</option><option value="linear">线性渐变</option><option value="radial">中心渐变</option></select></div>
-              <div class="row color-value-row"><label>颜色 1</label><div class="color-editor"><input id="borderColorPicker" type="color"><input id="borderColor" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
-              <div class="row color-value-row" id="borderColor2Row"><label>颜色 2</label><div class="color-editor"><input id="borderColor2Picker" type="color"><input id="borderColor2" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+              <div class="row color-value-row" id="borderSolidRow"><label>颜色</label><div class="color-editor"><input id="borderColorPicker" type="color"><input id="borderColor" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+              <div id="borderGradientGroup">
+                <div class="row" id="borderAngleRow"><label>渐变旋转 <span id="borderAngleVal"></span></label><input id="borderAngle" type="range" min="0" max="360"></div>
+                <div class="row" id="borderCenterRow"><label>中心位置 <span id="borderCenterVal"></span></label><input id="borderCenter" type="range" min="0" max="100"></div>
+                <div class="row" id="borderRangeRow"><label>扩散范围 <span id="borderRangeVal"></span></label><input id="borderRange" type="range" min="1" max="300"></div>
+                <div id="borderColors"></div>
+                <button class="add-stop" id="borderAddStop">＋ 添加渐变颜色</button>
+              </div>
               <div class="row"><label>透明度 <span id="borderOpacityVal"></span></label><input id="borderOpacity" type="range" min="0" max="100"></div>
               <button class="smallbtn full mt6" id="copyBorderToAll">复制当前边参数到四边</button>
             </div>

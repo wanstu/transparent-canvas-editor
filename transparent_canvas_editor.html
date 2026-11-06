@@ -6,6 +6,7 @@
 <title>Transparent Canvas Editor</title>
 <style>
 :root{--panel:360px;--accent:#2563eb;--line:#dfe5ee;--text:#172033;--muted:#6f7b8f;--ruler:28px}
+[hidden]{display:none!important}
 *{box-sizing:border-box}html,body{height:100%;margin:0}body{font-family:Inter,"Microsoft YaHei",system-ui,sans-serif;background:#e8edf3;color:var(--text);overflow:hidden}
 button,input,textarea,select{font:inherit}.app{height:100%;display:grid;grid-template-columns:var(--panel) 1fr}
 .sidebar{background:rgba(255,255,255,.985);border-right:1px solid #d9e0e9;overflow:auto;padding:18px 18px 28px;z-index:40;box-shadow:8px 0 30px rgba(25,35,55,.06)}
@@ -90,6 +91,30 @@ input[type=range]{width:100%}input[type=color]{width:40px;height:34px;padding:0;
 .object.deform-active>.deform-handle{pointer-events:auto}
 .deform-selection-frame>.rotate-handle{top:calc(0px - var(--deform-rotate-gap,48px));transform:translate(-50%,-50%) scale(var(--deform-ui-scale,1))}
 .deform-selection-frame>.rotate-handle::after{display:none}
+
+/* One shared position scale for every gradient stop. */
+.gradient-editor{margin:10px 0 6px;padding:12px;background:#f7f9fc;border:1px solid #e0e6ef;border-radius:11px}
+.gradient-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:10px;font-size:11px;color:#55627b}
+.gradient-heading strong{font-size:12px;color:#344461}.gradient-direction{font-size:10px;color:#7c8799}
+.gradient-rail{position:relative;height:54px;margin:0 8px;touch-action:none;user-select:none}
+.gradient-track{position:absolute;left:0;right:0;top:0;height:28px;border-radius:6px;border:1px solid #bbc6d5;cursor:crosshair;overflow:hidden;background-color:#fff;background-image:linear-gradient(45deg,#d5dbe4 25%,transparent 25%),linear-gradient(-45deg,#d5dbe4 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d5dbe4 75%),linear-gradient(-45deg,transparent 75%,#d5dbe4 75%);background-size:12px 12px;background-position:0 0,0 6px,6px -6px,-6px 0}
+.gradient-track-color{position:absolute;inset:0;pointer-events:none}
+.gradient-handles{position:absolute;inset:0;pointer-events:none}
+.gradient-stop{position:absolute;top:28px;width:26px;height:28px;padding:0;transform:translateX(-50%);border:0;background:transparent;cursor:ew-resize;pointer-events:auto;display:grid;place-items:center;z-index:1;touch-action:none}
+.gradient-stop.active{z-index:3}.gradient-stop:focus-visible{outline:2px solid #2563eb;outline-offset:1px;border-radius:5px}
+.gradient-thumb{display:block;position:relative;width:14px;height:18px;border:2px solid #fff;border-radius:3px;box-shadow:0 0 0 1px #a0aec1,0 2px 4px #33415524;background:linear-gradient(var(--stop-color),var(--stop-color)),repeating-conic-gradient(#d6dce6 0% 25%,#fff 0% 50%) 50%/8px 8px}
+.gradient-thumb::before{content:"";position:absolute;left:2px;top:-5px;width:6px;height:6px;background:#64748b;transform:rotate(45deg);z-index:-1}
+.gradient-stop.active .gradient-thumb{box-shadow:0 0 0 2px #2563eb,0 2px 5px #2563eb33}.gradient-stop.active .gradient-thumb::before{background:#2563eb}
+.gradient-stop:disabled{cursor:default;opacity:.55}
+.gradient-scale{display:flex;justify-content:space-between;margin:-1px 4px 10px;font-size:10px;color:#8390a3;pointer-events:none}
+.gradient-selection{display:grid;grid-template-columns:minmax(0,1fr) 88px 30px;gap:7px;align-items:center;margin-bottom:8px}
+.gradient-selection select{min-width:0;width:100%;height:32px;padding:5px 7px;font-size:11px}
+.gradient-position{display:flex;align-items:center;gap:3px;background:#fff;border:1px solid #d7deea;border-radius:8px;padding-right:7px;font-size:11px;color:#748096}
+.gradient-position input[type=number]{min-width:0;width:100%;height:30px;border:0;background:transparent;padding:5px 3px 5px 7px;font-size:11px;outline:none;box-shadow:none}
+.gradient-remove{height:32px;border:1px solid #dce3ed;border-radius:8px;background:#fff;color:#61718a;cursor:pointer;font-size:16px}.gradient-remove:hover:not(:disabled){color:#c14755;border-color:#e7b3bc;background:#fff5f6}.gradient-remove:disabled{opacity:.4;cursor:default}
+.gradient-color-slot .color-editor input[type=text]{font-size:11px}
+.gradient-footer{display:flex;justify-content:space-between;gap:6px;align-items:center;margin-top:8px;font-size:10px;line-height:1.5;color:#8792a4}
+.gradient-reverse{flex:none;border:0;padding:3px 0 3px 5px;background:transparent;color:#5979aa;font-size:11px;cursor:pointer}
 
 </style>
 </head>
@@ -193,8 +218,14 @@ input[type=range]{width:100%}input[type=color]{width:40px;height:34px;padding:0;
           <label class="toggle"><input id="borderOn" type="checkbox"> 显示边框</label>
           <div class="row"><label>统一粗细</label><input id="borderAllWidth" type="number" min="0" max="200" step="1"></div>
           <div class="row"><label>统一颜色模式</label><select id="borderAllPaint"><option value="solid">纯色</option><option value="linear">线性渐变</option><option value="radial">中心渐变</option></select></div>
-          <div class="row color-value-row"><label>统一颜色 1</label><div class="color-editor"><input id="borderAllColor1Picker" type="color"><input id="borderAllColor1" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
-          <div class="row color-value-row" id="borderAllColor2Row"><label>统一颜色 2</label><div class="color-editor"><input id="borderAllColor2Picker" type="color"><input id="borderAllColor2" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+          <div class="row color-value-row" id="borderAllSolidRow"><label>统一颜色</label><div class="color-editor"><input id="borderAllColor1Picker" type="color"><input id="borderAllColor1" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+          <div id="borderAllGradientGroup">
+            <div class="row" id="borderAllAngleRow"><label>渐变旋转 <span id="borderAllAngleVal"></span></label><input id="borderAllAngle" type="range" min="0" max="360"></div>
+            <div class="row" id="borderAllCenterRow"><label>中心位置 <span id="borderAllCenterVal"></span></label><input id="borderAllCenter" type="range" min="0" max="100"></div>
+            <div class="row" id="borderAllRangeRow"><label>扩散范围 <span id="borderAllRangeVal"></span></label><input id="borderAllRange" type="range" min="1" max="300"></div>
+            <div id="borderAllColors"></div>
+            <button class="add-stop" id="borderAllAddStop">＋ 添加渐变颜色</button>
+          </div>
           <div class="row"><label>统一透明度 <span id="borderAllOpacityVal"></span></label><input id="borderAllOpacity" type="range" min="0" max="100"></div>
           <div class="hint" id="borderUnifiedHint"></div>
 
@@ -205,8 +236,14 @@ input[type=range]{width:100%}input[type=color]{width:40px;height:34px;padding:0;
               <label class="toggle"><input id="borderSideOn" type="checkbox"> 启用当前边</label>
               <div class="row"><label>粗细</label><input id="borderWidth" type="number" min="0" max="200" step="1"></div>
               <div class="row"><label>颜色模式</label><select id="borderPaint"><option value="solid">纯色</option><option value="linear">线性渐变</option><option value="radial">中心渐变</option></select></div>
-              <div class="row color-value-row"><label>颜色 1</label><div class="color-editor"><input id="borderColorPicker" type="color"><input id="borderColor" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
-              <div class="row color-value-row" id="borderColor2Row"><label>颜色 2</label><div class="color-editor"><input id="borderColor2Picker" type="color"><input id="borderColor2" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+              <div class="row color-value-row" id="borderSolidRow"><label>颜色</label><div class="color-editor"><input id="borderColorPicker" type="color"><input id="borderColor" type="text" spellcheck="false" placeholder="#RRGGBB / rgba(...)"></div></div>
+              <div id="borderGradientGroup">
+                <div class="row" id="borderAngleRow"><label>渐变旋转 <span id="borderAngleVal"></span></label><input id="borderAngle" type="range" min="0" max="360"></div>
+                <div class="row" id="borderCenterRow"><label>中心位置 <span id="borderCenterVal"></span></label><input id="borderCenter" type="range" min="0" max="100"></div>
+                <div class="row" id="borderRangeRow"><label>扩散范围 <span id="borderRangeVal"></span></label><input id="borderRange" type="range" min="1" max="300"></div>
+                <div id="borderColors"></div>
+                <button class="add-stop" id="borderAddStop">＋ 添加渐变颜色</button>
+              </div>
               <div class="row"><label>透明度 <span id="borderOpacityVal"></span></label><input id="borderOpacity" type="range" min="0" max="100"></div>
               <button class="smallbtn full mt6" id="copyBorderToAll">复制当前边参数到四边</button>
             </div>
@@ -610,7 +647,7 @@ function cleanupUnusedResources(){
   return{imagesRemoved,fontsRemoved}
 }
 
-function defaultBorderSpec(color='#ffffff',width=2,opacity=.9){return{on:true,width,opacity,paint:'solid',color1:color,color2:color}}
+function defaultBorderSpec(color='#ffffff',width=2,opacity=.9){return{on:true,width,opacity,paint:'solid',color1:color,color2:color,colors:[{c:color,p:0},{c:color,p:100}],angle:0,center:50,range:100}}
 function defaultBorders(color='#ffffff',width=2,opacity=.9){return{top:defaultBorderSpec(color,width,opacity),right:defaultBorderSpec(color,width,opacity),bottom:defaultBorderSpec(color,width,opacity),left:defaultBorderSpec(color,width,opacity)}}
 function defaultDeformPoints(shape='rect'){
   if(shape==='ellipse')return[
@@ -691,24 +728,37 @@ function ensureBorders(o){
   for(const side of BORDER_SIDE_KEYS){
     const b=o.borders[side]||(o.borders[side]=defaultBorderSpec(o.borderColor||'#ffffff',o.borderWidth||2,o.borderOpacity??.9));
     b.on=b.on!==false;b.width=Math.max(0,finiteNumber(b.width,o.borderWidth||2));b.opacity=clamp(finiteNumber(b.opacity,o.borderOpacity??.9),0,1);
-    b.paint=['solid','linear','radial'].includes(b.paint)?b.paint:'solid';b.color1=normalizeColorValue(b.color1||o.borderColor||'#ffffff');b.color2=normalizeColorValue(b.color2||b.color1)
+    b.paint=['solid','linear','radial'].includes(b.paint)?b.paint:'solid';b.color1=normalizeColorValue(b.color1||o.borderColor||'#ffffff');b.color2=normalizeColorValue(b.color2||b.color1);b.angle=clamp(finiteNumber(b.angle,0),0,360);b.center=clamp(finiteNumber(b.center,50),0,100);b.range=clamp(finiteNumber(b.range,100),1,300);syncBorderColorAliases(b)
   }
   return o.borders
 }
 function activeBorderSpec(o){const borders=ensureBorders(o);return borders?.[$('#borderSide')?.value||'top']||null}
 function syncLegacyBorderFromTop(o){const b=ensureBorders(o)?.top;if(!b)return;o.borderWidth=b.width;o.borderColor=b.color1;o.borderOpacity=b.opacity}
+function borderGradientStops(b){
+  if(!Array.isArray(b.colors)||!b.colors.length)b.colors=[{c:b.color1||'#ffffff',p:0},{c:b.color2||b.color1||'#ffffff',p:100}];
+  if(b.colors.length>32)b.colors.length=32;b.colors.forEach((s,i)=>{s.c=normalizeColorValue(s.c,b.color1||'#ffffff');s.p=clamp(finiteNumber(s.p,i?100:0),0,100)});return b.colors
+}
+function syncBorderColorAliases(b){const stops=[...borderGradientStops(b)].sort((a,b)=>a.p-b.p);b.color1=stops[0].c;b.color2=stops.at(-1).c}
 function borderSpecsEqual(a,b){
-  return !!a&&!!b&&a.on===b.on&&Math.abs(a.width-b.width)<.001&&Math.abs(a.opacity-b.opacity)<.001&&a.paint===b.paint&&a.color1===b.color1&&a.color2===b.color2
+  if(!a||!b||a.on!==b.on||Math.abs(a.width-b.width)>.001||Math.abs(a.opacity-b.opacity)>.001||a.paint!==b.paint||a.color1!==b.color1)return false;
+  if(a.paint==='solid')return true;
+  const x=[...a.colors].sort((a,b)=>a.p-b.p),y=[...b.colors].sort((a,b)=>a.p-b.p);
+  return x.length===y.length&&x.every((s,i)=>s.c===y[i].c&&Math.abs(s.p-y[i].p)<.001)&&(a.paint==='linear'?Math.abs(a.angle-b.angle)<.001:Math.abs(a.center-b.center)<.001&&Math.abs(a.range-b.range)<.001)
 }
 function refreshBorderControls(o){
   if(!isFillShape(o))return;const borders=ensureBorders(o),b=activeBorderSpec(o);if(!b)return;
   const ref=borders.top,uniform=BORDER_SIDE_KEYS.every(k=>borderSpecsEqual(ref,borders[k]));
   $('#borderOn').checked=o.borderOn!==false;
   $('#borderAllWidth').value=ref.width;$('#borderAllPaint').value=ref.paint;$('#borderAllOpacity').value=Math.round(ref.opacity*100);$('#borderAllOpacityVal').textContent=Math.round(ref.opacity*100)+'%';
-  $('#borderAllColor2Row').style.display=ref.paint==='solid'?'none':'';staticColorEditors.borderAllColor1.set(ref.color1);staticColorEditors.borderAllColor2.set(ref.color2);
+  $('#borderAllSolidRow').hidden=ref.paint!=='solid';$('#borderAllGradientGroup').hidden=ref.paint==='solid';staticColorEditors.borderAllColor1.set(ref.color1);
   $('#borderUnifiedHint').textContent=uniform?'当前四边参数一致；修改上方参数会统一修改四边。':'当前四边参数不一致；上方显示上边参数，修改任一统一参数会立即应用到四边。';
   $('#borderSideOn').checked=b.on!==false;$('#borderWidth').value=b.width;$('#borderPaint').value=b.paint;$('#borderOpacity').value=Math.round(b.opacity*100);$('#borderOpacityVal').textContent=Math.round(b.opacity*100)+'%';
-  $('#borderColor2Row').style.display=b.paint==='solid'?'none':'';staticColorEditors.borderColor.set(b.color1);staticColorEditors.borderColor2.set(b.color2)
+  $('#borderSolidRow').hidden=b.paint!=='solid';$('#borderGradientGroup').hidden=b.paint==='solid';staticColorEditors.borderColor.set(b.color1);
+  for(const [prefix,spec]of[['borderAll',ref],['border',b]]){
+    $('#'+prefix+'AngleRow').hidden=spec.paint!=='linear';$('#'+prefix+'CenterRow').hidden=spec.paint!=='radial';$('#'+prefix+'RangeRow').hidden=spec.paint!=='radial';
+    for(const [name,suffix]of[['Angle','°'],['Center','%'],['Range','%']]){const key=name.toLowerCase();$('#'+prefix+name).value=spec[key];$('#'+prefix+name+'Val').textContent=spec[key]+suffix}
+  }
+  renderBorderGradientEditors(o)
 }
 function maxBorderWidth(o){const b=ensureBorders(o);return b?Math.max(...BORDER_SIDE_KEYS.map(k=>b[k].on?b[k].width:0)):0}
 function bordersNeedCanvas(o){const b=ensureBorders(o);return !!b&&o.borderOn!==false&&BORDER_SIDE_KEYS.some(k=>b[k].on&&b[k].paint!=='solid')}
@@ -1177,7 +1227,7 @@ function refreshPanels(){
       $('#boxImageOpacity').value=Math.round(o.imageOpacity*100);$('#boxImageOpacityVal').textContent=Math.round(o.imageOpacity*100)+'%';$('#boxImageFit').value=o.imageFit;
       refreshBorderControls(o);
       renderColorControls(o);
-      $('#boxPanel').querySelectorAll('input,select,button,textarea').forEach(el=>el.disabled=locked||multi);
+      $('#boxPanel').querySelectorAll('input,select,button,textarea').forEach(el=>{if(!el.closest('.gradient-editor'))el.disabled=locked||multi});
       $('#boxImageRemove').disabled=locked||multi||!o.imageRef
     }
     if(fillShape){
@@ -1221,37 +1271,97 @@ function makeColorEditor(value,onValue){
   const text=document.createElement('input');text.type='text';text.spellcheck=false;text.placeholder='#RRGGBB / rgba(...)';text.title='支持 #RGB、#RGBA、#RRGGBB、#RRGGBBAA、rgb(...)、rgba(...)';
   wrap.append(picker,text);const binding=bindColorEditor(text,picker,onValue);binding.set(value);return{wrap,binding,text,picker}
 }
+const gradientStopEditors=new Map();
+function sampleGradientColor(stops,position){
+  const list=[...stops].sort((a,b)=>a.p-b.p);if(!list.length)return'#ffffff';
+  const next=list.findIndex(s=>s.p>position);if(next===0)return list[0].c;if(next<0)return list.at(-1).c;
+  const left=list[next-1],right=list[next],t=clamp((position-left.p)/Math.max(.000001,right.p-left.p),0,1),a=parseColorValue(left.c),b=parseColorValue(right.c),alpha=a.a*(1-t)+b.a*t;
+  const rgb=['r','g','b'].map(key=>alpha>1e-8?Math.round((a[key]*a.a*(1-t)+b[key]*b.a*t)/alpha):0);
+  return alpha>=.999?'#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join(''):`rgba(${rgb.join(', ')}, ${Math.round(alpha*1000)/1000})`
+}
+function gradientGapPosition(stops){
+  const positions=[0,...stops.map(s=>s.p).sort((a,b)=>a-b),100];let gap=-1,position=50;
+  for(let i=0;i<positions.length-1;i++)if(positions[i+1]-positions[i]>gap){gap=positions[i+1]-positions[i];position=(positions[i+1]+positions[i])/2}return position
+}
+function gradientEditorFor(container,config){
+  let editor=gradientStopEditors.get(container);if(!editor){editor=new GradientStopEditor(container);gradientStopEditors.set(container,editor)}editor.configure(config);return editor
+}
+class GradientStopEditor{
+  constructor(container){
+    this.container=container;this.index=0;this.buttons=[];this.drag=null;container.classList.add('gradient-editor');
+    container.innerHTML='<div class="gradient-heading"><strong>渐变色带</strong><span class="gradient-direction"></span></div><div class="gradient-rail"><div class="gradient-track"><div class="gradient-track-color"></div></div><div class="gradient-handles"></div></div><div class="gradient-scale"><span>0%</span><span>50%</span><span>100%</span></div><div class="gradient-selection"><select class="gradient-stop-select" aria-label="选中色标"></select><label class="gradient-position"><input type="number" min="0" max="100" step="0.1" aria-label="色标位置"><span>%</span></label><button class="gradient-remove" title="删除选中色标" aria-label="删除选中色标">×</button></div><div class="gradient-color-slot"></div><div class="gradient-footer"><span>点击色带加颜色，拖动色标调位置</span><button class="gradient-reverse" title="反向渐变">⇄ 反向</button></div>';
+    this.rail=container.querySelector('.gradient-rail');this.handles=container.querySelector('.gradient-handles');this.track=container.querySelector('.gradient-track-color');this.menu=container.querySelector('select');this.position=container.querySelector('input[type=number]');this.remove=container.querySelector('.gradient-remove');this.reverse=container.querySelector('.gradient-reverse');
+    this.color=makeColorEditor('#ffffff',(value,commit)=>{if(this.disabled())return;const stop=this.stops()[this.index];if(!stop)return;stop.c=value;this.notify(commit?'修改渐变颜色':null)});
+    this.color.text.setAttribute('aria-label','色标颜色');this.color.picker.setAttribute('aria-label','选取色标颜色');container.querySelector('.gradient-color-slot').append(this.color.wrap);
+    this.menu.onchange=()=>{this.index=+this.menu.value;this.render()};
+    this.position.oninput=()=>{if(this.disabled()||this.position.value==='')return;const value=Number(this.position.value);if(!Number.isFinite(value))return;this.stops()[this.index].p=clamp(value,0,100);this.notify()};
+    this.position.onchange=()=>{this.position.value=this.stops()[this.index].p;this.notify('调整渐变色标位置')};
+    this.remove.onclick=()=>this.removeSelected();this.reverse.onclick=()=>{if(this.disabled())return;this.stops().forEach(s=>s.p=100-s.p);this.notify('反向渐变')};
+    this.rail.addEventListener('pointerdown',e=>{
+      if(e.button!==0||this.disabled())return;const marker=e.target.closest('[data-gradient-stop]'),track=e.target.closest('.gradient-track');if(!marker&&!track)return;
+      e.preventDefault();e.stopPropagation();document.activeElement?.blur();
+      const before=this.capture(),beforeIndex=this.index;let added=false;
+      if(marker)this.index=+marker.dataset.gradientStop;else{const stops=this.stops();if(stops.length>=32){setDataStatus('最多支持 32 个渐变色标','err');return}const p=this.pointerPosition(e),c=sampleGradientColor(stops,p);stops.push({c,p});this.index=stops.length-1;added=true;this.notify()}
+      this.drag={pointerId:e.pointerId,before,beforeIndex,added,startX:e.clientX,startPosition:this.stops()[this.index].p,moved:false};this.render();this.buttons[this.index]?.focus({preventScroll:true});this.rail.setPointerCapture(e.pointerId)
+    });
+    this.rail.addEventListener('pointermove',e=>{if(!this.drag)return;if(!this.drag.moved&&Math.abs(e.clientX-this.drag.startX)<2)return;this.drag.moved=true;this.stops()[this.index].p=this.pointerPosition(e);this.notify()});
+    this.rail.addEventListener('pointerup',e=>{if(!this.drag)return;const g=this.drag;this.drag=null;if(this.rail.hasPointerCapture(e.pointerId))this.rail.releasePointerCapture(e.pointerId);this.notify(g.added?'添加渐变色标':'移动渐变色标')});
+    this.rail.addEventListener('pointercancel',()=>this.cancel());
+    this.rail.addEventListener('keydown',e=>{
+      const marker=e.target.closest('[data-gradient-stop]');if(!marker)return;
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();this.cancel();return}
+      if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&this.drag){e.preventDefault();e.stopPropagation();this.cancel();return}
+      if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();e.stopPropagation();this.removeSelected();return}
+      if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key)||this.disabled())return;
+      e.preventDefault();e.stopPropagation();this.index=+marker.dataset.gradientStop;const stop=this.stops()[this.index],step=e.altKey?.1:e.shiftKey?10:1;
+      stop.p=e.key==='Home'?0:e.key==='End'?100:clamp(stop.p+(['ArrowLeft','ArrowDown'].includes(e.key)?-step:step),0,100);this.notify('微调渐变色标')
+    });
+    window.addEventListener('blur',()=>this.cancel())
+  }
+  configure(config){const changed=this.key!==config.key;if(changed){if(this.config){this.cancel();if(this.container.contains(document.activeElement))document.activeElement.blur()}this.index=0;this.key=config.key}this.config=config;this.render(changed)}
+  stops(){return this.config.getStops()}
+  disabled(){return !!this.config.disabled?.()}
+  capture(){return this.config.capture?this.config.capture():structuredClone(this.stops())}
+  pointerPosition(e){const r=this.rail.getBoundingClientRect();return Math.round(clamp((e.clientX-r.left)/Math.max(1,r.width)*100,0,100)*10)/10}
+  notify(label=null){this.config.onChange();this.render();if(label)commitHistory(this.config.label+' · '+label)}
+  cancel(){
+    if(!this.drag)return;const g=this.drag;this.drag=null;
+    if(this.rail.hasPointerCapture(g.pointerId))this.rail.releasePointerCapture(g.pointerId);
+    this.index=g.beforeIndex;this.config.restore(g.before);this.config.onRestore?.();this.render()
+  }
+  addStop(position=null){
+    const stops=this.stops();if(this.disabled()||stops.length>=32)return;const p=position??gradientGapPosition(stops),c=sampleGradientColor(stops,p);stops.push({c,p});this.index=stops.length-1;this.notify('添加渐变色标');this.buttons[this.index]?.focus({preventScroll:true})
+  }
+  removeSelected(){
+    if(this.disabled()||this.stops().length<=1)return;if(this.drag)this.cancel();this.stops().splice(this.index,1);this.index=Math.min(this.index,this.stops().length-1);this.notify('删除渐变色标');this.buttons[this.index]?.focus({preventScroll:true})
+  }
+  render(forceColor=false){
+    if(!this.config)return;const stops=this.stops(),disabled=this.disabled();this.index=clamp(this.index,0,Math.max(0,stops.length-1));
+    this.track.style.background=gradientCSS(stops,90,'linear');this.container.querySelector('.gradient-direction').textContent=this.config.type()==='radial'?'中心 → 外缘':'起点 → 终点';
+    while(this.buttons.length>stops.length)this.buttons.pop().remove();
+    while(this.buttons.length<stops.length){const button=document.createElement('button');button.className='gradient-stop';button.type='button';button.setAttribute('role','slider');button.setAttribute('aria-valuemin','0');button.setAttribute('aria-valuemax','100');button.innerHTML='<span class="gradient-thumb"></span>';this.handles.append(button);this.buttons.push(button)}
+    this.buttons.forEach((button,i)=>{const stop=stops[i];button.dataset.gradientStop=i;button.style.left=stop.p+'%';button.style.setProperty('--stop-color',stop.c);button.classList.toggle('active',i===this.index);button.disabled=disabled;button.setAttribute('aria-label','色标 '+(i+1));button.setAttribute('aria-valuenow',stop.p);button.setAttribute('aria-valuetext',stop.p+'%');button.setAttribute('aria-pressed',String(i===this.index));button.title=`色标 ${i+1} · ${stop.p}% · ${stop.c}`});
+    while(this.menu.options.length>stops.length)this.menu.remove(this.menu.options.length-1);
+    stops.forEach((stop,i)=>{if(!this.menu.options[i])this.menu.add(new Option('',''+i));this.menu.options[i].text='色标 '+(i+1)+' · '+Math.round(stop.p*10)/10+'%'});this.menu.value=''+this.index;
+    const current=stops[this.index];if(current){if(document.activeElement!==this.position)this.position.value=Math.round(current.p*10)/10;if(forceColor||document.activeElement!==this.color.text&&document.activeElement!==this.color.picker)this.color.binding.set(current.c)}
+    this.menu.disabled=disabled;this.position.disabled=disabled;this.remove.disabled=disabled||stops.length<=1;this.reverse.disabled=disabled;this.color.text.disabled=disabled;this.color.picker.disabled=disabled
+  }
+}
 function renderColorControls(o){
-  const wrap=$('#colors');wrap.innerHTML='';
-  o.colors.forEach((s,i)=>{
-    const r=document.createElement('div');r.className='color-row';
-    const editor=makeColorEditor(s.c,(value,commit)=>{s.c=value;renderObjects(false);if(commit)commitHistory('修改对象渐变颜色')});
-    const p=document.createElement('input');p.type='range';p.min='0';p.max='100';p.value=s.p;p.title='位置 '+s.p+'%';
-    const rm=document.createElement('button');rm.className='remove';rm.textContent='×';
-    p.oninput=()=>{s.p=+p.value;p.title='位置 '+s.p+'%';renderObjects(false)};
-    p.onchange=()=>commitHistory('调整对象渐变位置');
-    rm.onclick=()=>{if(o.colors.length>1){o.colors.splice(i,1);renderObjects(true);commitHistory('删除对象渐变颜色')}};
-    r.append(editor.wrap,p,rm);wrap.appendChild(r)
-  })
+  return gradientEditorFor($('#colors'),{key:'object:'+o.id,label:'对象渐变',getStops:()=>o.colors,type:()=>o.gradientType,disabled:()=>o.locked||hasMultiBoxes(),restore:stops=>{o.colors=stops},onRestore:()=>renderObjects(false),onChange:()=>renderObjects(false)})
 }
 function renderCanvasColorControls(){
-  const wrap=$('#canvasColors');wrap.innerHTML='';
-  state.canvasColors.forEach((s,i)=>{
-    const r=document.createElement('div');r.className='color-row';
-    const editor=makeColorEditor(s.c,(value,commit)=>{s.c=value;renderObjects(false);if(commit)commitHistory('修改画布渐变颜色')});
-    const p=document.createElement('input');p.type='range';p.min='0';p.max='100';p.value=s.p;p.title='位置 '+s.p+'%';
-    const rm=document.createElement('button');rm.className='remove';rm.textContent='×';
-    p.oninput=()=>{s.p=+p.value;p.title='位置 '+s.p+'%';renderObjects(false)};
-    p.onchange=()=>commitHistory('调整画布渐变位置');
-    rm.onclick=()=>{if(state.canvasColors.length>1){state.canvasColors.splice(i,1);renderCanvasColorControls();renderObjects(false);commitHistory('删除画布渐变颜色')}};
-    r.append(editor.wrap,p,rm);wrap.appendChild(r)
-  })
+  return gradientEditorFor($('#canvasColors'),{key:'canvas',label:'画布渐变',getStops:()=>state.canvasColors,type:()=>state.canvasGradientType,restore:stops=>{state.canvasColors=stops},onRestore:()=>renderObjects(false),onChange:()=>renderObjects(false)})
+}
+function setBorderSolidColor(b,color){const stops=borderGradientStops(b);[...stops].sort((a,b)=>a.p-b.p)[0].c=color;syncBorderColorAliases(b)}
+function renderBorderGradientEditors(o){
+  const refresh=()=>{syncLegacyBorderFromTop(o);renderObjects(false);refreshBorderControls(o)},disabled=()=>o.locked||hasMultiBoxes();
+  gradientEditorFor($('#borderAllColors'),{key:'border-all:'+o.id,label:'统一边框渐变',getStops:()=>borderGradientStops(ensureBorders(o).top),type:()=>ensureBorders(o).top.paint,disabled,capture:()=>structuredClone(ensureBorders(o)),restore:borders=>{o.borders=borders},onRestore:refresh,onChange:()=>{const borders=ensureBorders(o),stops=structuredClone(borders.top.colors);BORDER_SIDE_KEYS.forEach(k=>{borders[k].colors=structuredClone(stops);syncBorderColorAliases(borders[k])});refresh()}});
+  gradientEditorFor($('#borderColors'),{key:'border:'+o.id+':'+$('#borderSide').value,label:'单边渐变',getStops:()=>borderGradientStops(activeBorderSpec(o)),type:()=>activeBorderSpec(o).paint,disabled,capture:()=>structuredClone(ensureBorders(o)),restore:borders=>{o.borders=borders},onRestore:refresh,onChange:()=>{syncBorderColorAliases(activeBorderSpec(o));refresh()}})
 }
 const staticColorEditors={
-  borderAllColor1:bindColorEditor($('#borderAllColor1'),$('#borderAllColor1Picker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o)){const bs=ensureBorders(o);BORDER_SIDE_KEYS.forEach(k=>bs[k].color1=value);syncLegacyBorderFromTop(o)}});if(commit)commitHistory('统一修改四边颜色 1')}),
-  borderAllColor2:bindColorEditor($('#borderAllColor2'),$('#borderAllColor2Picker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o)){const bs=ensureBorders(o);BORDER_SIDE_KEYS.forEach(k=>bs[k].color2=value)}});if(commit)commitHistory('统一修改四边颜色 2')}),
-  borderColor:bindColorEditor($('#borderColor'),$('#borderColorPicker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.color1=value;syncLegacyBorderFromTop(o)}});if(commit)commitHistory('修改边框颜色 1')}),
-  borderColor2:bindColorEditor($('#borderColor2'),$('#borderColor2Picker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)b.color2=value}});if(commit)commitHistory('修改边框颜色 2')}),
+  borderAllColor1:bindColorEditor($('#borderAllColor1'),$('#borderAllColor1Picker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o)){const bs=ensureBorders(o);BORDER_SIDE_KEYS.forEach(k=>setBorderSolidColor(bs[k],value));syncLegacyBorderFromTop(o)}});if(commit)commitHistory('统一修改四边颜色 1')}),
+  borderColor:bindColorEditor($('#borderColor'),$('#borderColorPicker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o)){const b=activeBorderSpec(o);if(b)setBorderSolidColor(b,value);syncLegacyBorderFromTop(o)}});if(commit)commitHistory('修改边框颜色 1')}),
   shadowColor:bindColorEditor($('#shadowColor'),$('#shadowColorPicker'),(value,commit)=>{mutateSelected(o=>{if(o.type==='box')o.shadowColor=value});if(commit)commitHistory('修改外阴影颜色')}),
   innerShadowColor:bindColorEditor($('#innerShadowColor'),$('#innerShadowColorPicker'),(value,commit)=>{mutateSelected(o=>{if(isFillShape(o))o.innerShadowColor=value});if(commit)commitHistory('修改内阴影颜色')}),
   lineColor:bindColorEditor($('#lineColor'),$('#lineColorPicker'),(value,commit)=>{mutateSelected(o=>{if(isLine(o))o.lineColor=value});if(commit)commitHistory('修改直线颜色')}),
@@ -1632,7 +1742,15 @@ $('#syncCorners').onclick=()=>{mutateSelected(o=>{if(isFillShape(o)&&!isEllipse(
 $('#gradientType').onchange=e=>mutateSelected(o=>{if(isFillShape(o)){o.gradientType=e.target.value;$('#angleRow').style.display=o.gradientType==='radial'?'none':''}},true);
 $('#bgOpacity').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.bgOpacity=+e.target.value/100});$('#bgOpacityVal').textContent=e.target.value+'%'};
 $('#angle').oninput=e=>{mutateSelected(o=>{if(isFillShape(o))o.angle=+e.target.value});$('#angleVal').textContent=e.target.value+'°'};
-$('#addColor').onclick=()=>{mutateSelected(o=>{if(isFillShape(o))o.colors.push({c:'#ffffff',p:100})},true);commitHistory('添加对象渐变颜色')};
+$('#addColor').onclick=()=>{const o=selected();if(isFillShape(o))renderColorControls(o).addStop()};
+$('#borderAllAddStop').onclick=()=>gradientStopEditors.get($('#borderAllColors'))?.addStop();
+$('#borderAddStop').onclick=()=>gradientStopEditors.get($('#borderColors'))?.addStop();
+for(const [name,key,min,max]of[['Angle','angle',0,360],['Center','center',0,100],['Range','range',1,300]]){
+  for(const prefix of ['borderAll','border']){
+    $('#'+prefix+name).oninput=e=>{mutateSelected(o=>{if(!isFillShape(o))return;const borders=ensureBorders(o),value=clamp(+e.target.value,min,max);if(prefix==='borderAll')BORDER_SIDE_KEYS.forEach(k=>borders[k][key]=value);else activeBorderSpec(o)[key]=value});const o=selected();if(isFillShape(o))refreshBorderControls(o)};
+    $('#'+prefix+name).onchange=()=>commitHistory('调整边框渐变参数')
+  }
+}
 $('#borderSide').onchange=()=>{const o=selected();if(isFillShape(o))refreshBorderControls(o)};
 $('#borderOn').oninput=e=>mutateSelected(o=>{if(isFillShape(o))o.borderOn=e.target.checked});
 $('#borderAllWidth').oninput=e=>mutateSelected(o=>{if(isFillShape(o)){const v=Math.max(0,+e.target.value||0),bs=ensureBorders(o);BORDER_SIDE_KEYS.forEach(k=>bs[k].width=v);syncLegacyBorderFromTop(o)}});
@@ -1900,10 +2018,10 @@ function refreshCanvasControls(){
 }
 $('#canvasW').onchange=e=>{state.canvasW=clamp(+e.target.value||100,100,10000);updateWorldTransform();renderObjects(false);refreshCanvasControls()};
 $('#canvasH').onchange=e=>{state.canvasH=clamp(+e.target.value||100,100,10000);updateWorldTransform();renderObjects(false);refreshCanvasControls()};
-$('#canvasGradientType').onchange=e=>{state.canvasGradientType=e.target.value;$('#canvasAngleRow').style.display=state.canvasGradientType==='radial'?'none':'';renderObjects(false)};
+$('#canvasGradientType').onchange=e=>{state.canvasGradientType=e.target.value;$('#canvasAngleRow').style.display=state.canvasGradientType==='radial'?'none':'';renderCanvasColorControls();renderObjects(false)};
 $('#canvasBgOpacity').oninput=e=>{state.canvasBgOpacity=+e.target.value/100;$('#canvasBgOpacityVal').textContent=e.target.value+'%';renderObjects(false)};
 $('#canvasAngle').oninput=e=>{state.canvasAngle=+e.target.value;$('#canvasAngleVal').textContent=e.target.value+'°';renderObjects(false)};
-$('#canvasAddColor').onclick=()=>{state.canvasColors.push({c:'#ffffff',p:100});renderCanvasColorControls();renderObjects(false);commitHistory('添加画布渐变颜色')};
+$('#canvasAddColor').onclick=()=>renderCanvasColorControls().addStop();
 $('#snapEnabled').onclick=()=>{state.snapEnabled=!state.snapEnabled;refreshRightbar();commitHistory(state.snapEnabled?'开启自动吸附':'关闭自动吸附');setDataStatus(state.snapEnabled?'自动吸附已开启':'自动吸附已关闭','ok')};
 $('#guidesToggle').onclick=()=>{state.guidesVisible=!state.guidesVisible;renderGuides();refreshRightbar();commitHistory(state.guidesVisible?'显示参考线':'隐藏参考线');setDataStatus(state.guidesVisible?'参考线已显示':'参考线已隐藏','ok')};
 $('#clearGuides').onclick=()=>{state.guides={vertical:[],horizontal:[]};renderGuides();commitHistory('清空参考线');setDataStatus('参考线已清空','ok')};
@@ -1970,7 +2088,7 @@ function jumpHistory(id){
   $('#rightbarShell').classList.add('history-open');$('.history-group').classList.add('open')
 }
 
-const PROJECT_FORMAT='transparent-canvas-editor',PROJECT_VERSION=13;
+const PROJECT_FORMAT='transparent-canvas-editor',PROJECT_VERSION=14;
 function projectSnapshot(){return{format:PROJECT_FORMAT,version:PROJECT_VERSION,savedAt:new Date().toISOString(),assets:{images:exportImageAssets(),fonts:structuredClone(state.customFonts)},canvas:{width:state.canvasW,height:state.canvasH,backgroundOpacity:state.canvasBgOpacity,gradientType:state.canvasGradientType,gradientAngle:state.canvasAngle,colors:structuredClone(state.canvasColors),imageRef:state.canvasImageRef,imageOpacity:state.canvasImageOpacity,imageFit:state.canvasImageFit},objects:structuredClone(state.objects),assists:{snapEnabled:state.snapEnabled,guidesVisible:state.guidesVisible,guides:structuredClone(state.guides)},view:{zoom:state.zoom,panX:state.panX,panY:state.panY},selectedId:state.selectedId,selectedBoxIds:[...state.selectedBoxIds]}}
 function setDataStatus(msg,type='',duration=1800){
   const el=$('#dataStatus');clearTimeout(statusTimer);el.textContent=msg;el.className='right-status show'+(type?' '+type:'');
@@ -2010,7 +2128,7 @@ function cleanShape(v){return['rect','ellipse','line'].includes(v)?v:'rect'}
 function cleanBorderSpec(raw,fallbackColor,fallbackWidth,fallbackOpacity){
   raw=raw&&typeof raw==='object'?raw:{};
   const c1=cleanColor(raw.color1??raw.color,fallbackColor),c2=cleanColor(raw.color2,c1);
-  return{on:raw.on!==false,width:Math.max(0,finiteNumber(raw.width,fallbackWidth)),opacity:clamp(finiteNumber(raw.opacity,fallbackOpacity),0,1),paint:['solid','linear','radial'].includes(raw.paint)?raw.paint:'solid',color1:c1,color2:c2}
+  return{on:raw.on!==false,width:Math.max(0,finiteNumber(raw.width,fallbackWidth)),opacity:clamp(finiteNumber(raw.opacity,fallbackOpacity),0,1),paint:['solid','linear','radial'].includes(raw.paint)?raw.paint:'solid',color1:c1,color2:c2,colors:cleanStops(raw.colors,[{c:c1,p:0},{c:c2,p:100}]),angle:clamp(finiteNumber(raw.angle,0),0,360),center:clamp(finiteNumber(raw.center,50),0,100),range:clamp(finiteNumber(raw.range,100),1,300)}
 }
 function cleanBorders(rawBorders,color,width,opacity){
   const out={};BORDER_SIDE_KEYS.forEach(k=>out[k]=cleanBorderSpec(rawBorders?.[k],color,width,opacity));return out
@@ -2141,15 +2259,15 @@ function appendEllipseBorderSidePath(ctx,o,side){
   for(let i=0;i<=steps;i++){const p=ellipsePoint(o,a+(b-a)*i/steps);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)}
 }
 function borderStrokeStyle(ctx,o,side,b){
-  const c1=rgba(b.color1,b.opacity),c2=rgba(b.color2,b.opacity);if(b.paint==='solid')return c1;
-  const cx=o.x+o.w/2,cy=o.y+o.h/2;let x1=cx,y1=cy,x2=cx,y2=cy,r=Math.max(1,(side==='top'||side==='bottom'?o.w:o.h)/2),g;
+  const stops=borderGradientStops(b);if(b.paint==='solid')return rgba(b.color1,b.opacity);
+  let x1,y1,x2,y2,g;
   if(side==='top'){x1=o.x;y1=o.y;x2=o.x+o.w;y2=o.y}
   else if(side==='right'){x1=o.x+o.w;y1=o.y;x2=o.x+o.w;y2=o.y+o.h}
   else if(side==='bottom'){x1=o.x+o.w;y1=o.y+o.h;x2=o.x;y2=o.y+o.h}
   else{x1=o.x;y1=o.y+o.h;x2=o.x;y2=o.y}
-  if(b.paint==='radial'){const mx=(x1+x2)/2,my=(y1+y2)/2;g=ctx.createRadialGradient(mx,my,0,mx,my,r)}
-  else g=ctx.createLinearGradient(x1,y1,x2,y2);
-  g.addColorStop(0,c1);g.addColorStop(1,c2);return g
+  if(b.paint==='radial'){const cx=x1+(x2-x1)*b.center/100,cy=y1+(y2-y1)*b.center/100,r=Math.max(1,Math.hypot(x2-x1,y2-y1)*b.range/200);g=ctx.createRadialGradient(cx,cy,0,cx,cy,r)}
+  else{const cx=(x1+x2)/2,cy=(y1+y2)/2,a=b.angle*Math.PI/180,vx=x2-x1,vy=y2-y1,dx=vx*Math.cos(a)-vy*Math.sin(a),dy=vx*Math.sin(a)+vy*Math.cos(a);g=ctx.createLinearGradient(cx-dx/2,cy-dy/2,cx+dx/2,cy+dy/2)}
+  [...stops].sort((a,b)=>a.p-b.p).forEach(s=>g.addColorStop(clamp(s.p/100,0,1),rgba(s.c,b.opacity)));return g
 }
 function drawBorders(ctx,o){
   if(!o.borderOn||!isFillShape(o))return;const borders=ensureBorders(o);

@@ -1,4 +1,5 @@
 :root{--panel:360px;--accent:#2563eb;--line:#dfe5ee;--text:#172033;--muted:#6f7b8f;--ruler:28px}
+[hidden]{display:none!important}
 *{box-sizing:border-box}html,body{height:100%;margin:0}body{font-family:Inter,"Microsoft YaHei",system-ui,sans-serif;background:#e8edf3;color:var(--text);overflow:hidden}
 button,input,textarea,select{font:inherit}.app{height:100%;display:grid;grid-template-columns:var(--panel) 1fr}
 .sidebar{background:rgba(255,255,255,.985);border-right:1px solid #d9e0e9;overflow:auto;padding:18px 18px 28px;z-index:40;box-shadow:8px 0 30px rgba(25,35,55,.06)}
@@ -83,3 +84,27 @@ input[type=range]{width:100%}input[type=color]{width:40px;height:34px;padding:0;
 .object.deform-active>.deform-handle{pointer-events:auto}
 .deform-selection-frame>.rotate-handle{top:calc(0px - var(--deform-rotate-gap,48px));transform:translate(-50%,-50%) scale(var(--deform-ui-scale,1))}
 .deform-selection-frame>.rotate-handle::after{display:none}
+
+/* One shared position scale for every gradient stop. */
+.gradient-editor{margin:10px 0 6px;padding:12px;background:#f7f9fc;border:1px solid #e0e6ef;border-radius:11px}
+.gradient-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:10px;font-size:11px;color:#55627b}
+.gradient-heading strong{font-size:12px;color:#344461}.gradient-direction{font-size:10px;color:#7c8799}
+.gradient-rail{position:relative;height:54px;margin:0 8px;touch-action:none;user-select:none}
+.gradient-track{position:absolute;left:0;right:0;top:0;height:28px;border-radius:6px;border:1px solid #bbc6d5;cursor:crosshair;overflow:hidden;background-color:#fff;background-image:linear-gradient(45deg,#d5dbe4 25%,transparent 25%),linear-gradient(-45deg,#d5dbe4 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d5dbe4 75%),linear-gradient(-45deg,transparent 75%,#d5dbe4 75%);background-size:12px 12px;background-position:0 0,0 6px,6px -6px,-6px 0}
+.gradient-track-color{position:absolute;inset:0;pointer-events:none}
+.gradient-handles{position:absolute;inset:0;pointer-events:none}
+.gradient-stop{position:absolute;top:28px;width:26px;height:28px;padding:0;transform:translateX(-50%);border:0;background:transparent;cursor:ew-resize;pointer-events:auto;display:grid;place-items:center;z-index:1;touch-action:none}
+.gradient-stop.active{z-index:3}.gradient-stop:focus-visible{outline:2px solid #2563eb;outline-offset:1px;border-radius:5px}
+.gradient-thumb{display:block;position:relative;width:14px;height:18px;border:2px solid #fff;border-radius:3px;box-shadow:0 0 0 1px #a0aec1,0 2px 4px #33415524;background:linear-gradient(var(--stop-color),var(--stop-color)),repeating-conic-gradient(#d6dce6 0% 25%,#fff 0% 50%) 50%/8px 8px}
+.gradient-thumb::before{content:"";position:absolute;left:2px;top:-5px;width:6px;height:6px;background:#64748b;transform:rotate(45deg);z-index:-1}
+.gradient-stop.active .gradient-thumb{box-shadow:0 0 0 2px #2563eb,0 2px 5px #2563eb33}.gradient-stop.active .gradient-thumb::before{background:#2563eb}
+.gradient-stop:disabled{cursor:default;opacity:.55}
+.gradient-scale{display:flex;justify-content:space-between;margin:-1px 4px 10px;font-size:10px;color:#8390a3;pointer-events:none}
+.gradient-selection{display:grid;grid-template-columns:minmax(0,1fr) 88px 30px;gap:7px;align-items:center;margin-bottom:8px}
+.gradient-selection select{min-width:0;width:100%;height:32px;padding:5px 7px;font-size:11px}
+.gradient-position{display:flex;align-items:center;gap:3px;background:#fff;border:1px solid #d7deea;border-radius:8px;padding-right:7px;font-size:11px;color:#748096}
+.gradient-position input[type=number]{min-width:0;width:100%;height:30px;border:0;background:transparent;padding:5px 3px 5px 7px;font-size:11px;outline:none;box-shadow:none}
+.gradient-remove{height:32px;border:1px solid #dce3ed;border-radius:8px;background:#fff;color:#61718a;cursor:pointer;font-size:16px}.gradient-remove:hover:not(:disabled){color:#c14755;border-color:#e7b3bc;background:#fff5f6}.gradient-remove:disabled{opacity:.4;cursor:default}
+.gradient-color-slot .color-editor input[type=text]{font-size:11px}
+.gradient-footer{display:flex;justify-content:space-between;gap:6px;align-items:center;margin-top:8px;font-size:10px;line-height:1.5;color:#8792a4}
+.gradient-reverse{flex:none;border:0;padding:3px 0 3px 5px;background:transparent;color:#5979aa;font-size:11px;cursor:pointer}
